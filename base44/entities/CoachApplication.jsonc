@@ -1,0 +1,123 @@
+{
+  "name": "CoachApplication",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID of the applicant (pending account)"
+    },
+    "applicant_name": {
+      "type": "string"
+    },
+    "applicant_phone": {
+      "type": "string"
+    },
+    "applicant_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "desired_workspace_name": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "approx_client_count": {
+      "type": "number"
+    },
+    "coaching_info": {
+      "type": "string",
+      "description": "Coaching / business information"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "under_review",
+        "more_info_required",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "reviewed_by_name": {
+      "type": "string"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "more_info_request": {
+      "type": "string",
+      "description": "Information requested by reviewer"
+    },
+    "more_info_response": {
+      "type": "string"
+    },
+    "more_info_responded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_workspace_id": {
+      "type": "string",
+      "description": "Workspace created on approval"
+    }
+  },
+  "required": [
+    "user_id",
+    "applicant_name",
+    "applicant_phone",
+    "applicant_email",
+    "desired_workspace_name",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

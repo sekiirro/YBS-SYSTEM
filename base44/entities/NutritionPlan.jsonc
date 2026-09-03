@@ -1,0 +1,187 @@
+{
+  "name": "NutritionPlan",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "workspace_id": {
+      "type": "string"
+    },
+    "workspace_name": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "null for templates"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "assigned_ybs_coach_id": {
+      "type": "string"
+    },
+    "trainer_id": {
+      "type": "string"
+    },
+    "is_template": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "meals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "meal_name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "food_id": {
+                  "type": "string"
+                },
+                "food_name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "calories": {
+                  "type": "number"
+                },
+                "protein": {
+                  "type": "number"
+                },
+                "carbs": {
+                  "type": "number"
+                },
+                "fat": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "daily_calories": {
+      "type": "number"
+    },
+    "daily_protein": {
+      "type": "number"
+    },
+    "daily_carbs": {
+      "type": "number"
+    },
+    "daily_fat": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "workspace_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        },
+        {
+          "data.client_id": "{{user.data.self_client_id}}"
+        },
+        {
+          "$and": [
+            {
+              "data.is_template": true
+            },
+            {
+              "data.is_archived": false
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    }
+  }
+}

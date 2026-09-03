@@ -1,0 +1,212 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "client_code": {
+      "type": "string",
+      "description": "Unique human-readable code, e.g. YBS-0001"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female",
+        "other"
+      ]
+    },
+    "height": {
+      "type": "number",
+      "description": "Height in cm"
+    },
+    "current_weight": {
+      "type": "number",
+      "description": "Weight in kg"
+    },
+    "body_fat": {
+      "type": "number",
+      "description": "Body fat percentage"
+    },
+    "join_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "workspace_id": {
+      "type": "string",
+      "description": "Workspace this client belongs to"
+    },
+    "workspace_name": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Linked User account ID once activated"
+    },
+    "assigned_trainer_id": {
+      "type": "string",
+      "description": "Workspace trainer managing this client"
+    },
+    "assigned_trainer_name": {
+      "type": "string"
+    },
+    "assigned_ybs_coach_id": {
+      "type": "string",
+      "description": "YBS internal coach assigned to this client"
+    },
+    "assigned_ybs_coach_name": {
+      "type": "string"
+    },
+    "telegram_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "telegram_chat_id": {
+      "type": "string"
+    },
+    "follow_up_day": {
+      "type": "string",
+      "enum": [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "frozen",
+        "cancelled"
+      ],
+      "default": "active"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "expiring_soon",
+        "frozen",
+        "cancelled",
+        "no_subscription"
+      ],
+      "default": "no_subscription"
+    },
+    "subscription_end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "package_id": {
+      "type": "string"
+    },
+    "package_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "client_code",
+    "full_name",
+    "phone",
+    "workspace_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.assigned_trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.assigned_trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.assigned_trainer_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    }
+  }
+}

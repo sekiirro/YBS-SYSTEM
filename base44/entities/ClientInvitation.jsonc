@@ -1,0 +1,103 @@
+{
+  "name": "ClientInvitation",
+  "type": "object",
+  "properties": {
+    "workspace_id": {
+      "type": "string"
+    },
+    "workspace_name": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "Client record this invitation activates"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "client_code": {
+      "type": "string"
+    },
+    "client_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "client_phone": {
+      "type": "string"
+    },
+    "token": {
+      "type": "string",
+      "description": "Single-use random invitation token"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "used",
+        "expired",
+        "revoked"
+      ],
+      "default": "pending"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "used_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "client_id",
+    "token",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

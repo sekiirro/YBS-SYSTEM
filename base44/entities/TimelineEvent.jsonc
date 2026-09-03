@@ -1,0 +1,114 @@
+{
+  "name": "TimelineEvent",
+  "type": "object",
+  "properties": {
+    "workspace_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "assigned_ybs_coach_id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "subscription_created",
+        "subscription_renewed",
+        "form_assigned",
+        "form_submitted",
+        "form_reviewed",
+        "workout_assigned",
+        "nutrition_assigned",
+        "metrics_submitted",
+        "progress_photos_uploaded",
+        "ai_analysis_generated",
+        "client_reassigned",
+        "note_added",
+        "general",
+        "workspace_created",
+        "client_invited",
+        "client_activated",
+        "application_approved",
+        "application_rejected"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string"
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "client_id",
+    "event_type",
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        },
+        {
+          "data.client_id": "{{user.data.self_client_id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "data.assigned_ybs_coach_id": "{{user.id}}"
+        },
+        {
+          "data.client_id": "{{user.data.self_client_id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

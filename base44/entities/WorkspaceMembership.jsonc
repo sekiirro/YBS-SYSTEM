@@ -1,0 +1,109 @@
+{
+  "name": "WorkspaceMembership",
+  "type": "object",
+  "properties": {
+    "workspace_id": {
+      "type": "string"
+    },
+    "workspace_name": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "workspace_role": {
+      "type": "string",
+      "enum": [
+        "workspace_owner",
+        "workspace_manager",
+        "workspace_trainer",
+        "client"
+      ],
+      "default": "workspace_trainer"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "invited",
+        "suspended",
+        "removed"
+      ],
+      "default": "active"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "assigned_client_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "workspace_id",
+    "user_id",
+    "workspace_role"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.workspace_id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

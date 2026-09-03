@@ -1,0 +1,77 @@
+{
+  "name": "Package",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "silver",
+        "gold",
+        "platinum",
+        "custom"
+      ]
+    },
+    "duration": {
+      "type": "number"
+    },
+    "duration_unit": {
+      "type": "string",
+      "enum": [
+        "days",
+        "weeks",
+        "months"
+      ]
+    },
+    "price": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_custom": {
+      "type": "boolean",
+      "default": false
+    },
+    "max_capacity": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "name",
+    "tier",
+    "duration",
+    "duration_unit",
+    "price"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

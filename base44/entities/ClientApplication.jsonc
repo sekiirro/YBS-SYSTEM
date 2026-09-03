@@ -1,0 +1,118 @@
+{
+  "name": "ClientApplication",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID of the registering client"
+    },
+    "applicant_name": {
+      "type": "string"
+    },
+    "applicant_phone": {
+      "type": "string"
+    },
+    "applicant_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "under_review",
+        "more_info_required",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "assigned_workspace_id": {
+      "type": "string",
+      "description": "Workspace chosen by owner at approval"
+    },
+    "assigned_workspace_name": {
+      "type": "string"
+    },
+    "assigned_ybs_trainer_id": {
+      "type": "string",
+      "description": "YBS internal trainer assigned at approval"
+    },
+    "assigned_ybs_trainer_name": {
+      "type": "string"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "more_info_request": {
+      "type": "string"
+    },
+    "more_info_response": {
+      "type": "string"
+    },
+    "more_info_responded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "reviewed_by_name": {
+      "type": "string"
+    },
+    "created_client_id": {
+      "type": "string",
+      "description": "Client record created on approval"
+    }
+  },
+  "required": [
+    "user_id",
+    "applicant_name",
+    "applicant_phone",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

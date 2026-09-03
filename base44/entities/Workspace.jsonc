@@ -1,0 +1,130 @@
+{
+  "name": "Workspace",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Workspace / coaching business name"
+    },
+    "owner_id": {
+      "type": "string",
+      "description": "User ID of the workspace owner"
+    },
+    "owner_name": {
+      "type": "string"
+    },
+    "owner_phone": {
+      "type": "string"
+    },
+    "owner_email": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "suspended",
+        "pending",
+        "deactivated"
+      ],
+      "default": "active"
+    },
+    "platform_plan": {
+      "type": "string",
+      "enum": [
+        "starter",
+        "growth",
+        "scale",
+        "enterprise",
+        "trial",
+        "custom"
+      ],
+      "default": "starter"
+    },
+    "country": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "client_count": {
+      "type": "number",
+      "default": 0
+    },
+    "assigned_ybs_coaches": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "User IDs of YBS internal coaches assigned to this workspace"
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "default_follow_up_day": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        }
+      }
+    },
+    "created_by_application_id": {
+      "type": "string",
+      "description": "CoachApplication that created this workspace"
+    }
+  },
+  "required": [
+    "name",
+    "owner_id",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        },
+        {
+          "id": {
+            "$in": "{{user.data.workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "id": {
+            "$in": "{{user.data.managed_workspace_ids}}"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user",
+        "owner",
+        "manager",
+        "trainer",
+        "client"
+      ],
+      "default": "user"
+    },
+    "platform_role": {
+      "type": "string",
+      "enum": [
+        "platform_owner",
+        "platform_manager",
+        "platform_trainer",
+        "none"
+      ],
+      "default": "none"
+    },
+    "account_status": {
+      "type": "string",
+      "enum": [
+        "pending_approval",
+        "active",
+        "suspended",
+        "rejected",
+        "deactivated"
+      ],
+      "default": "active"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "disabled"
+      ],
+      "default": "active"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "workspace_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "All workspace IDs the user is a member of (denormalized for RLS)"
+    },
+    "managed_workspace_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Workspace IDs where user is owner or manager (denormalized for RLS)"
+    },
+    "active_workspace_id": {
+      "type": "string",
+      "description": "Currently selected workspace context"
+    },
+    "self_client_id": {
+      "type": "string",
+      "description": "Client record ID for client-portal users"
+    },
+    "ybs_coach": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for YBS internal coaches (platform trainers)"
+    },
+    "trainer_profile": {
+      "type": "object",
+      "properties": {
+        "specialization": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
