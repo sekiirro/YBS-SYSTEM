@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { FoodsService } from '@/services/foods';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Button, Modal, Input, Select } from '@/components/ui';
 import { Apple, Plus, Search } from 'lucide-react';
@@ -21,8 +20,10 @@ export default function Foods() {
   const loadFoods = async () => {
     try {
       setLoading(true);
-      const data = await db.entities.Food.filter({ is_archived: false }, 'name', 500);
+      const data = await FoodsService.list();
       setFoods(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
@@ -105,7 +106,7 @@ function CreateFoodModal({ onClose, onCreated }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await db.entities.Food.create({
+      await FoodsService.create({
         ...form,
         calories: parseFloat(form.calories) || 0,
         protein: parseFloat(form.protein) || 0,

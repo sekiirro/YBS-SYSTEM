@@ -1,10 +1,13 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
-import { hasPermission } from '@/lib/permissions';
+import { ClientsService } from '@/services/clients';
+import { TeamService } from '@/services/team';
+import { PackagesService } from '@/services/packages';
+import { WorkspacesService } from '@/services/workspaces';
+import { hasPermission, getClientFilterForUser } from '@/lib/permissions';
+import { getActiveWorkspaceId, getRoleCategory, isPlatformTrainer, isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Input, Select, Modal } from '@/components/ui';
 import { formatDate, getSubscriptionStatusColor, generateClientCode, getInitials } from '@/lib/ybs-utils';
 import { Users, Search, Plus, Filter, Phone, Mail, Download, X } from 'lucide-react';
@@ -16,29 +19,47 @@ export default function Clients() {
   const [clients, setClients] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [trainerFilter, setTrainerFilter] = useState('all');
   const [packageFilter, setPackageFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
 
-  const isTrainer = user?.role === 'trainer';
+  const isTrainer = isPlatformTrainer(user) || user?.role === 'trainer';
+  const isAdmin = isPlatformAdmin(user);
+  const activeWsId = getActiveWorkspaceId(user);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const filter = isTrainer ? { assigned_trainer_id: user.id } : {};
-      const [clientData, userData, pkgData] = await Promise.all([
-        db.entities.Client.filter(filter, '-created_date', 500),
-        db.entities.User.list(),
-        db.entities.Package.filter({ is_active: true }),
-      ]);
+      let filter = getClientFilterForUser(user);
+      const cat = getRoleCategory(user);
+      if (cat === 'workspace' && activeWsId) {
+        filter = { ...filter, workspace_id: activeWsId };
+      }
+
+      const promises = [
+        ClientsService.list(filter),
+        TeamService.list(),
+        PackagesService.list(),
+      ];
+      if (isAdmin) {
+        promises.push(WorkspacesService.list().catch(() => []));
+      }
+
+      const results = await Promise.all(promises);
+      const clientData = results[0] || [];
+      const userData = results[1] || [];
+      const pkgData = results[2] || [];
+      if (isAdmin) setWorkspaces(results[3] || []);
+
       setClients(clientData);
-      setTrainers(userData.filter((u) => u.role === 'trainer' && u.status !== 'disabled'));
+      setTrainers(userData.filter((u) => (u.platform_role === 'platform_trainer' || u.ybs_coach === true || u.role === 'trainer') && u.status !== 'disabled'));
       setPackages(pkgData);
     } catch (err) {
       console.error('Load error:', err);
@@ -231,6 +252,9 @@ export default function Clients() {
           onCreated={() => { setShowCreate(false); loadData(); }}
           trainers={trainers}
           packages={packages}
+          workspaces={workspaces}
+          activeWsId={activeWsId}
+          isAdmin={isAdmin}
           existingCodes={clients.map((c) => c.client_code)}
           user={user}
         />
@@ -239,7 +263,7 @@ export default function Clients() {
   );
 }
 
-function CreateClientModal({ onClose, onCreated, trainers, packages, existingCodes, user }) {
+function CreateClientModal({ onClose, onCreated, trainers, packages, workspaces = [], activeWsId, isAdmin, existingCodes, user }) {
   const [form, setForm] = useState({
     full_name: '',
     phone: '',
@@ -248,9 +272,10 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, existingCod
     gender: 'male',
     height: '',
     current_weight: '',
-    assigned_trainer_id: user?.role === 'trainer' ? user.id : '',
+    assigned_trainer_id: (user?.role === 'trainer' || user?.platform_role === 'platform_trainer') ? user.id : '',
     package_id: '',
     follow_up_day: 'saturday',
+    workspace_id: activeWsId || (workspaces[0]?.id || ''),
     notes: '',
   });
   const [saving, setSaving] = useState(false);
@@ -262,17 +287,22 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, existingCod
       setError('Name and phone are required');
       return;
     }
+    const wsId = form.workspace_id || activeWsId;
+    if (!wsId) {
+      setError('Workspace is required');
+      return;
+    }
     try {
       setSaving(true);
       const clientCode = generateClientCode(existingCodes);
       const trainer = trainers.find((t) => t.id === form.assigned_trainer_id);
       const pkg = packages.find((p) => p.id === form.package_id);
+      const targetWs = workspaces.find((w) => w.id === wsId);
 
-      await db.entities.Client.create({
+      await ClientsService.create({
         ...form,
+        workspace_id: wsId,
         client_code: clientCode,
-        assigned_trainer_name: trainer?.full_name || trainer?.email || '',
-        package_name: pkg?.name || '',
         join_date: new Date().toISOString().split('T')[0],
         subscription_status: pkg ? 'active' : 'no_subscription',
       });
@@ -289,6 +319,13 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, existingCod
     <Modal open onClose={onClose} title="Add New Client" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
+        {isAdmin && workspaces.length > 0 && (
+          <Select label="Workspace *" value={form.workspace_id} onChange={(e) => setForm({ ...form, workspace_id: e.target.value })}>
+            {workspaces.map((w) => (
+              <option key={w.id} value={w.id}>{w.name}</option>
+            ))}
+          </Select>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Input label="Full Name *" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" />
           <Input label="Phone *" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1234567890" />

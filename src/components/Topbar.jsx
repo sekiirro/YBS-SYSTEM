@@ -10,11 +10,12 @@ export default function Topbar({ onMenuClick }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const roleLabel = {
-    owner: 'Owner',
-    manager: 'Head Coach',
-    trainer: 'Trainer',
-    client: 'Client',
+  const getDisplayRole = () => {
+    if (user?.platform_role === 'platform_owner') return 'Platform Owner';
+    if (user?.platform_role === 'platform_trainer') return 'YBS Coach';
+    if (user?.managed_workspace_ids?.length > 0) return 'Workspace Owner';
+    if (user?.self_client_id) return 'Client';
+    return 'User';
   };
 
   return (
@@ -58,7 +59,7 @@ export default function Topbar({ onMenuClick }) {
             </div>
             <div className="hidden sm:flex flex-col items-start leading-none">
               <span className="text-[13px] font-medium text-foreground">{user?.full_name || 'User'}</span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">{roleLabel[user?.role] || user?.role}</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">{getDisplayRole()}</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
           </button>

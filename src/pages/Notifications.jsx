@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { NotificationsService } from '@/services/notifications';
 import { PageHeader, LoadingState, EmptyState, Badge, Button } from '@/components/ui';
 import { timeAgo } from '@/lib/ybs-utils';
 import { Bell, Check, CheckCheck } from 'lucide-react';
@@ -13,29 +12,29 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => { loadNotifications(); }, []);
+  useEffect(() => { loadNotifications(); }, [user]);
 
   const loadNotifications = async () => {
+    if (!user?.id) { setLoading(false); return; }
     try {
       setLoading(true);
-      const data = await db.entities.Notification.filter({ user_id: user.id }, '-created_date', 100);
+      const data = await NotificationsService.list(user.id);
       setNotifications(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
   const markAllRead = async () => {
     try {
-      await db.entities.Notification.updateMany(
-        { user_id: user.id, is_read: false },
-        { $set: { is_read: true } }
-      );
+      await NotificationsService.markAllAsRead(user.id);
       loadNotifications();
     } catch (err) { console.error(err); }
   };
 
   const markRead = async (id) => {
     try {
-      await db.entities.Notification.update(id, { is_read: true });
+      await NotificationsService.markAsRead(id);
       loadNotifications();
     } catch (err) { console.error(err); }
   };

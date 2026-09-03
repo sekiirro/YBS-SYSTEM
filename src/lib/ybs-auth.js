@@ -1,19 +1,24 @@
 // YBS role resolution + role-aware redirect destinations.
-// Distinguishes platform-level (admin/coach) from workspace-level and client access.
+// Strictly evaluates trusted database roles (Platform Owner, Workspace Owner, YBS Trainer, Client).
 
 export function getAccountStatus(user) {
   if (!user) return 'unknown';
-  if (user.role === 'admin') return 'active';
-  if (user.status === 'disabled') return 'suspended';
-  return user.account_status || 'active';
+  if (user.platform_role === 'platform_owner') return 'active';
+  return user.account_status || 'unknown';
 }
 
 export function isPlatformAdmin(user) {
-  return !!user && (user.role === 'admin' || user.platform_role === 'platform_owner' || user.platform_role === 'platform_manager');
+  return !!user && user.platform_role === 'platform_owner';
 }
 
 export function isPlatformTrainer(user) {
-  return !!user && (user.platform_role === 'platform_trainer' || user.ybs_coach === true);
+  return !!user && user.platform_role === 'platform_trainer';
+}
+
+export function isWorkspaceOwner(user) {
+  if (!user || isPlatformAdmin(user)) return false;
+  const managed = Array.isArray(user.managed_workspace_ids) ? user.managed_workspace_ids : [];
+  return managed.length > 0;
 }
 
 export function isWorkspaceMember(user) {
@@ -32,8 +37,8 @@ export function getRoleCategory(user) {
   if (!user) return 'unknown';
   if (isPlatformAdmin(user)) return 'admin';
   if (isPlatformTrainer(user)) return 'coach';
+  if (isWorkspaceOwner(user) || isWorkspaceMember(user)) return 'workspace';
   if (isClient(user)) return 'client';
-  if (isWorkspaceMember(user)) return 'workspace';
   return 'unknown';
 }
 
@@ -48,8 +53,11 @@ export function getActiveWorkspaceId(user) {
 export function getLandingPath(user) {
   if (!user) return '/login';
   const status = getAccountStatus(user);
-  if (status === 'pending_approval') return '/pending';
-  if (status === 'suspended' || status === 'rejected' || status === 'deactivated') return '/pending';
+  if (status === 'pending_approval' && !isPlatformAdmin(user)) return '/pending';
+  if ((status === 'suspended' || status === 'rejected' || status === 'deactivated' || status === 'disabled') && !isPlatformAdmin(user)) {
+    return '/pending';
+  }
+
   const cat = getRoleCategory(user);
   if (cat === 'admin') return '/admin/dashboard';
   if (cat === 'coach') return '/coach/dashboard';
@@ -61,7 +69,6 @@ export function getLandingPath(user) {
   return '/pending';
 }
 
-// Permission keys for the extended platform/workspace model.
 export const PLATFORM_PERMISSIONS = [
   'workspaces.view', 'workspaces.create', 'workspaces.manage', 'workspaces.suspend',
   'applications.view', 'applications.approve', 'applications.reject',

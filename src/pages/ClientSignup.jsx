@@ -1,102 +1,136 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
+import { supabase } from "@/utils/supabase";
+import { normalizePhone } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Phone, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { normalizePhone } from "@/lib/phone";
 
 export default function ClientSignup() {
-  const [step, setStep] = useState("form"); // form | otp
-  const [form, setForm] = useState({ full_name: "", phone: "", email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    password: "",
+    confirm: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otp, setOtp] = useState("");
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submitForm = async (e) => {
     e.preventDefault();
     setError("");
-    if (form.password !== form.confirm) { setError("Passwords do not match"); return; }
-    if (form.password.length < 8) { setError("Password must be at least 8 characters"); return; }
-    if (!form.full_name || !form.phone || !form.email) { setError("Please fill all required fields"); return; }
-    setLoading(true);
-    try {
-      await db.auth.register({ email: form.email, password: form.password });
-      setStep("otp");
-    } catch (err) {
-      setError(err.message || "Registration failed — email may already be in use");
-    } finally { setLoading(false); }
-  };
 
-  const verifyOtp = async () => {
-    setError("");
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!form.full_name.trim() || !form.phone.trim() || !form.email.trim()) {
+      setError("Please fill all required fields");
+      return;
+    }
+
+    const normalizedPhone = normalizePhone(form.phone);
+    if (!normalizedPhone || normalizedPhone.length < 9) {
+      setError("Please enter a valid mobile phone number");
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const result = await db.auth.verifyOtp({ email: form.email, otpCode: otp });
-      if (result?.access_token) db.auth.setToken(result.access_token);
-      const me = await db.auth.me();
-      await db.auth.updateMe({
-        account_status: "pending_approval",
-        platform_role: "none",
-        phone: normalizePhone(form.phone),
+      // 1. Register with Supabase Auth
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.full_name.trim(),
+            phone: normalizedPhone,
+            platform_role: "none",
+            account_status: "pending_approval",
+          },
+        },
       });
-      await db.entities.ClientApplication.create({
-        user_id: me.id,
-        applicant_name: form.full_name,
-        applicant_phone: normalizePhone(form.phone),
-        applicant_email: form.email,
+
+      if (authErr) {
+        if (authErr.message.includes("already registered") || authErr.message.includes("unique")) {
+          throw new Error("An account with this email address already exists. Please sign in instead.");
+        }
+        throw new Error(authErr.message);
+      }
+
+      const authUser = authData?.user;
+      if (!authUser) {
+        throw new Error("Unable to create account. Please try again.");
+      }
+
+      // 2. Insert ClientApplication record into database
+      const { error: appErr } = await supabase.from("client_applications").insert({
+        user_id: authUser.id,
+        applicant_name: form.full_name.trim(),
+        applicant_phone: normalizedPhone,
+        applicant_email: form.email.trim().toLowerCase(),
         status: "pending",
         submitted_at: new Date().toISOString(),
       });
+
+      if (appErr) {
+        console.warn("Application record notice:", appErr.message);
+      }
+
+      // 3. Ensure profile is set to pending_approval
+      await supabase.from("profiles").upsert({
+        id: authUser.id,
+        email: form.email.trim().toLowerCase(),
+        phone: normalizedPhone,
+        full_name: form.full_name.trim(),
+        platform_role: "none",
+        account_status: "pending_approval",
+      });
+
+      // 4. Redirect to pending approval screen
       window.location.href = "/pending";
     } catch (err) {
-      setError(err.message || "Verification failed");
-    } finally { setLoading(false); }
+      setError(err.message || "Registration failed. Please check your information and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const resend = async () => { try { await db.auth.resendOtp(form.email); } catch {} };
-
-  if (step === "otp") {
-    return (
-      <AuthLayout brand title="Verify your email" subtitle={`We sent a code to ${form.email}`}>
-        {error && <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{error}</div>}
-        <div className="flex justify-center mb-6">
-          <InputOTP maxLength={6} value={otp} onChange={setOtp} autoFocus autoComplete="one-time-code">
-            <InputOTPGroup>{[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}</InputOTPGroup>
-          </InputOTP>
-        </div>
-        <Button className="w-full h-12 font-medium" onClick={verifyOtp} disabled={loading || otp.length < 6}>
-          {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verifying...</> : "Verify & Submit"}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Didn't receive the code?{" "}
-          <button onClick={resend} className="text-primary font-medium hover:underline">Resend</button>
-        </p>
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout
       brand
       title="Create Client Account"
       subtitle="Request access to your coaching workspace"
-      footer={<>Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link></>}
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link to="/login" className="text-primary font-medium hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
     >
       <div className="mb-5 p-3 rounded-md bg-primary/5 border border-primary/15 text-[12px] text-muted-foreground">
-        Your registration is reviewed by the YBS team. Once approved, you'll be assigned to a workspace and can access your client portal.
+        Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to a workspace and can access your coaching portal.
       </div>
-      {error && <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{error}</div>}
+      {error && (
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+          {error}
+        </div>
+      )}
       <form onSubmit={submitForm} className="space-y-4">
         <Field icon={UserPlus} label="Full Name *">
-          <Input value={form.full_name} onChange={set("full_name")} placeholder="John Doe" required />
+          <Input value={form.full_name} onChange={set("full_name")} placeholder="Captain John" required />
         </Field>
         <Field icon={Phone} label="Phone *">
           <Input type="tel" value={form.phone} onChange={set("phone")} placeholder="+20 10x xxx xxxx" required />
@@ -113,7 +147,14 @@ export default function ClientSignup() {
           </Field>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : "Create Account"}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Submitting Application...
+            </>
+          ) : (
+            "Create Account"
+          )}
         </Button>
       </form>
     </AuthLayout>

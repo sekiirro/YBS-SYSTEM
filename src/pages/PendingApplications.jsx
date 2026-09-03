@@ -1,7 +1,5 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
-import React, { useState, useEffect } from 'react';
-
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/utils/supabase';
 import { PageHeader, LoadingState, Badge, Button, Modal, TextArea, Select } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import { ClipboardCheck, Check, X, MessageSquare, Eye, Loader2, Filter, Search } from 'lucide-react';
@@ -32,63 +30,122 @@ export default function PendingApplications() {
   const [err, setErr] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [list, ws, users] = await Promise.all([
-        db.entities.ClientApplication.list('-created_date', 500),
-        db.entities.Workspace.list('-created_date', 200),
-        db.entities.User.list('-created_date', 500),
+      const [appsRes, wsRes, trainersRes] = await Promise.all([
+        supabase
+          .from('client_applications')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('workspaces')
+          .select('id, name, status')
+          .eq('status', 'active')
+          .order('name'),
+        supabase
+          .from('profiles')
+          .select('id, full_name, email, phone')
+          .eq('platform_role', 'platform_trainer')
+          .eq('account_status', 'active')
+          .order('full_name'),
       ]);
-      setApps(list);
-      setWorkspaces(ws.filter((w) => w.status === 'active'));
-      setTrainers(users.filter((u) => u.platform_role === 'platform_trainer' || u.ybs_coach === true));
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
 
-  useEffect(() => { load(); }, []);
+      if (appsRes.data) setApps(appsRes.data);
+      if (wsRes.data) setWorkspaces(wsRes.data);
+      if (trainersRes.data) setTrainers(trainersRes.data);
+    } catch (e) {
+      console.error('Error loading pending applications:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = apps.filter((a) => {
     if (statusFilter !== 'all' && a.status !== statusFilter) return false;
     if (search) {
       const q = search.toLowerCase();
-      if (!a.applicant_name?.toLowerCase().includes(q) && !a.applicant_phone?.toLowerCase().includes(q) && !a.applicant_email?.toLowerCase().includes(q)) return false;
+      if (
+        !a.applicant_name?.toLowerCase().includes(q) &&
+        !a.applicant_phone?.toLowerCase().includes(q) &&
+        !a.applicant_email?.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
     }
     return true;
   });
 
   const openAction = (a, act) => {
-    setSelected(a); setAction(act); setErr(''); setReason(''); setMoreInfo('');
-    setWsChoice(a.assigned_workspace_id || ''); setTrainerChoice(a.assigned_ybs_trainer_id || '');
+    setSelected(a);
+    setAction(act);
+    setErr('');
+    setReason('');
+    setMoreInfo('');
+    setWsChoice(a.assigned_workspace_id || '');
+    setTrainerChoice(a.assigned_ybs_trainer_id || '');
   };
 
   const runAction = async () => {
     setErr('');
-    if (action === 'approve' && !wsChoice) { setErr('Please select a workspace'); return; }
+    if (action === 'approve' && !wsChoice) {
+      setErr('Please select a workspace for the client');
+      return;
+    }
     setBusy(true);
+
     try {
       if (action === 'approve') {
-        await db.functions.invoke('approveClientApplication', { applicationId: selected.id, workspaceId: wsChoice, trainerId: trainerChoice });
+        const { data, error } = await supabase.rpc('approve_client_application', {
+          p_application_id: selected.id,
+          p_workspace_id: wsChoice,
+          p_trainer_id: trainerChoice || null,
+        });
+        if (error) throw error;
       } else if (action === 'reject') {
-        await db.functions.invoke('rejectClientApplication', { applicationId: selected.id, reason });
-      } else {
-        await db.functions.invoke('requestClientInfo', { applicationId: selected.id, request: moreInfo });
+        const { data, error } = await supabase.rpc('reject_client_application', {
+          p_application_id: selected.id,
+          p_reason: reason || null,
+        });
+        if (error) throw error;
+      } else if (action === 'moreinfo') {
+        const { error } = await supabase
+          .from('client_applications')
+          .update({
+            more_info_request: moreInfo,
+            status: 'more_info_required',
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', selected.id);
+        if (error) throw error;
       }
-      setAction(null); setConfirmOpen(false); setSelected(null);
+
+      setAction(null);
+      setConfirmOpen(false);
+      setSelected(null);
       load();
     } catch (e) {
-      setErr(e?.response?.data?.error || e?.message || 'Action failed');
-    } finally { setBusy(false); }
+      setErr(e.message || 'Action failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (loading) return <LoadingState label="Loading client applications…" />;
 
-  const pendingCount = apps.filter((a) => a.status === 'pending').length;
+  const pendingCount = apps.filter((a) => a.status === 'pending' || a.status === 'under_review').length;
 
   return (
     <div>
-      <PageHeader title="Pending Client Approvals" description={`${pendingCount} awaiting review`} icon={ClipboardCheck} />
+      <PageHeader
+        title="Pending Client Approvals"
+        description={`${pendingCount} applications awaiting review`}
+        icon={ClipboardCheck}
+      />
 
       {/* Filters */}
       <div className="surface-card p-4 mb-4">
@@ -96,13 +153,19 @@ export default function PendingApplications() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
-              value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, phone, or email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, phone, or email…"
               className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40"
             />
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+            >
               <option value="pending">Pending</option>
               <option value="under_review">Under Review</option>
               <option value="more_info_required">More Info Required</option>
@@ -115,7 +178,9 @@ export default function PendingApplications() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="surface-card p-10 text-center text-muted-foreground text-[13px]">No applications match this filter.</div>
+        <div className="surface-card p-10 text-center text-muted-foreground text-[13px]">
+          No applications match this filter.
+        </div>
       ) : (
         <div className="surface-card overflow-hidden">
           <div className="hidden lg:block overflow-x-auto">
@@ -123,7 +188,12 @@ export default function PendingApplications() {
               <thead>
                 <tr className="border-b border-border">
                   {['Applicant', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
+                    <th
+                      key={h}
+                      className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -135,18 +205,47 @@ export default function PendingApplications() {
                       <p className="text-[11px] text-muted-foreground">{a.applicant_email}</p>
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground font-mono">{a.applicant_phone}</td>
-                    <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(a.submitted_at || a.created_date)}</td>
+                    <td className="px-4 py-3 text-[12px] text-muted-foreground">
+                      {formatDate(a.submitted_at || a.created_at)}
+                    </td>
                     <td className="px-4 py-3">
-                      <Badge className={cn(STATUS_STYLE[a.status] || STATUS_STYLE.pending, 'capitalize')}>{a.status.replace(/_/g, ' ')}</Badge>
+                      <Badge className={cn(STATUS_STYLE[a.status] || STATUS_STYLE.pending, 'capitalize')}>
+                        {a.status.replace(/_/g, ' ')}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setSelected(a); setAction(null); }}><Eye className="w-3.5 h-3.5" /></Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelected(a);
+                            setAction(null);
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
                         {a.status !== 'approved' && a.status !== 'rejected' && (
                           <>
-                            <Button variant="ghost" size="sm" className="text-success hover:text-success" onClick={() => openAction(a, 'approve')}><Check className="w-3.5 h-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => openAction(a, 'reject')}><X className="w-3.5 h-3.5" /></Button>
-                            <Button variant="ghost" size="sm" onClick={() => openAction(a, 'moreinfo')}><MessageSquare className="w-3.5 h-3.5" /></Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-success hover:text-success"
+                              onClick={() => openAction(a, 'approve')}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => openAction(a, 'reject')}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => openAction(a, 'moreinfo')}>
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </Button>
                           </>
                         )}
                       </div>
@@ -164,14 +263,29 @@ export default function PendingApplications() {
                     <p className="text-[14px] font-medium">{a.applicant_name}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">{a.applicant_phone}</p>
                   </div>
-                  <Badge className={cn(STATUS_STYLE[a.status] || STATUS_STYLE.pending, 'capitalize')}>{a.status.replace(/_/g, ' ')}</Badge>
+                  <Badge className={cn(STATUS_STYLE[a.status] || STATUS_STYLE.pending, 'capitalize')}>
+                    {a.status.replace(/_/g, ' ')}
+                  </Badge>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="secondary" onClick={() => { setSelected(a); setAction(null); }}>View</Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setSelected(a);
+                      setAction(null);
+                    }}
+                  >
+                    View
+                  </Button>
                   {a.status !== 'approved' && a.status !== 'rejected' && (
                     <>
-                      <Button size="sm" className="text-success" onClick={() => openAction(a, 'approve')}>Approve</Button>
-                      <Button size="sm" variant="destructive" onClick={() => openAction(a, 'reject')}>Reject</Button>
+                      <Button size="sm" className="text-success" onClick={() => openAction(a, 'approve')}>
+                        Approve
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => openAction(a, 'reject')}>
+                        Reject
+                      </Button>
                     </>
                   )}
                 </div>
@@ -181,74 +295,154 @@ export default function PendingApplications() {
         </div>
       )}
 
-      {/* Detail / action modal */}
+      {/* Detail / Action modal */}
       {selected && (
-        <Modal open onClose={() => { setSelected(null); setAction(null); setErr(''); setConfirmOpen(false); }} title={action ? actionLabel(action) : 'Client Application'} size="lg">
-          {err && <div className="mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{err}</div>}
+        <Modal
+          open
+          onClose={() => {
+            setSelected(null);
+            setAction(null);
+            setErr('');
+            setConfirmOpen(false);
+          }}
+          title={action ? actionLabel(action) : 'Client Application Details'}
+          size="lg"
+        >
+          {err && (
+            <div className="mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+              {err}
+            </div>
+          )}
           <div className="space-y-3">
             <DetailRow label="Applicant" value={selected.applicant_name} />
             <DetailRow label="Email" value={selected.applicant_email} />
             <DetailRow label="Phone" value={selected.applicant_phone} />
-            <DetailRow label="Registered" value={formatDate(selected.submitted_at || selected.created_date)} />
-            <DetailRow label="Status" value={<Badge className={cn(STATUS_STYLE[selected.status] || STATUS_STYLE.pending, 'capitalize')}>{selected.status.replace(/_/g, ' ')}</Badge>} />
-            {selected.assigned_workspace_name && <DetailRow label="Assigned Workspace" value={selected.assigned_workspace_name} />}
-            {selected.assigned_ybs_trainer_name && <DetailRow label="Assigned YBS Trainer" value={selected.assigned_ybs_trainer_name} />}
-            {selected.more_info_request && <DetailRow label="Info Requested" value={selected.more_info_request} />}
+            <DetailRow label="Registered Date" value={formatDate(selected.submitted_at || selected.created_at)} />
+            <DetailRow
+              label="Status"
+              value={
+                <Badge className={cn(STATUS_STYLE[selected.status] || STATUS_STYLE.pending, 'capitalize')}>
+                  {selected.status.replace(/_/g, ' ')}
+                </Badge>
+              }
+            />
+            {selected.more_info_request && <DetailRow label="Information Requested" value={selected.more_info_request} />}
             {selected.more_info_response && <DetailRow label="Client Response" value={selected.more_info_response} />}
             {selected.rejection_reason && <DetailRow label="Rejection Reason" value={selected.rejection_reason} />}
 
             {action === 'approve' && (
               <div className="pt-2 border-t border-border space-y-3">
-                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">Workspace Assignment</p>
-                <Select label="Select Workspace *" value={wsChoice} onChange={(e) => setWsChoice(e.target.value)}>
+                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Select Target Brand Workspace *
+                </p>
+                <Select label="Workspace *" value={wsChoice} onChange={(e) => setWsChoice(e.target.value)}>
                   <option value="">Select workspace…</option>
-                  {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {workspaces.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
                 </Select>
-                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider pt-1">YBS Trainer Assignment</p>
-                <Select label="Select YBS Trainer (optional)" value={trainerChoice} onChange={(e) => setTrainerChoice(e.target.value)}>
-                  <option value="">No trainer assigned</option>
-                  {trainers.map((t) => <option key={t.id} value={t.id}>{t.full_name || t.email}</option>)}
+                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider pt-1">
+                  Assign YBS Coach (Optional)
+                </p>
+                <Select
+                  label="YBS Coach"
+                  value={trainerChoice}
+                  onChange={(e) => setTrainerChoice(e.target.value)}
+                >
+                  <option value="">No internal coach assigned yet</option>
+                  {trainers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.full_name || t.email} ({t.phone || 'No phone'})
+                    </option>
+                  ))}
                 </Select>
               </div>
             )}
+
             {action === 'reject' && (
-              <TextArea label="Rejection reason (optional)" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason shared with the client…" />
+              <TextArea
+                label="Rejection reason (optional)"
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Reason shared with the client…"
+              />
             )}
+
             {action === 'moreinfo' && (
-              <TextArea label="Information requested" rows={3} value={moreInfo} onChange={(e) => setMoreInfo(e.target.value)} placeholder="What additional info do you need?" />
+              <TextArea
+                label="Information requested *"
+                rows={3}
+                value={moreInfo}
+                onChange={(e) => setMoreInfo(e.target.value)}
+                placeholder="What additional information or health documentation do you need?"
+              />
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => { setAction(null); setErr(''); setConfirmOpen(false); }}>Cancel</Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setAction(null);
+                  setErr('');
+                  setConfirmOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
               {action && (
-                <Button onClick={() => setConfirmOpen(true)} disabled={action === 'moreinfo' && !moreInfo}>
+                <Button onClick={() => setConfirmOpen(true)} disabled={action === 'moreinfo' && !moreInfo.trim()}>
                   {actionLabel(action)}
                 </Button>
               )}
-              {!action && (selected.status !== 'approved' && selected.status !== 'rejected') && (
+              {!action && selected.status !== 'approved' && selected.status !== 'rejected' && (
                 <>
-                  <Button variant="destructive" onClick={() => openAction(selected, 'reject')}><X className="w-4 h-4 mr-1" />Reject</Button>
-                  <Button variant="secondary" onClick={() => openAction(selected, 'moreinfo')}><MessageSquare className="w-4 h-4 mr-1" />Request Info</Button>
-                  <Button onClick={() => openAction(selected, 'approve')}><Check className="w-4 h-4 mr-1" />Approve</Button>
+                  <Button variant="destructive" onClick={() => openAction(selected, 'reject')}>
+                    <X className="w-4 h-4 mr-1" />
+                    Reject
+                  </Button>
+                  <Button variant="secondary" onClick={() => openAction(selected, 'moreinfo')}>
+                    <MessageSquare className="w-4 h-4 mr-1" />
+                    Request Info
+                  </Button>
+                  <Button onClick={() => openAction(selected, 'approve')}>
+                    <Check className="w-4 h-4 mr-1" />
+                    Approve
+                  </Button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Confirmation dialog for irreversible actions */}
+          {/* Confirmation dialog */}
           {confirmOpen && (
             <div className="absolute inset-0 bg-background/95 flex items-center justify-center p-6 rounded-2xl">
               <div className="text-center max-w-sm">
                 <p className="text-[15px] font-display font-semibold mb-2">Confirm {actionLabel(action)}</p>
                 <p className="text-[13px] text-muted-foreground mb-5">
                   {action === 'approve'
-                    ? `Assign ${selected.applicant_name} to ${workspaces.find((w) => w.id === wsChoice)?.name || 'the selected workspace'}?`
-                    : `Are you sure you want to ${action === 'reject' ? 'reject' : 'request more info from'} ${selected.applicant_name}?`}
+                    ? `Assign ${selected.applicant_name} to "${
+                        workspaces.find((w) => w.id === wsChoice)?.name || 'the selected workspace'
+                      }" and activate account?`
+                    : `Are you sure you want to ${action === 'reject' ? 'reject' : 'request more info from'} ${
+                        selected.applicant_name
+                      }?`}
                 </p>
                 <div className="flex justify-center gap-2">
-                  <Button variant="ghost" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                  <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
+                    Cancel
+                  </Button>
                   <Button onClick={runAction} disabled={busy}>
-                    {busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing…</> : 'Confirm'}
+                    {busy ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing…
+                      </>
+                    ) : (
+                      'Confirm'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -260,7 +454,15 @@ export default function PendingApplications() {
   );
 }
 
-function actionLabel(a) { return a === 'approve' ? 'Approve Client' : a === 'reject' ? 'Reject Application' : a === 'moreinfo' ? 'Request More Info' : ''; }
+function actionLabel(a) {
+  return a === 'approve'
+    ? 'Approve Client'
+    : a === 'reject'
+    ? 'Reject Application'
+    : a === 'moreinfo'
+    ? 'Request More Info'
+    : '';
+}
 
 function DetailRow({ label, value }) {
   return (

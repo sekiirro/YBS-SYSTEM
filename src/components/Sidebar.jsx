@@ -18,7 +18,7 @@ const SECTIONS = {
     ]},
     { label: 'Platform', items: [
       { label: 'Workspaces', path: '/admin/workspaces', icon: Building2, perm: 'workspaces.view' },
-      { label: 'Pending Clients', path: '/admin/applications', icon: ClipboardCheck, perm: 'applications.view' },
+      { label: 'Pending Approvals', path: '/admin/applications', icon: ClipboardCheck, perm: 'applications.view' },
     ]},
     { label: 'Clients', items: [
       { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
@@ -66,13 +66,17 @@ const SECTIONS = {
       { label: 'Dashboard', path: '/coach/dashboard', icon: LayoutDashboard, perm: null },
     ]},
     { label: 'Clients', items: [
-      { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
+      { label: 'My Clients', path: '/clients', icon: Users, perm: 'clients.view' },
       { label: 'Assessments', path: '/assessments', icon: ClipboardList, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [
       { label: 'Nutrition Plans', path: '/nutrition', icon: Apple, perm: 'nutrition.view' },
       { label: 'Workout Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
+      { label: 'Exercises', path: '/exercises', icon: Dumbbell, perm: null },
+    ]},
+    { label: 'Administration', items: [
+      { label: 'Notifications', path: '/notifications', icon: Bell, perm: null },
     ]},
   ],
 };

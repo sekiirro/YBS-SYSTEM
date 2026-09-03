@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/utils/supabase';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Button } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
@@ -20,8 +19,19 @@ export default function Metrics() {
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const data = await db.entities.MetricEntry.list('-entry_date', 200);
-      setMetrics(data);
+      const { data, error } = await supabase
+        .from('metrics')
+        .select('*, clients(full_name, client_code)')
+        .order('entry_date', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      const formatted = (data || []).map((m) => ({
+        ...m,
+        client_name: m.client_name || m.clients?.full_name || 'Client',
+      }));
+      setMetrics(formatted);
+    } catch (err) {
+      console.error('Error loading metrics:', err);
     } finally { setLoading(false); }
   };
 

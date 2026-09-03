@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { ExercisesService } from '@/services/exercises';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { Dumbbell, Plus, Search, ExternalLink, Edit, Archive } from 'lucide-react';
@@ -21,8 +20,10 @@ export default function Exercises() {
   const loadExercises = async () => {
     try {
       setLoading(true);
-      const data = await db.entities.Exercise.filter({ is_archived: false }, 'name', 500);
+      const data = await ExercisesService.list();
       setExercises(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
@@ -94,7 +95,7 @@ function CreateExerciseModal({ onClose, onCreated }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await db.entities.Exercise.create(form);
+      await ExercisesService.create(form);
       onCreated();
     } catch (err) { console.error(err); } finally { setSaving(false); }
   };

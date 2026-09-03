@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { SubscriptionsService } from '@/services/subscriptions';
 import { hasPermission, canViewFinancials } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button } from '@/components/ui';
 import { formatDate, formatCurrency, getSubscriptionStatusColor } from '@/lib/ybs-utils';
@@ -22,8 +21,10 @@ export default function Subscriptions() {
   const loadSubs = async () => {
     try {
       setLoading(true);
-      const data = await db.entities.Subscription.list('-start_date', 300);
+      const data = await SubscriptionsService.list();
       setSubs(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 

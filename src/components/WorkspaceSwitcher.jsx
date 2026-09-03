@@ -1,9 +1,9 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/utils/supabase';
+import { WorkspacesService } from '@/services/workspaces';
 import { getRoleCategory, getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Check, Building2 } from 'lucide-react';
@@ -11,7 +11,7 @@ import { ChevronDown, Check, Building2 } from 'lucide-react';
 // Workspace switcher — lists only workspaces the user is authorized to access.
 // Switching sets the active workspace context (persisted on the user) and navigates.
 export default function WorkspaceSwitcher({ collapsed }) {
-  const { user, checkUserAuth } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState([]);
@@ -29,7 +29,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
     let alive = true;
     (async () => {
       try {
-        const all = await db.entities.Workspace.list('-created_date', 100);
+        const all = await WorkspacesService.list();
         const mine = all.filter((w) => wsIds.includes(w.id));
         if (alive) { setWorkspaces(mine); setLoading(false); }
       } catch { if (alive) setLoading(false); }
@@ -46,8 +46,10 @@ export default function WorkspaceSwitcher({ collapsed }) {
     setOpen(false);
     if (wsId === activeId) return;
     try {
-      await db.auth.updateMe({ active_workspace_id: wsId });
-      await checkUserAuth();
+      if (user?.id) {
+        await supabase.from('profiles').update({ active_workspace_id: wsId }).eq('id', user.id);
+        if (refreshProfile) await refreshProfile();
+      }
     } catch (e) { /* ignore */ }
     const cat2 = getRoleCategory(user);
     if (cat2 === 'coach') navigate(`/coach/dashboard`);
@@ -66,6 +68,20 @@ export default function WorkspaceSwitcher({ collapsed }) {
   }
 
   if (loading || workspaces.length === 0) return null;
+
+  // Single workspace owner — display workspace name without switcher dropdown
+  if (workspaces.length === 1) {
+    return (
+      <div className={cn('px-2', collapsed && 'px-0')}>
+        <div className={cn('flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/40 border border-border', collapsed && 'justify-center')}>
+          <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-semibold text-primary">{active?.name?.[0] || 'W'}</span>
+          </div>
+          {!collapsed && <span className="text-[12px] font-medium truncate flex-1">{active?.name || 'Workspace'}</span>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative px-2">

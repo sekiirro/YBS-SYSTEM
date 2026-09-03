@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { PackagesService } from '@/services/packages';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatCurrency, calculateSubscriptionEnd } from '@/lib/ybs-utils';
@@ -21,8 +20,10 @@ export default function Packages() {
   const loadPackages = async () => {
     try {
       setLoading(true);
-      const data = await db.entities.Package.list('-created_date', 100);
+      const data = await PackagesService.list();
       setPackages(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
@@ -96,7 +97,7 @@ function CreatePackageModal({ onClose, onCreated }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await db.entities.Package.create({
+      await PackagesService.create({
         ...form,
         price: parseFloat(form.price) || 0,
         duration: parseInt(form.duration) || 1,

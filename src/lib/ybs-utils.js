@@ -59,11 +59,11 @@ export function getFormStatusColor(status) {
   return map[status] || map.pending;
 }
 
-export function formatCurrency(amount) {
+export function formatCurrency(amount, currency = 'EGP') {
   if (amount == null) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currency,
     minimumFractionDigits: 0,
   }).format(amount);
 }

@@ -1,9 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from "react";
-
 import { useAuth } from "@/lib/AuthContext";
 import { getAccountStatus } from "@/lib/ybs-auth";
+import { supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { TextArea } from "@/components/ui";
 import { Clock, CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
@@ -20,44 +18,96 @@ export default function PendingApproval() {
   const status = getAccountStatus(user);
 
   useEffect(() => {
-    (async () => {
-      if (!user) return;
+    let active = true;
+    async function loadApp() {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
       try {
-        // Client applications take precedence; fall back to coach applications.
-        const clientApps = await db.entities.ClientApplication.filter({ user_id: user.id }, "-created_date", 5);
-        if (clientApps[0]) { setApplication({ ...clientApps[0], kind: "client" }); }
-        else {
-          const coachApps = await db.entities.CoachApplication.filter({ user_id: user.id }, "-created_date", 5);
-          if (coachApps[0]) setApplication({ ...coachApps[0], kind: "coach" });
+        const { data, error } = await supabase
+          .from("client_applications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (active && data && data[0]) {
+          setApplication(data[0]);
         }
-      } catch {}
-      finally { setLoading(false); }
-    })();
+      } catch (err) {
+        console.warn("Error fetching application:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    loadApp();
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const submitMoreInfo = async () => {
-    if (!application) return;
-    setSubmitting(true); setMsg("");
+    if (!application?.id || !response.trim()) return;
+    setSubmitting(true);
+    setMsg("");
     try {
-      const entity = application.kind === "client" ? db.entities.ClientApplication : db.entities.CoachApplication;
-      await entity.update(application.id, {
-        more_info_response: response,
-        more_info_responded_at: new Date().toISOString(),
-        status: "under_review",
-      });
-      setMsg("Your response has been submitted. The YBS team will review it shortly.");
+      const { error } = await supabase
+        .from("client_applications")
+        .update({
+          more_info_response: response.trim(),
+          more_info_responded_at: new Date().toISOString(),
+          status: "under_review",
+        })
+        .eq("id", application.id);
+
+      if (error) throw error;
+
+      setMsg("Your response has been submitted. The YBS platform team will review it shortly.");
       setResponse("");
-    } catch (err) { setMsg(err.message || "Failed to submit"); }
-    finally { setSubmitting(false); }
+      setApplication((prev) => ({ ...prev, status: "under_review", more_info_response: response }));
+    } catch (err) {
+      setMsg(err.message || "Failed to submit response");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const config = {
-    pending_approval: { icon: Clock, title: "Application Under Review", color: "text-warning", desc: "Your account is pending approval by the YBS team. You'll be notified once approved." },
-    suspended: { icon: AlertCircle, title: "Account Suspended", color: "text-destructive", desc: "Your account has been suspended. Please contact YBS support." },
-    rejected: { icon: XCircle, title: "Application Rejected", color: "text-destructive", desc: application?.rejection_reason ? `Your application was not approved: ${application.rejection_reason}` : "Your application was not approved at this time." },
-    deactivated: { icon: XCircle, title: "Account Deactivated", color: "text-destructive", desc: "Your account has been deactivated. Please contact YBS support." },
-    unknown: { icon: Clock, title: "Pending", color: "text-warning", desc: "Your access is pending." },
+    pending_approval: {
+      icon: Clock,
+      title: "Application Under Review",
+      color: "text-warning",
+      desc: "Your account is pending approval by the YBS team. You will be notified once your workspace and coaching plan are assigned.",
+    },
+    suspended: {
+      icon: AlertCircle,
+      title: "Account Suspended",
+      color: "text-destructive",
+      desc: "Your account has been suspended. Please contact YBS management.",
+    },
+    rejected: {
+      icon: XCircle,
+      title: "Application Rejected",
+      color: "text-destructive",
+      desc: application?.rejection_reason
+        ? `Your application was not approved: ${application.rejection_reason}`
+        : "Your application was not approved at this time.",
+    },
+    disabled: {
+      icon: XCircle,
+      title: "Account Disabled",
+      color: "text-destructive",
+      desc: "Your account is currently disabled. Please contact YBS management.",
+    },
+    unknown: {
+      icon: Clock,
+      title: "Access Pending",
+      color: "text-warning",
+      desc: "Your access is currently being provisioned.",
+    },
   };
+
   const c = config[status] || config.unknown;
   const Icon = c.icon;
   const needsMoreInfo = application?.status === "more_info_required";
@@ -69,31 +119,54 @@ export default function PendingApproval() {
           <Icon className={`w-7 h-7 ${c.color}`} />
         </div>
         <p className="text-[14px] text-muted-foreground max-w-sm">{c.desc}</p>
+
         {application && (
           <div className="w-full mt-5 p-4 rounded-md bg-secondary/40 border border-border text-left">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{application.kind === "client" ? "Client Application" : "Coach Application"}</span>
-              <span className={`text-[11px] font-medium capitalize ${c.color}`}>{application.status.replace(/_/g, " ")}</span>
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Registration Status</span>
+              <span className={`text-[11px] font-medium capitalize ${c.color}`}>
+                {application.status.replace(/_/g, " ")}
+              </span>
             </div>
             <p className="text-[13px] font-medium mt-1">{application.applicant_name}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {new Date(application.submitted_at || application.created_date).toLocaleDateString()}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Submitted on {new Date(application.submitted_at || application.created_at).toLocaleDateString()}
+            </p>
           </div>
         )}
+
         {needsMoreInfo && (
           <div className="w-full mt-4 text-left">
             <div className="p-3 rounded-md bg-warning/10 border border-warning/20 mb-3">
-              <p className="text-[11px] uppercase tracking-wider text-warning mb-1">More information requested</p>
+              <p className="text-[11px] uppercase tracking-wider text-warning mb-1">Additional Information Requested</p>
               <p className="text-[13px] text-foreground">{application.more_info_request}</p>
             </div>
             <label className="text-[12px] font-medium text-muted-foreground">Your Response</label>
-            <TextArea rows={3} value={response} onChange={(e) => setResponse(e.target.value)} placeholder="Provide the requested information…" className="mt-1.5" />
-            <Button className="w-full mt-3" onClick={submitMoreInfo} disabled={submitting || !response}>
-              {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : "Submit Response"}
+            <TextArea
+              rows={3}
+              value={response}
+              onChange={(e) => setResponse(e.target.value)}
+              placeholder="Provide the requested information…"
+              className="mt-1.5"
+            />
+            <Button className="w-full mt-3" onClick={submitMoreInfo} disabled={submitting || !response.trim()}>
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Response"
+              )}
             </Button>
           </div>
         )}
+
         {msg && <p className="text-[12px] text-success mt-3">{msg}</p>}
-        <button onClick={() => logout()} className="mt-6 text-[12px] text-muted-foreground hover:text-foreground">Sign out</button>
+
+        <button onClick={() => logout()} className="mt-6 text-[12px] text-muted-foreground hover:text-foreground">
+          Sign out
+        </button>
       </div>
     </AuthLayout>
   );

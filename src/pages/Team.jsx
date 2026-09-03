@@ -1,8 +1,9 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/utils/supabase';
+import { TeamService } from '@/services/team';
+import { ClientsService } from '@/services/clients';
 import { hasPermission, canManageTeam } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select } from '@/components/ui';
 import { getInitials } from '@/lib/ybs-utils';
@@ -22,11 +23,13 @@ export default function Team() {
     try {
       setLoading(true);
       const [userData, clientData] = await Promise.all([
-        db.entities.User.list(),
-        db.entities.Client.list(500),
+        TeamService.list(user?.active_workspace_id),
+        ClientsService.list(),
       ]);
       setUsers(userData);
       setClients(clientData);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
@@ -109,7 +112,13 @@ function InviteModal({ onClose, onInvited }) {
     try {
       setSaving(true);
       setError('');
-      await db.users.inviteUser(email, role);
+      const { error: inviteErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          data: { role, platform_role: role === 'owner' ? 'platform_owner' : 'platform_trainer' },
+        },
+      });
+      if (inviteErr) throw inviteErr;
       onInvited();
     } catch (err) {
       setError(err.message || 'Failed to invite user');

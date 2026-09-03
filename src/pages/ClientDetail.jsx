@@ -1,9 +1,14 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
+import { ClientsService } from '@/services/clients';
+import { SubscriptionsService } from '@/services/subscriptions';
+import { AssessmentsService } from '@/services/assessments';
+import { MetricsService } from '@/services/metrics';
+import { NutritionService } from '@/services/nutrition';
+import { WorkoutsService } from '@/services/workouts';
+import { AuditService } from '@/services/audit';
 import { hasPermission } from '@/lib/permissions';
 import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate, getSubscriptionStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
@@ -43,16 +48,15 @@ export default function ClientDetail() {
   const loadClient = async () => {
     try {
       setLoading(true);
-      const c = await db.entities.Client.get(id);
+      const c = await ClientsService.getById(id);
       setClient(c);
 
-      const [tl, subs, frm, mtr] = await Promise.all([
-        db.entities.TimelineEvent.filter({ client_id: id }, '-created_date', 50),
-        db.entities.Subscription.filter({ client_id: id }, '-start_date', 50),
-        db.entities.Assessment.filter({ assigned_client_id: id, is_template: false }, '-created_date', 50),
-        db.entities.MetricEntry.filter({ client_id: id }, '-entry_date', 50),
+      const [subs, frm, mtr] = await Promise.all([
+        SubscriptionsService.list({ client_id: id }).catch(() => []),
+        AssessmentsService.list({ client_id: id }).catch(() => []),
+        MetricsService.listByClient(id).catch(() => []),
       ]);
-      setTimeline(tl);
+      setTimeline([]);
       setSubscriptions(subs);
       setForms(frm);
       setMetrics(mtr);
@@ -289,8 +293,9 @@ function NutritionTab({ clientId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.entities.NutritionPlan.filter({ client_id: clientId, is_archived: false }, '-created_date', 10)
+    NutritionService.list({ client_id: clientId })
       .then(setPlans)
+      .catch(() => setPlans([]))
       .finally(() => setLoading(false));
   }, [clientId]);
 
@@ -311,7 +316,7 @@ function NutritionTab({ clientId }) {
                 {p.daily_carbs != null && <span>Carbs: {p.daily_carbs}g</span>}
                 {p.daily_fat != null && <span>Fat: {p.daily_fat}g</span>}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">{p.meals?.length || 0} meals</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{p.nutrition_meals?.length || p.meals?.length || 0} meals</p>
             </div>
           ))}
         </div>
@@ -325,8 +330,9 @@ function WorkoutTab({ clientId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.entities.WorkoutPlan.filter({ client_id: clientId, is_archived: false }, '-created_date', 10)
+    WorkoutsService.list({ client_id: clientId })
       .then(setPlans)
+      .catch(() => setPlans([]))
       .finally(() => setLoading(false));
   }, [clientId]);
 
@@ -380,7 +386,7 @@ function EditClientModal({ client, onClose, onSaved }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await db.entities.Client.update(client.id, form);
+      await ClientsService.update(client.id, form);
       onSaved();
     } catch (err) {
       console.error(err);
@@ -441,19 +447,12 @@ function AddMetricModal({ clientId, clientName, trainerId, onClose, onSaved }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = { ...form, client_id: clientId, client_name: clientName, trainer_id: trainerId };
+      const data = { ...form, client_id: clientId };
       Object.keys(data).forEach((k) => {
         if (data[k] === '' || data[k] === null) delete data[k];
         if (typeof data[k] === 'string' && k !== 'entry_date' && k !== 'notes' && data[k] !== '') data[k] = parseFloat(data[k]);
       });
-      await db.entities.MetricEntry.create(data);
-      await db.entities.TimelineEvent.create({
-        client_id: clientId,
-        client_name: clientName,
-        event_type: 'metrics_submitted',
-        title: 'New metrics entry recorded',
-        actor_id: trainerId,
-      });
+      await MetricsService.create(data);
       onSaved();
     } catch (err) {
       console.error(err);

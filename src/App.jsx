@@ -1,10 +1,11 @@
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import RoleGuard from '@/components/RoleGuard';
@@ -40,19 +41,14 @@ import PendingApplications from '@/pages/PendingApplications';
 import PortalDashboard from '@/pages/PortalDashboard';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth } = useAuth();
 
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
       </div>
     );
-  }
-
-  if (authError) {
-    if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
-    if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
   return (
@@ -94,7 +90,7 @@ const AuthenticatedApp = () => {
             <Route path="/foods" element={<Foods />} />
             <Route path="/workouts" element={<WorkoutPlans />} />
             <Route path="/exercises" element={<Exercises />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions" element={<Navigate to="/clients" replace />} />
             <Route path="/notifications" element={<Notifications />} />
           </Route>
         </Route>
@@ -102,7 +98,15 @@ const AuthenticatedApp = () => {
         {/* Client portal */}
         <Route element={<PortalLayout />}>
           <Route element={<RoleGuard allow={['client', 'admin']} />}>
-            <Route path="/portal/dashboard" element={<PortalDashboard />} />
+            <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
+            <Route path="/portal/dashboard" element={<PortalDashboard view="dashboard" />} />
+            <Route path="/portal/workout" element={<PortalDashboard view="workout" />} />
+            <Route path="/portal/nutrition" element={<PortalDashboard view="nutrition" />} />
+            <Route path="/portal/progress" element={<PortalDashboard view="progress" />} />
+            <Route path="/portal/assessments" element={<PortalDashboard view="assessments" />} />
+            <Route path="/portal/subscription" element={<PortalDashboard view="subscription" />} />
+            <Route path="/portal/notifications" element={<PortalDashboard view="notifications" />} />
+            <Route path="/portal/profile" element={<PortalDashboard view="profile" />} />
           </Route>
         </Route>
       </Route>
@@ -114,16 +118,18 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
-  )
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
 }
 
-export default App
+export default App;

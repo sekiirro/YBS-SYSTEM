@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { NutritionService } from '@/services/nutrition';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button } from '@/components/ui';
 import { Apple, Search, Plus } from 'lucide-react';
@@ -20,10 +19,10 @@ export default function NutritionPlans() {
   const loadPlans = async () => {
     try {
       setLoading(true);
-      const filter = view === 'template' ? { is_template: true } : { is_template: false, is_archived: false };
-      if (isTrainer && view === 'client') filter.trainer_id = user.id;
-      const data = await db.entities.NutritionPlan.filter(filter, '-created_date', 200);
+      const data = await NutritionService.list({ is_template: view === 'template' });
       setPlans(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 

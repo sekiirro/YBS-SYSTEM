@@ -1,15 +1,21 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
-import { hasPermission, canViewFinancials } from '@/lib/permissions';
+import { supabase } from '@/utils/supabase';
+import { ClientsService } from '@/services/clients';
+import { AssessmentsService } from '@/services/assessments';
+import { SubscriptionsService } from '@/services/subscriptions';
+import { PackagesService } from '@/services/packages';
+import { WorkspacesService } from '@/services/workspaces';
+import { AuditService } from '@/services/audit';
+import { hasPermission, canViewFinancials, isPlatformAdmin } from '@/lib/permissions';
 import { PageHeader, StatCard, LoadingState, Badge, Button } from '@/components/ui';
 import { formatDate, formatCurrency, getSubscriptionStatusColor, daysUntil } from '@/lib/ybs-utils';
 import {
   Users, UserCheck, AlertTriangle, CalendarCheck, FileText, FileWarning,
-  FileClock, DollarSign, TrendingUp, Activity, ArrowRight, CreditCard
+  FileClock, DollarSign, TrendingUp, Activity, ArrowRight, CreditCard,
+  Building2, ClipboardCheck, UsersRound, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,27 +27,52 @@ export default function Dashboard() {
   const [expiringClients, setExpiringClients] = useState([]);
   const [pendingForms, setPendingForms] = useState([]);
   const [revenueData, setRevenueData] = useState(null);
+  const [adminStats, setAdminStats] = useState({ activeWorkspaces: 0, pendingApprovals: 0, ybsTrainers: 0 });
+
+  const isAdmin = isPlatformAdmin(user);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [user]);
 
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const isTrainer = user?.role === 'trainer';
-      const clientFilter = isTrainer ? { assigned_trainer_id: user.id } : {};
+      const isTrainer = user?.role === 'trainer' || user?.platform_role === 'platform_trainer';
+      const clientFilter = isTrainer ? { assigned_ybs_coach_id: user.id } : {};
 
-      const [clients, forms, subscriptions, timeline, packages] = await Promise.all([
-        db.entities.Client.filter(clientFilter, '-created_date', 200),
-        db.entities.Assessment.filter(
-          isTrainer ? { trainer_id: user.id, is_template: false } : { is_template: false },
-          '-created_date', 100
-        ),
-        db.entities.Subscription.filter({}, '-created_date', 200),
-        db.entities.TimelineEvent.list('-created_date', 10),
-        db.entities.Package.filter({ is_active: true }),
-      ]);
+      const promises = [
+        ClientsService.list(clientFilter),
+        AssessmentsService.list(isTrainer ? { assigned_ybs_coach_id: user.id } : {}),
+        SubscriptionsService.list(),
+        AuditService.list(),
+        PackagesService.list(),
+      ];
+
+      if (isAdmin) {
+        promises.push(WorkspacesService.list().catch(() => []));
+        promises.push(supabase.from('client_applications').select('*').eq('status', 'pending').then((r) => r.data || []));
+        promises.push(supabase.from('profiles').select('*').eq('platform_role', 'platform_trainer').then((r) => r.data || []));
+      }
+
+      const results = await Promise.all(promises);
+      const clients = results[0] || [];
+      const forms = results[1] || [];
+      const subscriptions = results[2] || [];
+      const timeline = results[3] || [];
+      const packages = results[4] || [];
+
+      if (isAdmin) {
+        const wsList = results[5] || [];
+        const pendingApps = results[6] || [];
+        const allUsers = results[7] || [];
+        const trainerUsers = allUsers.filter(u => u.platform_role === 'platform_trainer' || u.ybs_coach === true);
+        setAdminStats({
+          activeWorkspaces: wsList.filter(w => w.status === 'active').length,
+          pendingApprovals: pendingApps.length,
+          ybsTrainers: trainerUsers.length,
+        });
+      }
 
       const today = new Date().toISOString().split('T')[0];
 
@@ -109,19 +140,42 @@ export default function Dashboard() {
   return (
     <div>
       <PageHeader
-        title="Dashboard"
-        description={user?.role === 'trainer' ? 'Your assigned client portfolio overview' : 'Organization overview and key metrics'}
+        title={isAdmin ? "Platform Owner Dashboard" : "Dashboard"}
+        description={isAdmin ? "YBS Platform overview, workspaces, pending approvals, and operational health" : user?.role === 'trainer' ? 'Your assigned client portfolio overview' : 'Workspace overview and key metrics'}
       />
+
+      {/* Operational Alert banner for admin */}
+      {isAdmin && adminStats.pendingApprovals > 0 && (
+        <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{adminStats.pendingApprovals} Client Application{adminStats.pendingApprovals > 1 ? 's' : ''} Awaiting Review</p>
+              <p className="text-xs text-muted-foreground">New clients have self-registered and require workspace assignment and trainer allocation.</p>
+            </div>
+          </div>
+          <Link to="/admin/applications">
+            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-black font-medium">Review Approvals</Button>
+          </Link>
+        </div>
+      )}
 
       {/* Top stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 mb-6">
-        <StatCard label="Active Clients" value={stats.activeClients} sublabel={`${stats.totalClients || 0} total`} icon={UserCheck} accent />
+        {isAdmin && (
+          <>
+            <StatCard label="Active Workspaces" value={adminStats.activeWorkspaces} icon={Building2} accent />
+            <StatCard label="Pending Approvals" value={adminStats.pendingApprovals} icon={ClipboardCheck} accent={adminStats.pendingApprovals > 0} />
+          </>
+        )}
+        <StatCard label="Active Clients" value={stats.activeClients} sublabel={`${stats.totalClients || 0} total`} icon={UserCheck} accent={!isAdmin} />
         <StatCard label="Expired" value={stats.expiredClients} icon={Users} />
         <StatCard label="Expiring Soon" value={stats.expiringSoon} sublabel="within 7 days" icon={AlertTriangle} />
+        {isAdmin && (
+          <StatCard label="YBS Trainers" value={adminStats.ybsTrainers} icon={UsersRound} />
+        )}
         <StatCard label="Today's Check-ins" value={stats.todayCheckins} icon={CalendarCheck} />
-        <StatCard label="Pending Forms" value={stats.pendingForms} icon={FileText} />
-        <StatCard label="Overdue Forms" value={stats.overdueForms} icon={FileWarning} />
-        <StatCard label="Unreviewed" value={stats.unreviewedForms} icon={FileClock} />
+        <StatCard label="Unreviewed Forms" value={stats.unreviewedForms} icon={FileClock} />
         {canViewFinancials(user) && (
           <StatCard label="Total Revenue" value={formatCurrency(revenueData?.totalRevenue || 0)} icon={DollarSign} accent />
         )}

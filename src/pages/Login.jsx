@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
+import { supabase } from "@/utils/supabase";
+import { normalizePhone } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,19 +20,63 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       const id = identifier.trim();
       let email = id;
-      // Phone-first: resolve phone -> email via backend, unless it's already an email.
+
+      // Phone-first login: resolve phone -> authentication email via Supabase RPC
       if (id && !id.includes("@")) {
-        const res = await db.functions.invoke("phoneLogin", { identifier: id });
-        email = res.data.email;
+        const normalized = normalizePhone(id);
+        const { data: res, error: rpcErr } = await supabase.rpc("resolve_phone_identifier", {
+          p_phone: normalized,
+        });
+
+        if (rpcErr) {
+          console.error("Phone resolution error:", rpcErr);
+          throw new Error("Unable to verify phone number. Please try again or use email.");
+        }
+
+        if (!res || !res.found) {
+          throw new Error("No account found with this phone number. Please check or create a client account.");
+        }
+
+        const status = res.account_status;
+        if (status === "pending_approval") {
+          throw new Error("Your account is currently awaiting approval by the YBS team. You will be notified once reviewed.");
+        } else if (status === "suspended" || status === "disabled") {
+          throw new Error("This account has been suspended. Please contact YBS management.");
+        } else if (status === "rejected") {
+          throw new Error("Your registration application was not approved. Please contact YBS.");
+        }
+
+        if (!res.email) {
+          throw new Error("Account configuration error. Please sign in with your email address.");
+        }
+
+        email = res.email;
       }
-      await db.auth.loginViaEmailPassword(email, password);
-      window.location.href = returnTo;
+
+      // Supabase Auth Email/Password Sign-In
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authErr) {
+        if (authErr.message.includes("Invalid login credentials")) {
+          throw new Error("Invalid phone/email or password. Please try again.");
+        } else if (authErr.message.includes("Email not confirmed")) {
+          throw new Error("Please confirm your email address before signing in.");
+        }
+        throw new Error(authErr.message);
+      }
+
+      if (authData?.session) {
+        window.location.href = returnTo || "/";
+      }
     } catch (err) {
-      const msg = err?.response?.data?.error || err?.message || "Invalid phone/email or password";
-      setError(msg);
+      setError(err.message || "An unexpected error occurred during sign in.");
     } finally {
       setLoading(false);
     }
@@ -63,15 +106,17 @@ export default function Login() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="identifier" className="text-label">Phone Number</Label>
+          <Label htmlFor="identifier" className="text-label">
+            Phone Number (or Email)
+          </Label>
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               id="identifier"
-              type="tel"
-              autoComplete="tel"
+              type="text"
+              autoComplete="username"
               autoFocus
-              placeholder="+20 10x xxx xxxx"
+              placeholder="+20 10x xxx xxxx or email@example.com"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="pl-10 h-12"
@@ -81,7 +126,9 @@ export default function Login() {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-label">Password</Label>
+            <Label htmlFor="password" className="text-label">
+              Password
+            </Label>
             <Link to="/forgot-password" className="text-xs text-primary hover:underline">
               Forgot password?
             </Link>

@@ -1,8 +1,7 @@
-const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { AssessmentsService } from '@/services/assessments';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button } from '@/components/ui';
 import { formatDate, getFormStatusColor } from '@/lib/ybs-utils';
@@ -22,9 +21,11 @@ export default function Assessments() {
   const loadForms = async () => {
     try {
       setLoading(true);
-      const filter = isTrainer ? { trainer_id: user.id, is_template: false } : { is_template: false };
-      const data = await db.entities.Assessment.filter(filter, '-created_date', 200);
+      const filter = isTrainer ? { assigned_ybs_coach_id: user.id } : {};
+      const data = await AssessmentsService.list(filter);
       setForms(data);
+    } catch (err) {
+      console.error(err);
     } finally { setLoading(false); }
   };
 
