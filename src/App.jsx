@@ -2,7 +2,7 @@ import React from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useParams } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -15,6 +15,7 @@ import PortalLayout from '@/components/PortalLayout';
 import HomeRedirect from '@/pages/HomeRedirect';
 import Login from '@/pages/Login';
 import ClientSignup from '@/pages/ClientSignup';
+import JoinWorkspace from '@/pages/JoinWorkspace';
 import Activate from '@/pages/Activate';
 import PendingApproval from '@/pages/PendingApproval';
 import Forbidden from '@/pages/Forbidden';
@@ -33,6 +34,7 @@ import Metrics from '@/pages/Metrics';
 import NutritionPlans from '@/pages/NutritionPlans';
 import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
 import WorkoutPlans from '@/pages/WorkoutPlans';
+import WorkoutPlanBuilder from '@/pages/WorkoutPlanBuilder';
 import Team from '@/pages/Team';
 import Notifications from '@/pages/Notifications';
 import AuditLogs from '@/pages/AuditLogs';
@@ -40,6 +42,20 @@ import Settings from '@/pages/Settings';
 import Workspaces from '@/pages/Workspaces';
 import PendingApplications from '@/pages/PendingApplications';
 import PortalDashboard from '@/pages/PortalDashboard';
+import { isPlatformAdmin } from '@/lib/ybs-auth';
+
+// Ensures the route only renders when the user actually belongs to the
+// requested workspace (or is the Platform Owner). UI-level safety net;
+// RLS on the underlying queries is the real isolation boundary.
+const WorkspaceRouteGuard = ({ children }) => {
+  const { workspaceId } = useParams();
+  const { user } = useAuth();
+  if (isPlatformAdmin(user)) return children;
+  const managed = user?.managed_workspace_ids || [];
+  const member = user?.workspace_ids || [];
+  if (managed.includes(workspaceId) || member.includes(workspaceId)) return children;
+  return <Forbidden />;
+};
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth } = useAuth();
@@ -57,6 +73,7 @@ const AuthenticatedApp = () => {
       {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<ClientSignup />} />
+      <Route path="/join/:token" element={<JoinWorkspace />} />
       <Route path="/activate" element={<Activate />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -74,6 +91,10 @@ const AuthenticatedApp = () => {
             <Route path="/admin/applications" element={<PendingApplications />} />
             <Route path="/audit" element={<AuditLogs />} />
             <Route path="/team" element={<Team />} />
+          </Route>
+
+          {/* Admin + workspace owner (workspace-scoped feature pages) */}
+          <Route element={<RoleGuard allow={['admin', 'workspace']} />}>
             <Route path="/settings" element={<Settings />} />
             <Route path="/packages" element={<Packages />} />
           </Route>
@@ -81,7 +102,14 @@ const AuthenticatedApp = () => {
           {/* Admin + workspace + coach */}
           <Route element={<RoleGuard allow={['admin', 'workspace', 'coach']} />}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/workspace/:workspaceId/dashboard" element={<Dashboard />} />
+            <Route
+              path="/workspace/:workspaceId/dashboard"
+              element={
+                <WorkspaceRouteGuard>
+                  <Dashboard />
+                </WorkspaceRouteGuard>
+              }
+            />
             <Route path="/coach/dashboard" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
@@ -93,6 +121,8 @@ const AuthenticatedApp = () => {
             <Route path="/nutrition/builder/:id" element={<NutritionPlanBuilder />} />
             <Route path="/foods" element={<Foods />} />
             <Route path="/workouts" element={<WorkoutPlans />} />
+            <Route path="/workouts/builder" element={<WorkoutPlanBuilder />} />
+            <Route path="/workouts/builder/:id" element={<WorkoutPlanBuilder />} />
             <Route path="/exercises" element={<Exercises />} />
             <Route path="/subscriptions" element={<Navigate to="/clients" replace />} />
             <Route path="/notifications" element={<Notifications />} />

@@ -44,9 +44,16 @@ export function StatCard({ label, value, sublabel, icon: Icon, trend, accent }) 
   );
 }
 
-export function Badge({ children, className }) {
+export function Badge({ children, variant = 'default', className = '' }) {
+  const variants = {
+    default: 'border-border bg-secondary/60 text-foreground',
+    outline: 'border-border text-foreground',
+    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    destructive: 'bg-red-500/10 text-red-400 border-red-500/20',
+  };
   return (
-    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border', className)}>
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border', variants[variant] || variants.default, className)}>
       {children}
     </span>
   );
@@ -78,7 +85,7 @@ export function LoadingState({ label }) {
   );
 }
 
-export function Input({ label, error, className, ...props }) {
+export function Input({ label = '', error = '', className = '', ...props }) {
   return (
     <div className="space-y-1.5">
       {label && <label className="text-[12px] font-medium text-muted-foreground">{label}</label>}
@@ -96,7 +103,7 @@ export function Input({ label, error, className, ...props }) {
   );
 }
 
-export function Select({ label, error, className, children, ...props }) {
+export function Select({ label = '', error = '', className = '', children = null, ...props }) {
   return (
     <div className="space-y-1.5">
       {label && <label className="text-[12px] font-medium text-muted-foreground">{label}</label>}
@@ -116,7 +123,7 @@ export function Select({ label, error, className, children, ...props }) {
   );
 }
 
-export function TextArea({ label, error, className, ...props }) {
+export function TextArea({ label = '', error = '', className = '', ...props }) {
   return (
     <div className="space-y-1.5">
       {label && <label className="text-[12px] font-medium text-muted-foreground">{label}</label>}
@@ -134,7 +141,7 @@ export function TextArea({ label, error, className, ...props }) {
   );
 }
 
-export function Modal({ open, onClose, title, children, size }) {
+export function Modal({ open, onClose, title, children, size = 'md' }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -150,9 +157,10 @@ export function Modal({ open, onClose, title, children, size }) {
   );
 }
 
-export function Button({ children, variant = 'default', size = 'default', className, ...props }) {
+export function Button({ children = null, variant = 'default', size = 'default', className = '', ...props }) {
   const variants = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
     secondary: 'bg-secondary text-foreground hover:bg-secondary/80 border border-border',
     outline: 'border border-border text-foreground hover:bg-secondary/50',
     ghost: 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',

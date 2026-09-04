@@ -92,7 +92,7 @@ export default function PendingApplications() {
 
   const runAction = async () => {
     setErr('');
-    if (action === 'approve' && !wsChoice) {
+    if (action === 'approve' && !selected.assigned_workspace_id && !wsChoice) {
       setErr('Please select a workspace for the client');
       return;
     }
@@ -100,9 +100,13 @@ export default function PendingApplications() {
 
     try {
       if (action === 'approve') {
+        // When the trainee registered through a workspace link, the
+        // workspace is already established on the application
+        // (assigned_workspace_id). Pass NULL so the RPC resolves it
+        // from the application context instead of an admin choice.
         const { data, error } = await supabase.rpc('approve_client_application', {
           p_application_id: selected.id,
-          p_workspace_id: wsChoice,
+          p_workspace_id: selected.assigned_workspace_id ? null : wsChoice,
           p_trainer_id: trainerChoice || null,
         });
         if (error) throw error;
@@ -138,6 +142,7 @@ export default function PendingApplications() {
   if (loading) return <LoadingState label="Loading client applications…" />;
 
   const pendingCount = apps.filter((a) => a.status === 'pending' || a.status === 'under_review').length;
+  const workspaceName = (id) => (id ? workspaces.find((w) => w.id === id)?.name || '—' : '—');
 
   return (
     <div>
@@ -187,7 +192,7 @@ export default function PendingApplications() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {['Applicant', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
+                  {['Applicant', 'Workspace / Brand', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -203,6 +208,12 @@ export default function PendingApplications() {
                     <td className="px-4 py-3">
                       <p className="text-[13px] font-medium">{a.applicant_name}</p>
                       <p className="text-[11px] text-muted-foreground">{a.applicant_email}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-[12px] font-medium">{workspaceName(a.assigned_workspace_id)}</p>
+                      {a.assigned_workspace_id && (
+                        <p className="text-[11px] text-muted-foreground">via registration link</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground font-mono">{a.applicant_phone}</td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">
@@ -267,6 +278,12 @@ export default function PendingApplications() {
                     {a.status.replace(/_/g, ' ')}
                   </Badge>
                 </div>
+                <div className="mt-1.5">
+                  <p className="text-[12px] text-muted-foreground">
+                    <strong className="text-foreground font-medium">{workspaceName(a.assigned_workspace_id)}</strong>
+                    {a.assigned_workspace_id ? ' — via registration link' : ''}
+                  </p>
+                </div>
                 <div className="flex gap-2 mt-3">
                   <Button
                     size="sm"
@@ -317,6 +334,17 @@ export default function PendingApplications() {
             <DetailRow label="Applicant" value={selected.applicant_name} />
             <DetailRow label="Email" value={selected.applicant_email} />
             <DetailRow label="Phone" value={selected.applicant_phone} />
+            <DetailRow
+              label="Workspace / Brand"
+              value={
+                <>
+                  {workspaceName(selected.assigned_workspace_id)}
+                  {selected.assigned_workspace_id && (
+                    <span className="text-[11px] text-muted-foreground ml-1">(via registration link)</span>
+                  )}
+                </>
+              }
+            />
             <DetailRow label="Registered Date" value={formatDate(selected.submitted_at || selected.created_at)} />
             <DetailRow
               label="Status"
@@ -332,17 +360,32 @@ export default function PendingApplications() {
 
             {action === 'approve' && (
               <div className="pt-2 border-t border-border space-y-3">
-                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Select Target Brand Workspace *
-                </p>
-                <Select label="Workspace *" value={wsChoice} onChange={(e) => setWsChoice(e.target.value)}>
-                  <option value="">Select workspace…</option>
-                  {workspaces.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </Select>
+                {selected.assigned_workspace_id ? (
+                  <div className="p-3 rounded-md bg-primary/5 border border-primary/15">
+                    <p className="text-[12px] font-medium text-foreground">
+                      <Check className="w-3.5 h-3.5 inline mr-1 text-success" />
+                      Workspace confirmed via registration link
+                    </p>
+                    <p className="text-[12px] text-muted-foreground mt-1">
+                      This trainee registered through <strong className="text-foreground">{workspaceName(selected.assigned_workspace_id)}</strong>'s
+                      public link. Approval will assign them to this workspace automatically — no selection needed.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+                      Select Target Brand Workspace *
+                    </p>
+                    <Select label="Workspace *" value={wsChoice} onChange={(e) => setWsChoice(e.target.value)}>
+                      <option value="">Select workspace…</option>
+                      {workspaces.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </>
+                )}
                 <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider pt-1">
                   Assign YBS Coach (Optional)
                 </p>
@@ -424,7 +467,9 @@ export default function PendingApplications() {
                 <p className="text-[13px] text-muted-foreground mb-5">
                   {action === 'approve'
                     ? `Assign ${selected.applicant_name} to "${
-                        workspaces.find((w) => w.id === wsChoice)?.name || 'the selected workspace'
+                        selected.assigned_workspace_id
+                          ? workspaceName(selected.assigned_workspace_id)
+                          : workspaces.find((w) => w.id === wsChoice)?.name || 'the selected workspace'
                       }" and activate account?`
                     : `Are you sure you want to ${action === 'reject' ? 'reject' : 'request more info from'} ${
                         selected.applicant_name

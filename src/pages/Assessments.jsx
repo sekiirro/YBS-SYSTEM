@@ -4,10 +4,11 @@ import { useAuth } from '@/lib/AuthContext';
 import { AssessmentsService, TemplatesService, QuestionsService } from '@/services/assessments';
 import { ClientsService } from '@/services/clients';
 import { hasPermission } from '@/lib/permissions';
-import { getActiveWorkspaceId } from '@/lib/ybs-auth';
+import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
+import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
 import { formatDate, getFormStatusColor } from '@/lib/ybs-utils';
-import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, Users, ChevronRight } from 'lucide-react';
+import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FormBuilder from '@/components/FormBuilder';
 
@@ -39,7 +40,16 @@ export default function Assessments() {
   // View response state
   const [viewingForm, setViewingForm] = useState(null);
 
-  const isTrainer = user?.platform_role === 'platform_owner' || user?.platform_role === 'platform_trainer'
+  // Template → Workspace assignment state (Platform Owner only)
+  const [assignWsOpen, setAssignWsOpen] = useState(false);
+  const [assignWsTemplate, setAssignWsTemplate] = useState(null);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [workspaceSelection, setWorkspaceSelection] = useState({});
+  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [assignWsError, setAssignWsError] = useState('');
+
+  const isAdmin = isPlatformAdmin(user);
+  const isTrainer = isPlatformAdmin(user) || user?.platform_role === 'platform_trainer'
     || (user?.managed_workspace_ids && user.managed_workspace_ids.length > 0);
 
   const loadData = useCallback(async () => {
@@ -175,6 +185,63 @@ export default function Assessments() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // ── Assign master template to workspaces (Platform Owner only) ──
+  const openAssignToWorkspaces = async (template) => {
+    setAssignWsError('');
+    setAssignWsTemplate(template);
+    setAssignWsOpen(true);
+    try {
+      const data = await WorkspacesService.list();
+      setWorkspaces((data || []).filter((w) => w.status === 'active'));
+      const selected = (template.assigned_workspace_ids || []).reduce((acc, id) => {
+        acc[id] = true;
+        return acc;
+      }, {});
+      setWorkspaceSelection(selected);
+    } catch (err) {
+      console.error(err);
+      setAssignWsError('Failed to load workspaces.');
+    }
+  };
+
+  const toggleWorkspaceAssignment = (wsId) => {
+    setWorkspaceSelection((prev) => ({ ...prev, [wsId]: !prev[wsId] }));
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!assignWsTemplate) return;
+    setSavingAssignment(true);
+    setAssignWsError('');
+    const original = (assignWsTemplate.assigned_workspace_ids || []);
+    const originalSet = new Set(original);
+    try {
+      const tasks = [];
+      for (const w of workspaces) {
+        const nowSelected = !!workspaceSelection[w.id];
+        if (nowSelected && !originalSet.has(w.id)) {
+          tasks.push(TemplatesService.assignToWorkspace(assignWsTemplate.id, w.id));
+        } else if (!nowSelected && originalSet.has(w.id)) {
+          tasks.push(TemplatesService.unassignFromWorkspace(assignWsTemplate.id, w.id));
+        }
+      }
+      await Promise.all(tasks);
+      setAssignWsOpen(false);
+      setAssignWsTemplate(null);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setAssignWsError(err.message || 'Failed to update workspace assignments.');
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const openAssignToWorkspacesClose = () => {
+    setAssignWsOpen(false);
+    setAssignWsTemplate(null);
+    setAssignWsError('');
   };
 
   // ── View responses ──
@@ -350,6 +417,16 @@ export default function Assessments() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    {t.workspace_id == null && isAdmin && (
+                      <Button variant="outline" size="sm" onClick={() => openAssignToWorkspaces(t)}>
+                        <Building2 className="w-3.5 h-3.5" /> Workspaces
+                        {(t.assigned_workspace_ids?.length || 0) > 0 && (
+                          <span className="ml-1 text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded">
+                            {t.assigned_workspace_ids.length}
+                          </span>
+                        )}
+                      </Button>
+                    )}
                     {t.status === 'published' && hasPermission(user, 'forms.assign') && (
                       <Button variant="outline" size="sm" onClick={() => openAssign(t)}>
                         <Send className="w-3.5 h-3.5" /> Assign
@@ -451,6 +528,71 @@ export default function Assessments() {
             <Button onClick={handleAssign} disabled={assigning || !selectedClient}>
               <Send className="w-3.5 h-3.5" />
               {assigning ? 'Assigning…' : 'Assign Form'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Assign Master Template to Workspaces Modal ── */}
+      <Modal open={assignWsOpen} onClose={openAssignToWorkspacesClose} title="Assign Master Template to Workspaces" size="lg">
+        <div className="space-y-4">
+          {assignWsTemplate && (
+            <div className="p-3 rounded-lg bg-secondary/30 border border-border/50">
+              <p className="text-[13px] font-medium">{assignWsTemplate.name}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Master template · visible only to workspaces selected below.
+              </p>
+            </div>
+          )}
+
+          {assignWsError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{assignWsError}</div>
+          )}
+
+          <div className="max-h-72 overflow-y-auto space-y-1 border border-border/50 rounded-lg p-1">
+            {workspaces.length === 0 ? (
+              <p className="py-4 text-center text-muted-foreground text-[12px]">No active workspaces found</p>
+            ) : (
+              workspaces.map((w) => {
+                const selected = !!workspaceSelection[w.id];
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => toggleWorkspaceAssignment(w.id)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors',
+                      selected
+                        ? 'bg-primary/10 border border-primary/30'
+                        : 'hover:bg-secondary/50 border border-transparent'
+                    )}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-[12px] font-mono text-foreground shrink-0">
+                      {(w.name?.[0] || 'W').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium truncate">{w.name}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{w.owner_name || w.slug || ' '}</p>
+                    </div>
+                    <div
+                      className={cn(
+                        'w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors',
+                        selected ? 'bg-primary border-primary' : 'border-border'
+                      )}
+                    >
+                      {selected && <span className="text-primary-foreground text-[11px]">✓</span>}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={openAssignToWorkspacesClose}>Cancel</Button>
+            <Button onClick={handleSaveAssignment} disabled={savingAssignment}>
+              <Building2 className="w-3.5 h-3.5" />
+              {savingAssignment ? 'Saving Assignments…' : 'Save Assignments'}
             </Button>
           </div>
         </div>

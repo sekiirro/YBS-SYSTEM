@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Package, ClipboardList, TrendingUp,
-  Apple, Dumbbell, FileText, Bell, UsersRound, ScrollText, Settings,
+  Apple, Dumbbell, Bell, UsersRound, ScrollText, Settings,
   Building2, ClipboardCheck, ChevronLeft, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,8 +27,8 @@ const SECTIONS = {
     ]},
     { label: 'Programs', items: [
       { label: 'Nutrition Plans', path: '/nutrition', icon: Apple, perm: 'nutrition.view' },
+      { label: 'Exercise Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
       { label: 'Food Database', path: '/foods', icon: Apple, perm: null },
-      { label: 'Workout Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
       { label: 'Exercises', path: '/exercises', icon: Dumbbell, perm: null },
     ]},
     { label: 'Administration', items: [
@@ -50,12 +50,11 @@ const SECTIONS = {
     ]},
     { label: 'Programs', items: [
       { label: 'Nutrition Plans', path: '/nutrition', icon: Apple, perm: 'nutrition.view' },
+      { label: 'Exercise Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
       { label: 'Food Database', path: '/foods', icon: Apple, perm: null },
-      { label: 'Workout Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
       { label: 'Exercises', path: '/exercises', icon: Dumbbell, perm: null },
     ]},
     { label: 'Administration', items: [
-      { label: 'Team', path: '/team', icon: UsersRound, perm: 'team.manage' },
       { label: 'Packages', path: '/packages', icon: Package, perm: null },
       { label: 'Notifications', path: '/notifications', icon: Bell, perm: null },
       { label: 'Settings', path: '/settings', icon: Settings, perm: 'settings.manage' },
@@ -72,7 +71,7 @@ const SECTIONS = {
     ]},
     { label: 'Programs', items: [
       { label: 'Nutrition Plans', path: '/nutrition', icon: Apple, perm: 'nutrition.view' },
-      { label: 'Workout Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
+      { label: 'Exercise Plans', path: '/workouts', icon: Dumbbell, perm: 'workout.view' },
       { label: 'Exercises', path: '/exercises', icon: Dumbbell, perm: null },
     ]},
     { label: 'Administration', items: [

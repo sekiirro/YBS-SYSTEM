@@ -326,6 +326,7 @@ function NutritionTab({ clientId }) {
 }
 
 function WorkoutTab({ clientId }) {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -336,18 +337,41 @@ function WorkoutTab({ clientId }) {
       .finally(() => setLoading(false));
   }, [clientId]);
 
-  if (loading) return <LoadingState label="Loading workout plans…" />;
+  if (loading) return <LoadingState label="Loading workout programs…" />;
   return (
     <div>
-      <h3 className="text-[14px] font-display font-semibold mb-4">Workout Plans</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[14px] font-display font-semibold">Workout Programs</h3>
+        <Button size="sm" onClick={() => navigate(`/workouts/builder?clientId=${clientId}`)}>
+          <Plus className="w-3.5 h-3.5" /> New Program
+        </Button>
+      </div>
+
       {plans.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground py-8 text-center">No workout plans assigned</p>
+        <p className="text-[13px] text-muted-foreground py-8 text-center">No workout programs assigned to this client.</p>
       ) : (
         <div className="space-y-3">
           {plans.map((p) => (
-            <div key={p.id} className="p-4 rounded-lg bg-secondary/30 border border-border">
-              <p className="text-[13px] font-medium">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground mt-1 capitalize">{p.split_type?.replace('_', ' ')} · {p.days?.length || 0} days</p>
+            <div
+              key={p.id}
+              onClick={() => navigate(`/workouts/builder/${p.id}`)}
+              className="p-4 rounded-xl bg-secondary/30 border border-border hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group"
+            >
+              <div>
+                <p className="text-[13px] font-medium text-foreground group-hover:text-primary transition-colors">{p.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[11px] text-muted-foreground capitalize">
+                    {(p.split_type || 'custom').replace(/_/g, ' ')} · {p.days?.length || 0} sessions
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">·</span>
+                  <span className="text-[11px] text-primary font-mono font-medium">
+                    {p.total_working_sets || 0} working sets/wk
+                  </span>
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" className="text-xs">
+                Open Builder
+              </Button>
             </div>
           ))}
         </div>

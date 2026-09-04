@@ -14,6 +14,7 @@ import { formatDate, getSubscriptionStatusColor, getFormStatusColor, daysUntil }
 import { Dumbbell, Apple, TrendingUp, ClipboardList, CreditCard, Bell, User, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FormFiller from '@/components/FormFiller';
+import ClientWorkoutTracker from '@/components/workouts/ClientWorkoutTracker';
 
 export default function PortalDashboard({ view = 'dashboard' }) {
   const { user } = useAuth();
@@ -93,38 +94,11 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   // Render view-specific content
   if (view === 'workout') {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Dumbbell className="w-5 h-5 text-primary" />
-          <h1 className="text-title font-display font-semibold">My Workout Plan</h1>
-        </div>
-        {workout ? (
-          <div className="surface-card p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold">{workout.name}</h2>
-              <p className="text-sm text-muted-foreground capitalize">{workout.split_type?.replace(/_/g, ' ')} · {workout.days?.length || 0} training days</p>
-            </div>
-            {workout.notes && <p className="text-xs bg-secondary/50 p-3 rounded-md text-muted-foreground">{workout.notes}</p>}
-            <div className="space-y-3">
-              {(workout.days || []).map((day, idx) => (
-                <div key={idx} className="border border-border/70 rounded-lg p-4 bg-secondary/20">
-                  <h3 className="text-sm font-semibold text-primary">{day.name || `Day ${idx + 1}`}</h3>
-                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                    {(day.exercises || []).map((ex, exIdx) => (
-                      <div key={exIdx} className="flex justify-between py-1 border-b border-border/40 last:border-0">
-                        <span className="font-medium text-foreground">{ex.name || 'Exercise'}</span>
-                        <span>{ex.sets || 3} sets × {ex.reps || 10} reps {ex.rest_seconds ? `(${ex.rest_seconds}s rest)` : ''}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="surface-card p-10 text-center text-muted-foreground">No workout plan assigned yet. Your coach will update this soon.</div>
-        )}
-      </div>
+      <ClientWorkoutTracker
+        workout={workout}
+        client={client}
+        user={user}
+      />
     );
   }
 

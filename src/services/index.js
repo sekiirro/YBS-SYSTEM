@@ -12,3 +12,4 @@ export * from './exercises';
 export * from './team';
 export * from './notifications';
 export * from './audit';
+export * from './partnershipTypes';

@@ -10,7 +10,7 @@ import { hasPermission, getClientFilterForUser } from '@/lib/permissions';
 import { getActiveWorkspaceId, getRoleCategory, isPlatformTrainer, isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Input, Select, Modal } from '@/components/ui';
 import { formatDate, getSubscriptionStatusColor, generateClientCode, getInitials } from '@/lib/ybs-utils';
-import { Users, Search, Plus, Filter, Phone, Mail, Download, X } from 'lucide-react';
+import { Users, Search, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Clients() {
@@ -46,7 +46,7 @@ export default function Clients() {
       const promises = [
         ClientsService.list(filter),
         TeamService.list(),
-        PackagesService.list(),
+        cat === 'workspace' && activeWsId ? PackagesService.list(activeWsId) : PackagesService.list(),
       ];
       if (isAdmin) {
         promises.push(WorkspacesService.list().catch(() => []));
@@ -55,8 +55,11 @@ export default function Clients() {
       const results = await Promise.all(promises);
       const clientData = results[0] || [];
       const userData = results[1] || [];
-      const pkgData = results[2] || [];
+      let pkgData = results[2] || [];
       if (isAdmin) setWorkspaces(results[3] || []);
+      if (cat === 'workspace' && activeWsId) {
+        pkgData = pkgData.filter((p) => p.workspace_id === activeWsId);
+      }
 
       setClients(clientData);
       setTrainers(userData.filter((u) => (u.platform_role === 'platform_trainer' || u.ybs_coach === true || u.role === 'trainer') && u.status !== 'disabled'));
@@ -278,11 +281,41 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, workspaces 
     workspace_id: activeWsId || (workspaces[0]?.id || ''),
     notes: '',
   });
+  const [capacityStats, setCapacityStats] = useState(null);
+  const [loadingCapacity, setLoadingCapacity] = useState(false);
+  const [allowOverride, setAllowOverride] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const targetWsId = form.workspace_id || activeWsId;
+
+  // Fetch workspace capacity stats when workspace selection changes
+  useEffect(() => {
+    let alive = true;
+    if (!targetWsId) return;
+
+    (async () => {
+      try {
+        setLoadingCapacity(true);
+        const stats = await WorkspacesService.getCapacityStats(targetWsId);
+        if (alive) setCapacityStats(stats);
+      } catch (err) {
+        console.warn('Could not load capacity stats:', err);
+      } finally {
+        if (alive) setLoadingCapacity(false);
+      }
+    })();
+
+    return () => { alive = false; };
+  }, [targetWsId]);
+
+  const isAtCapacity = capacityStats?.isAtCapacity || false;
+  const isWarning = capacityStats?.isWarning || false;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     if (!form.full_name || !form.phone) {
       setError('Name and phone are required');
       return;
@@ -292,20 +325,36 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, workspaces 
       setError('Workspace is required');
       return;
     }
+
+    if (isAtCapacity && !isAdmin) {
+      setError('This Workspace has reached active client capacity. Contact a Platform Owner for an override.');
+      return;
+    }
+
+    if (isAtCapacity && isAdmin && !allowOverride) {
+      setError('Please check the confirmation box below to authorize a Platform Owner capacity override.');
+      return;
+    }
+
     try {
       setSaving(true);
       const clientCode = generateClientCode(existingCodes);
-      const trainer = trainers.find((t) => t.id === form.assigned_trainer_id);
       const pkg = packages.find((p) => p.id === form.package_id);
-      const targetWs = workspaces.find((w) => w.id === wsId);
 
-      await ClientsService.create({
+      const payload = {
         ...form,
         workspace_id: wsId,
         client_code: clientCode,
         join_date: new Date().toISOString().split('T')[0],
         subscription_status: pkg ? 'active' : 'no_subscription',
-      });
+        status: 'active',
+      };
+
+      if (isAtCapacity && isAdmin && allowOverride) {
+        await ClientsService.createWithOverride(payload);
+      } else {
+        await ClientsService.create(payload);
+      }
 
       onCreated();
     } catch (err) {
@@ -318,41 +367,129 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, workspaces 
   return (
     <Modal open onClose={onClose} title="Add New Client" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-[13px] text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Capacity Warning / Block Banners */}
+        {isAtCapacity && (
+          <div className="p-3.5 rounded-lg bg-destructive/10 border border-destructive/20 text-[13px] space-y-2">
+            <div className="font-semibold text-destructive flex items-center gap-1.5">
+              <span>⚠️ Active Client Capacity Reached ({capacityStats.activeCount} / {capacityStats.capacity})</span>
+            </div>
+            <p className="text-muted-foreground text-[12px]">
+              This workspace has reached its configured limit for active clients.
+              {!isAdmin && ' You cannot add an active client without Platform Owner authorization.'}
+            </p>
+            {isAdmin && (
+              <label className="flex items-center gap-2 pt-1.5 text-[12px] font-medium text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allowOverride}
+                  onChange={(e) => setAllowOverride(e.target.checked)}
+                  className="rounded text-primary focus:ring-primary h-4 w-4"
+                />
+                <span>Authorize Platform Owner Capacity Override (Administrative Exception)</span>
+              </label>
+            )}
+          </div>
+        )}
+
+        {!isAtCapacity && isWarning && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[12px] flex items-center justify-between">
+            <span>
+              ⚡ <strong>Approaching Capacity:</strong> {capacityStats.activeCount} of {capacityStats.capacity} clients ({capacityStats.utilizationPct}%)
+            </span>
+            <span className="text-[11px] text-muted-foreground">Limit: {capacityStats.capacity}</span>
+          </div>
+        )}
+
         {isAdmin && workspaces.length > 0 && (
-          <Select label="Workspace *" value={form.workspace_id} onChange={(e) => setForm({ ...form, workspace_id: e.target.value })}>
+          <Select
+            label="Workspace *"
+            value={form.workspace_id}
+            onChange={(e) => setForm({ ...form, workspace_id: e.target.value })}
+          >
             {workspaces.map((w) => (
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </Select>
         )}
+
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Full Name *" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" />
-          <Input label="Phone *" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1234567890" />
+          <Input
+            label="Full Name *"
+            value={form.full_name}
+            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+            placeholder="John Doe"
+            required
+          />
+          <Input
+            label="Phone *"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            placeholder="+1234567890"
+            required
+          />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" />
-          <Input label="Date of Birth" type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} />
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="john@example.com"
+          />
+          <Input
+            label="Date of Birth"
+            type="date"
+            value={form.date_of_birth}
+            onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+          />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <Select label="Gender" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
             <option value="male">Male</option>
             <option value="female">Female</option>
             <option value="other">Other</option>
           </Select>
-          <Select label="Follow-up Day" value={form.follow_up_day} onChange={(e) => setForm({ ...form, follow_up_day: e.target.value })}>
+          <Select
+            label="Follow-up Day"
+            value={form.follow_up_day}
+            onChange={(e) => setForm({ ...form, follow_up_day: e.target.value })}
+          >
             {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map((d) => (
               <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
             ))}
           </Select>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Height (cm)" type="number" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} />
-          <Input label="Current Weight (kg)" type="number" value={form.current_weight} onChange={(e) => setForm({ ...form, current_weight: e.target.value })} />
+          <Input
+            label="Height (cm)"
+            type="number"
+            value={form.height}
+            onChange={(e) => setForm({ ...form, height: e.target.value })}
+          />
+          <Input
+            label="Current Weight (kg)"
+            type="number"
+            value={form.current_weight}
+            onChange={(e) => setForm({ ...form, current_weight: e.target.value })}
+          />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           {user?.role !== 'trainer' && (
-            <Select label="Assigned Trainer" value={form.assigned_trainer_id} onChange={(e) => setForm({ ...form, assigned_trainer_id: e.target.value })}>
+            <Select
+              label="Assigned Trainer"
+              value={form.assigned_trainer_id}
+              onChange={(e) => setForm({ ...form, assigned_trainer_id: e.target.value })}
+            >
               <option value="">Select trainer…</option>
               {trainers.map((t) => (
                 <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
@@ -366,10 +503,31 @@ function CreateClientModal({ onClose, onCreated, trainers, packages, workspaces 
             ))}
           </Select>
         </div>
-        <Input label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes…" />
+
+        <Input
+          label="Notes"
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          placeholder="Optional notes…"
+        />
+
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create Client'}</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={saving || (isAtCapacity && (!isAdmin || !allowOverride))}
+            variant={isAtCapacity && isAdmin && allowOverride ? 'destructive' : 'default'}
+          >
+            {saving
+              ? 'Creating…'
+              : isAtCapacity && isAdmin && allowOverride
+              ? 'Create with Platform Override'
+              : isAtCapacity
+              ? 'Capacity Reached'
+              : 'Create Client'}
+          </Button>
         </div>
       </form>
     </Modal>

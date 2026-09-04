@@ -5,10 +5,10 @@ import { normalizePhone } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Phone, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Phone, Mail, Lock, Loader2, MailCheck, Building2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
-export default function ClientSignup() {
+export default function ClientSignup({ workspace = null, joinToken = null }) {
   const [form, setForm] = useState({
     full_name: "",
     phone: "",
@@ -18,6 +18,8 @@ export default function ClientSignup() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -48,6 +50,11 @@ export default function ClientSignup() {
 
     try {
       // 1. Register with Supabase Auth
+      //    When the trainee arrived via a workspace registration link,
+      //    carry the validated join token through signup metadata. The
+      //    server-side handle_new_user() trigger resolves that token
+      //    back to the workspace and creates the pending application
+      //    for it — the client never submits a workspace_id.
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
@@ -57,6 +64,7 @@ export default function ClientSignup() {
             phone: normalizedPhone,
             platform_role: "none",
             account_status: "pending_approval",
+            ...(joinToken ? { join_token: joinToken } : {}),
           },
         },
       });
@@ -74,6 +82,9 @@ export default function ClientSignup() {
       }
 
       // 2. Insert ClientApplication record into database
+      //    NOTE: under email confirmation this runs as anon and is
+      //    denied by RLS — that is expected. The handle_new_user()
+      //    trigger already created the application server-side.
       const { error: appErr } = await supabase.from("client_applications").insert({
         user_id: authUser.id,
         applicant_name: form.full_name.trim(),
@@ -87,7 +98,7 @@ export default function ClientSignup() {
         console.warn("Application record notice:", appErr.message);
       }
 
-      // 3. Ensure profile is set to pending_approval
+      // 3. Ensure profile is set to pending_approval (best-effort)
       await supabase.from("profiles").upsert({
         id: authUser.id,
         email: form.email.trim().toLowerCase(),
@@ -97,8 +108,17 @@ export default function ClientSignup() {
         account_status: "pending_approval",
       });
 
-      // 4. Redirect to pending approval screen
-      window.location.href = "/pending";
+      // 4. With email confirmation enabled (mailer_autoconfirm=false),
+      //    signUp() returns a user but NO session. If we have a real
+      //    session we can route straight to /pending; otherwise show a
+      //    confirmation prompt so the trainee verifies their email
+      //    before signing in.
+      if (authData.session) {
+        window.location.href = "/pending";
+      } else {
+        setSignupEmail(form.email.trim().toLowerCase());
+        setSignedUp(true);
+      }
     } catch (err) {
       setError(err.message || "Registration failed. Please check your information and try again.");
     } finally {
@@ -106,11 +126,47 @@ export default function ClientSignup() {
     }
   };
 
+  if (signedUp) {
+    return (
+      <AuthLayout
+        brand
+        title="Account Created"
+        subtitle={workspace ? `Join ${workspace.workspace_name || workspace.brand_name}` : "Client Registration"}
+        footer={
+          <>
+            Already confirmed?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Sign in
+            </Link>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center py-2">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+            <MailCheck className="w-7 h-7 text-emerald-400" />
+          </div>
+          <p className="text-[15px] font-semibold text-foreground">Confirm your email address</p>
+          <p className="text-[13px] text-muted-foreground mt-1 max-w-sm">
+            We sent a confirmation link to <strong className="text-foreground">{signupEmail}</strong>. Click it to
+            activate your account, then sign in. Your registration is automatically submitted to the YBS team.
+          </p>
+          <Link
+            to="/login"
+            className="w-full mt-5 inline-flex h-11 items-center justify-center rounded-lg bg-primary text-primary-foreground text-[14px] font-medium hover:bg-primary/90"
+          >
+            Go to Sign In
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
-      brand
-      title="Create Client Account"
-      subtitle="Request access to your coaching workspace"
+      icon={UserPlus}
+      brand={!workspace}
+      title={workspace ? workspace.workspace_name || workspace.brand_name || "Join" : "Create Client Account"}
+      subtitle={workspace ? "Create your account to join this workspace" : "Request access to your coaching workspace"}
       footer={
         <>
           Already have an account?{" "}
@@ -120,8 +176,23 @@ export default function ClientSignup() {
         </>
       }
     >
+      {workspace && (
+        <div className="mb-5 p-3 rounded-md bg-primary/5 border border-primary/15">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Building2 className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] font-semibold text-foreground">Joining {workspace.workspace_name || workspace.brand_name}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
+                Your application will be submitted to this workspace automatically. You do not need to choose a brand or workspace.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-5 p-3 rounded-md bg-primary/5 border border-primary/15 text-[12px] text-muted-foreground">
-        Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to a workspace and can access your coaching portal.
+        Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to your workspace and can access your coaching portal.
       </div>
       {error && (
         <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">

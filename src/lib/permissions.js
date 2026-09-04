@@ -44,11 +44,30 @@ export const PERMISSIONS = {
   'settings.manage': 'Manage organization settings',
 };
 
+// The DB sync trigger + WORKSPACE_PERMISSIONS grant CANONICAL PLURAL tokens
+// (assessments.*, workouts.*), while pages historically check SINGULAR tokens
+// (forms.*, workout.*). Alias the singular UI tokens to their canonical plural
+// form so workspace-owner permission evaluation matches server-side RLS.
+const PERMISSION_ALIASES = {
+  'forms.view': 'assessments.view',
+  'forms.create': 'assessments.create',
+  'forms.update': 'assessments.update',
+  'forms.delete': 'assessments.delete',
+  'forms.review': 'assessments.review',
+  'forms.assign': 'assessments.assign',
+  'workout.view': 'workouts.view',
+  'workout.create': 'workouts.create',
+  'workout.update': 'workouts.update',
+  'workout.exercise': 'workouts.exercise',
+};
+
 export function hasPermission(user, permission) {
   if (!user) return false;
   if (isPlatformAdmin(user)) return true;
   const customPerms = user.permissions || [];
-  return customPerms.includes(permission);
+  if (customPerms.includes(permission)) return true;
+  const canonical = PERMISSION_ALIASES[permission];
+  return !!canonical && customPerms.includes(canonical);
 }
 
 export function hasAnyPermission(user, permissions) {

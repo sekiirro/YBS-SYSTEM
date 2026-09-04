@@ -97,12 +97,12 @@ export default function Team() {
           </div>
         </div>
       )}
-      {showInvite && <InviteModal onClose={() => setShowInvite(false)} onInvited={() => { setShowInvite(false); loadTeam(); }} />}
+      {showInvite && <InviteModal workspaceId={user?.active_workspace_id} onClose={() => setShowInvite(false)} onInvited={() => { setShowInvite(false); loadTeam(); }} />}
     </div>
   );
 }
 
-function InviteModal({ onClose, onInvited }) {
+function InviteModal({ workspaceId, onClose, onInvited }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('trainer');
   const [saving, setSaving] = useState(false);
@@ -112,10 +112,17 @@ function InviteModal({ onClose, onInvited }) {
     try {
       setSaving(true);
       setError('');
+      const inviteRole = role === 'owner' ? 'platform_owner' : 'platform_trainer';
+      const { error: rpcErr } = await supabase.rpc('invite_team_member', {
+        p_email: email,
+        p_role: inviteRole,
+        p_workspace_id: workspaceId,
+      });
+      if (rpcErr) throw rpcErr;
       const { error: inviteErr } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          data: { role, platform_role: role === 'owner' ? 'platform_owner' : 'platform_trainer' },
+          data: { role, platform_role: inviteRole },
         },
       });
       if (inviteErr) throw inviteErr;

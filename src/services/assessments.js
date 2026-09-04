@@ -7,7 +7,7 @@ export const TemplatesService = {
   async list(filters = {}) {
     let query = supabase
       .from('assessment_templates')
-      .select('*, assessment_questions(count)')
+      .select('*, assessment_questions(count), form_template_workspace_assignments(workspace_id)')
       .order('created_at', { ascending: false });
 
     if (filters.workspace_id) query = query.eq('workspace_id', filters.workspace_id);
@@ -20,6 +20,7 @@ export const TemplatesService = {
     return (data || []).map((t) => ({
       ...t,
       question_count: t.assessment_questions?.[0]?.count || 0,
+      assigned_workspace_ids: (t.form_template_workspace_assignments || []).map((a) => a.workspace_id),
     }));
   },
 
@@ -64,6 +65,31 @@ export const TemplatesService = {
       .delete()
       .eq('id', id);
     if (error) throw error;
+  },
+
+  /**
+   * Platform-owner only: assign a GLOBAL master template to a workspace.
+   * Enforced server-side by the guarded assign_form_template RPC.
+   */
+  async assignToWorkspace(templateId, workspaceId) {
+    const { data, error } = await supabase.rpc('assign_form_template', {
+      p_template_id: templateId,
+      p_workspace_id: workspaceId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Platform-owner only: revoke a workspace's access to a master template.
+   */
+  async unassignFromWorkspace(templateId, workspaceId) {
+    const { data, error } = await supabase.rpc('unassign_form_template', {
+      p_template_id: templateId,
+      p_workspace_id: workspaceId,
+    });
+    if (error) throw error;
+    return data;
   },
 };
 

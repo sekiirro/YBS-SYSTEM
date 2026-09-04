@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
+import { getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { supabase } from '@/utils/supabase';
 import { ClientsService } from '@/services/clients';
 import { AssessmentsService } from '@/services/assessments';
@@ -15,15 +16,20 @@ import { formatDate, formatCurrency, getSubscriptionStatusColor, daysUntil } fro
 import {
   Users, UserCheck, AlertTriangle, CalendarCheck, FileText, FileWarning,
   FileClock, DollarSign, TrendingUp, Activity, ArrowRight, CreditCard,
-  Building2, ClipboardCheck, UsersRound, AlertCircle
+  Building2, ClipboardCheck, UsersRound, AlertCircle, Gauge, Handshake, Globe, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { workspaceId } = useParams();
+  const effectiveWsId = workspaceId || getActiveWorkspaceId(user);
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
+  const [workspaceStats, setWorkspaceStats] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
+
   const [expiringClients, setExpiringClients] = useState([]);
   const [pendingForms, setPendingForms] = useState([]);
   const [revenueData, setRevenueData] = useState(null);
@@ -55,6 +61,9 @@ export default function Dashboard() {
         promises.push(supabase.from('profiles').select('*').eq('platform_role', 'platform_trainer').then((r) => r.data || []));
       }
 
+      // Always query target workspace capacity stats if available
+      promises.push(effectiveWsId ? WorkspacesService.getCapacityStats(effectiveWsId).catch(() => null) : Promise.resolve(null));
+
       const results = await Promise.all(promises);
       const clients = results[0] || [];
       const forms = results[1] || [];
@@ -72,7 +81,11 @@ export default function Dashboard() {
           pendingApprovals: pendingApps.length,
           ybsTrainers: trainerUsers.length,
         });
+        setWorkspaceStats(results[8]);
+      } else {
+        setWorkspaceStats(results[5]);
       }
+
 
       const today = new Date().toISOString().split('T')[0];
 
@@ -160,7 +173,63 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Workspace Operational & Capacity Strip (Section 22) */}
+      {workspaceStats && (
+        <div className="surface-card p-4 mb-6 border border-border">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[14px] font-semibold text-foreground">
+                  {workspaceStats.workspaceName}
+                </span>
+                {workspaceStats.partnershipType && (
+                  <Badge variant="outline" className="text-primary bg-primary/5 border-primary/20 text-[11px]">
+                    <Handshake className="w-3 h-3 mr-1" />
+                    {workspaceStats.partnershipType.name}
+                  </Badge>
+                )}
+                {workspaceStats.isAtCapacity ? (
+                  <Badge variant="destructive" className="flex items-center gap-1 text-[11px]">
+                    <ShieldAlert className="w-3 h-3" /> Capacity Reached (100%)
+                  </Badge>
+                ) : workspaceStats.isWarning ? (
+                  <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1 text-[11px]">
+                    <AlertTriangle className="w-3 h-3" /> Approaching Limit ({workspaceStats.utilizationPct}%)
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="text-[12px] text-muted-foreground">
+                Assigned YBS Trainers: <strong className="text-foreground">{workspaceStats.assignedTrainersCount}</strong>
+              </p>
+            </div>
+
+            {/* Capacity gauge and progress */}
+            <div className="lg:w-72 space-y-1.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-muted-foreground">Active Client Capacity:</span>
+                <span className="font-semibold text-foreground">
+                  {workspaceStats.activeCount} / {workspaceStats.isUnlimited ? 'Unlimited' : `${workspaceStats.capacity} clients`}
+                  {!workspaceStats.isUnlimited && ` (${workspaceStats.utilizationPct}%)`}
+                </span>
+              </div>
+              {!workspaceStats.isUnlimited && (
+                <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full transition-all duration-300 rounded-full',
+                      workspaceStats.isAtCapacity ? 'bg-destructive' : workspaceStats.isWarning ? 'bg-warning' : 'bg-primary'
+                    )}
+                    style={{ width: `${Math.min(workspaceStats.utilizationPct, 100)}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top stats grid */}
+
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 mb-6">
         {isAdmin && (
           <>

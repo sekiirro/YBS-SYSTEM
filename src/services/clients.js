@@ -42,6 +42,19 @@ export const ClientsService = {
     return data;
   },
 
+  async countActive(workspaceId) {
+    let query = supabase
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active');
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+    const { count, error } = await query;
+    if (error) throw error;
+    return count || 0;
+  },
+
   async create(payload) {
     // Generate unique code YBS-XXXX if not provided
     let code = payload.client_code;
@@ -55,6 +68,24 @@ export const ClientsService = {
       .insert({ ...payload, client_code: code })
       .select()
       .single();
+
+    if (error) {
+      if (error.code === 'P0001' || error.message?.includes('WORKSPACE_CAPACITY_REACHED')) {
+        const capacityError = Object.assign(
+          new Error('This Workspace has reached its active client capacity. Contact a Platform Owner to add another client or request an administrative override.'),
+          { code: 'WORKSPACE_CAPACITY_REACHED', originalError: error }
+        );
+        throw capacityError;
+      }
+      throw error;
+    }
+    return data;
+  },
+
+  async createWithOverride(payload) {
+    const { data, error } = await supabase.rpc('create_client_with_override', {
+      p_payload: payload,
+    });
     if (error) throw error;
     return data;
   },
@@ -66,7 +97,18 @@ export const ClientsService = {
       .eq('id', id)
       .select()
       .single();
-    if (error) throw error;
+
+    if (error) {
+      if (error.code === 'P0001' || error.message?.includes('WORKSPACE_CAPACITY_REACHED')) {
+        const capacityError = Object.assign(
+          new Error('Cannot reactivate client: Workspace has reached its active client capacity limit.'),
+          { code: 'WORKSPACE_CAPACITY_REACHED', originalError: error }
+        );
+        throw capacityError;
+      }
+      throw error;
+    }
     return data;
   }
 };
+
