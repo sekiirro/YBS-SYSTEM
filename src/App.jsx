@@ -31,6 +31,7 @@ import Foods from '@/pages/Foods';
 import Assessments from '@/pages/Assessments';
 import Metrics from '@/pages/Metrics';
 import NutritionPlans from '@/pages/NutritionPlans';
+import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
 import WorkoutPlans from '@/pages/WorkoutPlans';
 import Team from '@/pages/Team';
 import Notifications from '@/pages/Notifications';
@@ -84,9 +85,12 @@ const AuthenticatedApp = () => {
             <Route path="/coach/dashboard" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
-            <Route path="/assessments" element={<Assessments />} />
+            <Route path="/forms" element={<Assessments />} />
+            <Route path="/assessments" element={<Navigate to="/forms" replace />} />
             <Route path="/metrics" element={<Metrics />} />
             <Route path="/nutrition" element={<NutritionPlans />} />
+            <Route path="/nutrition/builder" element={<NutritionPlanBuilder />} />
+            <Route path="/nutrition/builder/:id" element={<NutritionPlanBuilder />} />
             <Route path="/foods" element={<Foods />} />
             <Route path="/workouts" element={<WorkoutPlans />} />
             <Route path="/exercises" element={<Exercises />} />
@@ -103,7 +107,8 @@ const AuthenticatedApp = () => {
             <Route path="/portal/workout" element={<PortalDashboard view="workout" />} />
             <Route path="/portal/nutrition" element={<PortalDashboard view="nutrition" />} />
             <Route path="/portal/progress" element={<PortalDashboard view="progress" />} />
-            <Route path="/portal/assessments" element={<PortalDashboard view="assessments" />} />
+            <Route path="/portal/forms" element={<PortalDashboard view="assessments" />} />
+            <Route path="/portal/assessments" element={<Navigate to="/portal/forms" replace />} />
             <Route path="/portal/subscription" element={<PortalDashboard view="subscription" />} />
             <Route path="/portal/notifications" element={<PortalDashboard view="notifications" />} />
             <Route path="/portal/profile" element={<PortalDashboard view="profile" />} />

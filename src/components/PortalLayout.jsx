@@ -10,7 +10,7 @@ const NAV = [
   { label: 'My Workout', path: '/portal/workout', icon: Dumbbell },
   { label: 'My Nutrition', path: '/portal/nutrition', icon: Apple },
   { label: 'My Progress', path: '/portal/progress', icon: TrendingUp },
-  { label: 'Assessments', path: '/portal/assessments', icon: ClipboardList },
+  { label: 'Forms', path: '/portal/forms', icon: ClipboardList },
   { label: 'Subscription', path: '/portal/subscription', icon: CreditCard },
   { label: 'Notifications', path: '/portal/notifications', icon: Bell },
   { label: 'Profile', path: '/portal/profile', icon: User },

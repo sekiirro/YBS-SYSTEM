@@ -22,7 +22,7 @@ const SECTIONS = {
     ]},
     { label: 'Clients', items: [
       { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
-      { label: 'Assessments', path: '/assessments', icon: ClipboardList, perm: 'forms.view' },
+      { label: 'Forms', path: '/forms', icon: ClipboardList, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [
@@ -45,7 +45,7 @@ const SECTIONS = {
     ]},
     { label: 'Clients', items: [
       { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
-      { label: 'Assessments', path: '/assessments', icon: ClipboardList, perm: 'forms.view' },
+      { label: 'Forms', path: '/forms', icon: ClipboardList, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [
@@ -67,7 +67,7 @@ const SECTIONS = {
     ]},
     { label: 'Clients', items: [
       { label: 'My Clients', path: '/clients', icon: Users, perm: 'clients.view' },
-      { label: 'Assessments', path: '/assessments', icon: ClipboardList, perm: 'forms.view' },
+      { label: 'Forms', path: '/forms', icon: ClipboardList, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [

@@ -45,7 +45,7 @@ export const FoodsService = {
   async delete(id) {
     const { error } = await supabase
       .from('foods')
-      .update({ is_archived: true })
+      .update({ is_archived: true, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw error;
     return true;

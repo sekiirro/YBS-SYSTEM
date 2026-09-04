@@ -10,9 +10,10 @@ import { MetricsService } from '@/services/metrics';
 import { AssessmentsService } from '@/services/assessments';
 import { NotificationsService } from '@/services/notifications';
 import { LoadingState, Badge, Button } from '@/components/ui';
-import { formatDate, getSubscriptionStatusColor, daysUntil } from '@/lib/ybs-utils';
+import { formatDate, getSubscriptionStatusColor, getFormStatusColor, daysUntil } from '@/lib/ybs-utils';
 import { Dumbbell, Apple, TrendingUp, ClipboardList, CreditCard, Bell, User, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import FormFiller from '@/components/FormFiller';
 
 export default function PortalDashboard({ view = 'dashboard' }) {
   const { user } = useAuth();
@@ -22,9 +23,11 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   const [allSubscriptions, setAllSubscriptions] = useState([]);
   const [workout, setWorkout] = useState(null);
   const [nutrition, setNutrition] = useState(null);
+  const [allNutritionPlans, setAllNutritionPlans] = useState([]);
   const [metrics, setMetrics] = useState([]);
   const [forms, setForms] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [activeForm, setActiveForm] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -43,6 +46,7 @@ export default function PortalDashboard({ view = 'dashboard' }) {
         setAllSubscriptions(subs);
         setSubscription(subs.find(s => s.status === 'active') || subs[0] || null);
         setWorkout(wps[0] || null);
+        setAllNutritionPlans(nps || []);
         setNutrition(nps[0] || null);
         setMetrics(metList);
         setForms(formList);
@@ -58,6 +62,33 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   const days = subscription ? daysUntil(subscription.end_date) : null;
   const latestMetric = metrics[0] || null;
   const pendingForm = forms.find(f => f.submission_status === 'pending') || null;
+
+  const handleOpenForm = async (f) => {
+    try {
+      const full = await AssessmentsService.getById(f.id);
+      setActiveForm(full);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveForm = async (assessmentId, responses) => {
+    await AssessmentsService.saveResponses(assessmentId, responses);
+    const full = await AssessmentsService.getById(assessmentId);
+    setActiveForm(full);
+  };
+
+  const handleSubmitForm = async (assessmentId, responses) => {
+    await AssessmentsService.submitForm(assessmentId, responses, {
+      clientUserId: user.id,
+      coachUserId: activeForm?.assigned_ybs_coach_id,
+      workspaceId: activeForm?.workspace_id,
+      formName: activeForm?.name,
+    });
+    const formList = await AssessmentsService.list({ client_id: user.self_client_id });
+    setForms(formList);
+    setActiveForm(null);
+  };
 
   // Render view-specific content
   if (view === 'workout') {
@@ -100,46 +131,87 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   if (view === 'nutrition') {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Apple className="w-5 h-5 text-primary" />
-          <h1 className="text-title font-display font-semibold">My Nutrition Plan</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Apple className="w-5 h-5 text-primary" />
+            <h1 className="text-title font-display font-semibold">My Nutrition Plan</h1>
+          </div>
+
+          {allNutritionPlans.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Plan:</span>
+              <select
+                value={nutrition?.id}
+                onChange={(e) => {
+                  const selected = allNutritionPlans.find((p) => p.id === e.target.value);
+                  if (selected) setNutrition(selected);
+                }}
+                className="h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40 text-foreground"
+              >
+                {allNutritionPlans.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
+
         {nutrition ? (
           <div className="surface-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">{nutrition.name}</h2>
-              <p className="text-sm text-muted-foreground">{nutrition.daily_calories ? `${nutrition.daily_calories} kcal/day` : ''} · {nutrition.meals?.length || 0} meals</p>
+              <h2 className="text-lg font-semibold text-foreground">{nutrition.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                {nutrition.daily_calories ? `${Math.round(nutrition.daily_calories)} kcal/day` : ''} · {nutrition.meals?.length || 0} meals
+              </p>
             </div>
+
+            {nutrition.notes && (
+              <p className="text-xs bg-secondary/50 p-3 rounded-md text-muted-foreground border border-border/40">
+                {nutrition.notes}
+              </p>
+            )}
+
             <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="bg-secondary/40 p-2.5 rounded-lg">
+              <div className="bg-secondary/40 p-2.5 rounded-lg border border-border/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Calories</p>
-                <p className="text-sm font-semibold">{nutrition.daily_calories || '—'}</p>
+                <p className="text-sm font-semibold text-primary">{Math.round(nutrition.daily_calories || 0)} kcal</p>
               </div>
-              <div className="bg-secondary/40 p-2.5 rounded-lg">
+              <div className="bg-secondary/40 p-2.5 rounded-lg border border-border/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Protein</p>
-                <p className="text-sm font-semibold">{nutrition.protein_g ? `${nutrition.protein_g}g` : '—'}</p>
+                <p className="text-sm font-semibold text-foreground">{nutrition.daily_protein != null ? `${nutrition.daily_protein}g` : '—'}</p>
               </div>
-              <div className="bg-secondary/40 p-2.5 rounded-lg">
+              <div className="bg-secondary/40 p-2.5 rounded-lg border border-border/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Carbs</p>
-                <p className="text-sm font-semibold">{nutrition.carbs_g ? `${nutrition.carbs_g}g` : '—'}</p>
+                <p className="text-sm font-semibold text-foreground">{nutrition.daily_carbs != null ? `${nutrition.daily_carbs}g` : '—'}</p>
               </div>
-              <div className="bg-secondary/40 p-2.5 rounded-lg">
+              <div className="bg-secondary/40 p-2.5 rounded-lg border border-border/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Fats</p>
-                <p className="text-sm font-semibold">{nutrition.fats_g ? `${nutrition.fats_g}g` : '—'}</p>
+                <p className="text-sm font-semibold text-foreground">{nutrition.daily_fat != null ? `${nutrition.daily_fat}g` : '—'}</p>
               </div>
             </div>
+
             <div className="space-y-3 pt-2">
               {(nutrition.meals || []).map((meal, idx) => (
-                <div key={idx} className="border border-border/70 rounded-lg p-4 bg-secondary/20">
+                <div key={idx} className="border border-border/70 rounded-lg p-4 bg-secondary/20 space-y-2">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-semibold text-primary">{meal.name || `Meal ${idx + 1}`}</h3>
-                    {meal.calories && <span className="text-xs text-muted-foreground">{meal.calories} kcal</span>}
+                    <h3 className="text-sm font-semibold text-primary">{meal.meal_name || meal.name || `Meal ${idx + 1}`}</h3>
+                    {meal.calories != null && (
+                      <span className="text-xs font-mono text-muted-foreground">{Math.round(meal.calories)} kcal</span>
+                    )}
                   </div>
-                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {meal.notes && (
+                    <p className="text-[11px] text-muted-foreground italic">{meal.notes}</p>
+                  )}
+                  <div className="space-y-1 text-xs text-muted-foreground pt-1">
                     {(meal.items || []).map((it, itIdx) => (
-                      <div key={itIdx} className="flex justify-between py-1 border-b border-border/40 last:border-0">
-                        <span className="text-foreground">{it.name}</span>
-                        <span>{it.amount} {it.unit}</span>
+                      <div key={itIdx} className="flex justify-between items-center py-1.5 border-b border-border/40 last:border-0">
+                        <span className="text-foreground font-medium">{it.food_name || it.name || 'Food Item'}</span>
+                        <div className="flex items-center gap-3 font-mono">
+                          <span>{it.amount} {it.unit}</span>
+                          {it.calories != null && (
+                            <span className="text-primary/90 font-semibold">{Math.round(it.calories)} kcal</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -198,7 +270,7 @@ export default function PortalDashboard({ view = 'dashboard' }) {
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <ClipboardList className="w-5 h-5 text-primary" />
-          <h1 className="text-title font-display font-semibold">My Assessments & Check-ins</h1>
+          <h1 className="text-title font-display font-semibold">My Forms & Check-ins</h1>
         </div>
         {forms.length > 0 ? (
           <div className="space-y-3">
@@ -208,14 +280,32 @@ export default function PortalDashboard({ view = 'dashboard' }) {
                   <h3 className="text-sm font-semibold">{f.name}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Due: {formatDate(f.due_date)} · Status: <span className="capitalize">{f.submission_status}</span></p>
                 </div>
-                <Badge className={cn(f.submission_status === 'submitted' ? 'text-success bg-success/10' : 'text-warning bg-warning/10', 'capitalize')}>
-                  {f.submission_status}
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>
+                    {f.submission_status}
+                  </Badge>
+                  <Button
+                    variant={f.submission_status === 'submitted' ? 'ghost' : 'default'}
+                    size="sm"
+                    onClick={() => handleOpenForm(f)}
+                  >
+                    {f.submission_status === 'submitted' ? 'View Answers' : 'Fill Out'}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="surface-card p-10 text-center text-muted-foreground">No assessments scheduled at this time.</div>
+          <div className="surface-card p-10 text-center text-muted-foreground">No forms scheduled at this time.</div>
+        )}
+
+        {activeForm && (
+          <FormFiller
+            assessment={activeForm}
+            onSave={handleSaveForm}
+            onSubmit={handleSubmitForm}
+            onClose={() => setActiveForm(null)}
+          />
         )}
       </div>
     );
@@ -354,8 +444,8 @@ export default function PortalDashboard({ view = 'dashboard' }) {
         <PortalCard icon={TrendingUp} title="Latest Progress" to="/portal/progress">
           {latestMetric ? <><p className="text-[14px] font-medium">{formatDate(latestMetric.entry_date)}</p><p className="text-[12px] text-muted-foreground mt-1">{latestMetric.weight ? `${latestMetric.weight} kg` : ''}{latestMetric.body_fat ? ` · ${latestMetric.body_fat}% BF` : ''}</p></> : <Empty text="No metrics yet" />}
         </PortalCard>
-        <PortalCard icon={ClipboardList} title="Pending Assessment" to="/portal/assessments">
-          {pendingForm ? <><p className="text-[14px] font-medium">{pendingForm.name}</p><p className="text-[12px] text-muted-foreground mt-1">Due {formatDate(pendingForm.due_date)}</p></> : <Empty text="No pending assessments" />}
+        <PortalCard icon={ClipboardList} title="Pending Form" to="/portal/forms">
+          {pendingForm ? <><p className="text-[14px] font-medium">{pendingForm.name}</p><p className="text-[12px] text-muted-foreground mt-1">Due {formatDate(pendingForm.due_date)}</p></> : <Empty text="No pending forms" />}
         </PortalCard>
       </div>
 
@@ -374,6 +464,15 @@ export default function PortalDashboard({ view = 'dashboard' }) {
             ))}
           </div>
         </div>
+      )}
+
+      {activeForm && (
+        <FormFiller
+          assessment={activeForm}
+          onSave={handleSaveForm}
+          onSubmit={handleSubmitForm}
+          onClose={() => setActiveForm(null)}
+        />
       )}
     </div>
   );

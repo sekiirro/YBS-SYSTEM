@@ -31,5 +31,19 @@ export const NotificationsService = {
       .eq('is_read', false);
     if (error) throw error;
     return true;
+  },
+
+  async create(payload) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        ...payload,
+        delivery_status: 'delivered',
+        delivery_channel: 'in_app',
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }
 };

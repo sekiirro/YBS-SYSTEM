@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       // 2. Fetch workspace memberships
       const { data: memberships } = await supabase
         .from('workspace_memberships')
-        .select('workspace_id, workspace_role, status')
+        .select('workspace_id, workspace_role, status, permissions')
         .eq('user_id', userId)
         .eq('status', 'active');
 
@@ -54,6 +54,10 @@ export const AuthProvider = ({ children }) => {
         .eq('user_id', userId)
         .maybeSingle();
 
+      const activeWsId =
+        profile?.active_workspace_id || managedWsIds[0] || allWsIds[0] || clientRecord?.workspace_id || null;
+      const activeMembership = memList.find((m) => m.workspace_id === activeWsId) || memList[0];
+
       // Consolidated trusted user object
       const fullUser = {
         id: userId,
@@ -63,7 +67,8 @@ export const AuthProvider = ({ children }) => {
         avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || null,
         platform_role: profile?.platform_role || 'none',
         account_status: profile?.account_status || (authUser.user_metadata?.account_status || 'pending_approval'),
-        active_workspace_id: profile?.active_workspace_id || managedWsIds[0] || allWsIds[0] || clientRecord?.workspace_id || null,
+        active_workspace_id: activeWsId,
+        permissions: activeMembership?.permissions || [],
         workspace_ids: allWsIds,
         managed_workspace_ids: managedWsIds,
         self_client_id: clientRecord?.id || null,
