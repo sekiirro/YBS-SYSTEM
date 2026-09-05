@@ -4,10 +4,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/utils/supabase';
 import { TeamService } from '@/services/team';
 import { ClientsService } from '@/services/clients';
-import { hasPermission, canManageTeam } from '@/lib/permissions';
+import { canManageTeam } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select } from '@/components/ui';
 import { getInitials } from '@/lib/ybs-utils';
-import { UsersRound, Plus, Mail } from 'lucide-react';
+import { UsersRound, Plus, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Team() {
@@ -97,40 +97,46 @@ export default function Team() {
           </div>
         </div>
       )}
-      {showInvite && <InviteModal workspaceId={user?.active_workspace_id} onClose={() => setShowInvite(false)} onInvited={() => { setShowInvite(false); loadTeam(); }} />}
+      {showInvite && <InviteModal workspaceId={user?.active_workspace_id} onClose={() => setShowInvite(false)} />}
     </div>
   );
 }
 
-function InviteModal({ workspaceId, onClose, onInvited }) {
+function InviteModal({ workspaceId, onClose }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('trainer');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+  const [copied, setCopied] = useState(false);
 
-  const handleInvite = async () => {
+  const inviteRole = role === 'owner' ? 'platform_owner' : 'platform_trainer';
+
+  const handleGenerateLink = async () => {
     try {
       setSaving(true);
       setError('');
-      const inviteRole = role === 'owner' ? 'platform_owner' : 'platform_trainer';
-      const { error: rpcErr } = await supabase.rpc('invite_team_member', {
-        p_email: email,
-        p_role: inviteRole,
-        p_workspace_id: workspaceId,
+      setResult(null);
+      const { data } = await supabase.functions.invoke('generate-trainer-invite', {
+        body: { email: email.trim(), role: inviteRole, workspace_id: workspaceId },
       });
-      if (rpcErr) throw rpcErr;
-      const { error: inviteErr } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          data: { role, platform_role: inviteRole },
-        },
-      });
-      if (inviteErr) throw inviteErr;
-      onInvited();
+      if (!data) throw new Error('No response from the invitation service');
+      setResult(data);
     } catch (err) {
-      setError(err.message || 'Failed to invite user');
+      setError(err?.context?.error?.message || err?.message || 'Failed to generate invitation link');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!result?.invite_url) return;
+    try {
+      await navigator.clipboard.writeText(result.invite_url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('Could not copy automatically. Select and copy the link manually.');
     }
   };
 
@@ -138,17 +144,41 @@ function InviteModal({ workspaceId, onClose, onInvited }) {
     <Modal open onClose={onClose} title="Invite Team Member">
       <div className="space-y-4">
         {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
-        <Input label="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="trainer@example.com" />
-        <Select label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="trainer">Trainer</option>
-          <option value="manager">Head Coach (Manager)</option>
-          <option value="owner">Owner</option>
-        </Select>
-        <p className="text-[12px] text-muted-foreground">An invitation email will be sent. The user will join with the selected role.</p>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleInvite} disabled={saving || !email}>{saving ? 'Sending…' : 'Send Invitation'}</Button>
-        </div>
+        {result ? (
+          result.status === 'already_active' ? (
+            <div className="space-y-4">
+              <p className="text-[13px] text-muted-foreground">{result.message}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button onClick={onClose}>Done</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-[13px] text-muted-foreground">
+                Invitation created for <span className="text-foreground font-medium">{result.email}</span>. No email is sent — share this link directly with the member (WhatsApp, Telegram, SMS). Opening it takes them to set their password with the selected role.
+              </p>
+              <Input label="Invitation Link" readOnly value={result.invite_url} />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={onClose}>Done</Button>
+                <Button onClick={copyLink}><Copy className="w-4 h-4" /> {copied ? 'Copied!' : 'Copy Link'}</Button>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="space-y-4">
+            <Input label="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="trainer@example.com" />
+            <Select label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="trainer">Trainer</option>
+              <option value="manager">Head Coach (Manager)</option>
+              <option value="owner">Owner</option>
+            </Select>
+            <p className="text-[12px] text-muted-foreground">A secure invitation link will be generated. No email is sent — share it directly with the member (WhatsApp, Telegram, SMS).</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+              <Button onClick={handleGenerateLink} disabled={saving || !email}>{saving ? 'Generating…' : 'Generate Invitation Link'}</Button>
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

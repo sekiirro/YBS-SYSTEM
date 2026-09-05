@@ -18,6 +18,15 @@ export default function Activate() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const markActivationComplete = async () => {
+    try {
+      const { error } = await supabase.rpc('mark_activation_complete');
+      if (error) console.warn('Activation marker warning:', error.message);
+    } catch (err) {
+      console.warn('Activation marker failed silently:', err);
+    }
+  };
+
   const submitForm = async (e) => {
     e.preventDefault();
     setError("");
@@ -44,6 +53,7 @@ export default function Activate() {
         });
         if (error) throw error;
       }
+      await markActivationComplete();
 
       setSuccess(true);
       setTimeout(() => {
