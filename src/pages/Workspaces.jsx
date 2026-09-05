@@ -5,12 +5,11 @@ import { PartnershipTypesService } from '@/services/partnershipTypes';
 import { AuditService } from '@/services/audit';
 import { useAuth } from '@/lib/AuthContext';
 import { getAppBaseUrl } from '@/lib/app-params';
-import { toast } from '@/components/ui/use-toast';
 import { PageHeader, StatCard, LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import {
   Building2, Users, CheckCircle2, AlertTriangle, Plus, Pause, Play,
-  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2, Mail
+  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,7 +53,10 @@ export default function Workspaces() {
   const [partnershipTypesLoading, setPartnershipTypesLoading] = useState(false);
   const [partnershipTypesError, setPartnershipTypesError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [sendingInviteId, setSendingInviteId] = useState(null);
+  const [generatingId, setGeneratingId] = useState(null);
+  const [inviteLinks, setInviteLinks] = useState({});
+  const [copiedInviteId, setCopiedInviteId] = useState(null);
+  const [inviteError, setInviteError] = useState('');
 
   const load = async () => {
     try {
@@ -116,35 +118,39 @@ export default function Workspaces() {
     }
   };
 
-  const resendInvite = async (ws) => {
-    const email = ws.owner_email;
-    if (!email) return;
+  const generateActivationLink = async (ws) => {
     try {
-      setSendingInviteId(ws.id);
-      const activationUrl = `${getAppBaseUrl()}/activate?email=${encodeURIComponent(email)}`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: activationUrl,
-          data: {
-            full_name: ws.owner_name || email,
-            role: 'workspace_owner',
-          },
+      setGeneratingId(ws.id);
+      setInviteError('');
+      const { data, error: invokeErr } = await supabase.functions.invoke('generate-owner-invite', {
+        body: { workspace_id: ws.id },
+      });
+      if (invokeErr) throw invokeErr;
+      if (!data) throw new Error('No response from the activation link service');
+      setInviteLinks((prev) => ({
+        ...prev,
+        [ws.id]: {
+          email: data.email,
+          url: data.invite_url || null,
+          message: data.status === 'already_active'
+            ? (data.message || `${data.email} already has an active account.`)
+            : (data.message || 'Opening the link takes the owner to set their password.'),
         },
-      });
-      if (error) throw error;
-      toast({
-        title: 'Invitation sent',
-        description: `Activation email sent to ${email}.`,
-      });
+      }));
     } catch (err) {
-      toast({
-        title: 'Invitation failed',
-        description: err.message || 'Could not send the invitation email.',
-        variant: 'destructive',
-      });
+      setInviteError(err?.context?.error?.message || err?.message || 'Failed to generate activation link');
     } finally {
-      setSendingInviteId(null);
+      setGeneratingId(null);
+    }
+  };
+
+  const copyInviteLink = async (wsId, url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedInviteId(wsId);
+      setTimeout(() => setCopiedInviteId(null), 2500);
+    } catch {
+      setInviteError('Could not copy automatically. Select and copy the link manually.');
     }
   };
 
@@ -220,9 +226,10 @@ export default function Workspaces() {
               return (
                 <div
                   key={w.id}
-                  className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-secondary/30 transition-colors"
+                  className="p-5 space-y-3 hover:bg-secondary/30 transition-colors"
                 >
-                  <div className="space-y-2 flex-1">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[16px] font-semibold text-foreground">{w.name}</span>
                       <Badge variant={w.status === 'active' ? 'success' : 'destructive'} className="capitalize">
@@ -309,16 +316,16 @@ export default function Workspaces() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => resendInvite(w)}
-                      disabled={sendingInviteId === w.id}
-                      title={w.owner_email ? `Resend activation invite to ${w.owner_email}` : 'Resend activation invite'}
+                      onClick={() => generateActivationLink(w)}
+                      disabled={generatingId === w.id}
+                      title={w.owner_email ? `Generate activation link for ${w.owner_email}` : 'Generate activation link'}
                     >
-                      {sendingInviteId === w.id ? (
+                      {generatingId === w.id ? (
                         <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
                       ) : (
-                        <Mail className="w-3.5 h-3.5 mr-1 text-primary" />
+                        <Link2 className="w-3.5 h-3.5 mr-1 text-primary" />
                       )}
-                      {sendingInviteId === w.id ? 'Sending…' : 'Resend Invitation'}
+                      {generatingId === w.id ? 'Generating…' : 'Generate Activation Link'}
                     </Button>
                     <Button
                       variant="ghost"
@@ -336,13 +343,57 @@ export default function Workspaces() {
                         </>
                       )}
                     </Button>
+                    </div>
+                    </div>
+                    {inviteLinks[w.id] && (
+                      <div className="surface-card p-3 border border-border space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
+                            <Link2 className="w-3.5 h-3.5 text-muted-foreground" /> Workspace Owner Activation Link
+                          </span>
+                          {inviteLinks[w.id].url && (
+                            <span className="text-[11px] text-muted-foreground">
+                              Share with {inviteLinks[w.id].email} directly (WhatsApp, Telegram, SMS)
+                            </span>
+                          )}
+                        </div>
+                        {inviteLinks[w.id].url ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              readOnly
+                              value={inviteLinks[w.id].url}
+                              className="flex-1 h-9 px-3 rounded-md bg-secondary/50 border border-border text-[12px] font-mono text-muted-foreground select-all"
+                            />
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => copyInviteLink(w.id, inviteLinks[w.id].url)}
+                            >
+                              {copiedInviteId === w.id ? (
+                                <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5 mr-1" />
+                              )}
+                              {copiedInviteId === w.id ? 'Copied' : 'Copy Link'}
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-[12px] text-muted-foreground">{inviteLinks[w.id].message}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {inviteError && (
+        <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+          {inviteError}
+        </div>
+      )}
 
       {showCreate && (
         <CreateWorkspaceModal

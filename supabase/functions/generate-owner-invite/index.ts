@@ -22,17 +22,13 @@ function error(code: string, message: string, status: number) {
   return json({ error: { code, message } }, status);
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function logAudit(
   admin: SupabaseClient,
   caller: { id: string; email?: string | null },
-  email: string,
-  workspaceId: string | null,
-  role: string,
-  inviteId: string | null,
   action: string,
+  metadata: { workspace_id: string; workspace_name: string; email: string; role: string },
 ) {
   try {
     const { data: profile } = await admin
@@ -46,14 +42,14 @@ async function logAudit(
       actor_name: profile?.full_name || caller.email || caller.id,
       actor_role: profile?.platform_role || null,
       action,
-      entity_type: 'platform_invites',
-      entity_id: inviteId || null,
-      entity_name: email,
-      workspace_id: workspaceId || null,
-      metadata: { role },
+      entity_type: 'workspaces',
+      entity_id: metadata.workspace_id,
+      entity_name: metadata.email,
+      workspace_id: metadata.workspace_id,
+      metadata: { role: metadata.role, workspace_name: metadata.workspace_name },
     });
   } catch {
-    // Audit logging must never break the invite flow.
+    // Audit logging must never break the link generation flow.
   }
 }
 
@@ -71,7 +67,7 @@ Deno.serve(async (req) => {
   const redirectUrl = Deno.env.get('YBS_ACTIVATE_REDIRECT_URL') || DEFAULT_REDIRECT;
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return error('server_not_configured', 'The invitation service is not configured.', 500);
+    return error('server_not_configured', 'The activation link service is not configured.', 500);
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
@@ -93,13 +89,6 @@ Deno.serve(async (req) => {
     }
     const caller = callerData.user;
 
-    // Acting client carries the caller's identity so the guarded
-    // invite_team_member RPC enforces authorization via auth.uid().
-    const acting = createClient(supabaseUrl, anonKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
     // 2. Validate the payload.
     let payload;
     try {
@@ -107,38 +96,42 @@ Deno.serve(async (req) => {
     } catch {
       return error('bad_request', 'Invalid JSON body.', 400);
     }
-
-    const email = String(payload?.email || '').trim().toLowerCase();
-    const role = String(payload?.role || '').trim().toLowerCase();
     const workspaceId = payload?.workspace_id ? String(payload.workspace_id).trim() : null;
-
-    if (!EMAIL_RE.test(email)) return error('validation', 'A valid email address is required.', 400);
-    if (role !== 'platform_trainer' && role !== 'platform_owner') {
-      return error('validation', 'Invalid role.', 400);
-    }
-    if (workspaceId && !UUID_RE.test(workspaceId)) {
-      return error('validation', 'Invalid workspace id.', 400);
+    if (!workspaceId || !UUID_RE.test(workspaceId)) {
+      return error('validation', 'A valid workspace id is required.', 400);
     }
 
-    // 3. Record the trusted ledger row via the existing SECURITY DEFINER RPC.
-    //    This is the real enforcement point: only the platform owner, or a
-    //    workspace owner of the target workspace, may invite.
-    const { data: invite, error: inviteErr } = await acting.rpc('invite_team_member', {
-      p_email: email,
-      p_role: role,
-      p_workspace_id: workspaceId,
-    });
-    if (inviteErr) {
-      const msg = String(inviteErr.message);
-      if (msg.includes('permission_denied')) {
-        return error('permission_denied', 'You are not allowed to invite members here.', 403);
-      }
-      if (msg.includes('email_required')) return error('validation', 'A valid email address is required.', 400);
-      if (msg.includes('invalid_role')) return error('validation', 'Invalid role.', 400);
-      return error('invite_failed', inviteErr.message || 'Could not record the invitation.', 500);
+    // 3. Authorize the caller server-side: the platform owner, or an active
+    //    owner of the target workspace, may generate its activation link.
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('platform_role')
+      .eq('id', caller.id)
+      .maybeSingle();
+    const isPlatformOwner = profile?.platform_role === 'platform_owner';
+    const { data: membership } = await admin
+      .from('workspace_memberships')
+      .select('workspace_role')
+      .eq('user_id', caller.id)
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!isPlatformOwner && membership?.workspace_role !== 'workspace_owner') {
+      return error('permission_denied', 'You are not allowed to generate an activation link for this workspace.', 403);
     }
 
-    // 4. Resolve the account state (Cases A/B/C) without trusting client input.
+    // 4. The owner email always comes from the trusted workspaces row, never
+    //    from client input.
+    const { data: ws, error: wsErr } = await admin
+      .from('workspaces')
+      .select('name, owner_email, owner_name')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    if (wsErr || !ws) return error('workspace_not_found', 'Workspace not found.', 404);
+    const email = String(ws.owner_email || '').trim().toLowerCase();
+    if (!email) return error('validation', 'This workspace has no owner email configured.', 400);
+
+    // 5. Resolve the account state without trusting client input.
     let existing = null;
     for (let page = 1; page <= 10; page += 1) {
       const { data: pageData, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
@@ -151,46 +144,38 @@ Deno.serve(async (req) => {
       if ((pageData.users || []).length < 1000) break;
     }
 
-    const response = {
-      email,
-      role,
-      workspace_id: workspaceId,
-      invite_id: invite?.id ?? null,
-    };
-
-    // Case resolution (A/B/C). email_confirmed_at is NEVER proof of a fully
-    // activated account: GoTrue does not expose password presence via the
-    // Admin API, and a confirmed user may still be unable to sign in because
-    // they never completed activation. The authoritative signal is the
-    // server-side marker written by mark_activation_complete() into
-    // auth.users.raw_app_meta_data.activated.
     const isActivated =
       !!existing &&
       !!existing.email_confirmed_at &&
       (existing.app_metadata?.activated === true || existing.app_metadata?.activated === 'true');
 
-    // Case A — confirmed and activation completed; never mint a duplicate
-    // invitation and never hand out a password-reset link for this account.
+    // Already fully active — never mint a duplicate and never hand out a
+    // password-reset style link for this account.
     if (isActivated) {
-      await logAudit(admin, caller, email, workspaceId, role, invite?.id, 'invite_already_active');
+      await logAudit(admin, caller, 'owner_activation_link_already_active', {
+        workspace_id: workspaceId,
+        workspace_name: ws.name || workspaceId,
+        email,
+        role: 'workspace_owner',
+      });
       return json({
         status: 'already_active',
-        message: `${email} already has an active account. No new invitation was created. Use the normal login / password reset flow instead.`,
-        ...response,
+        message: `${email} already has an active account. No new activation link was generated.`,
+        email,
+        workspace_id: workspaceId,
       });
     }
 
-    // Cases B and C — no existing user, an unconfirmed user, or a CONFIRMED
-    // user who has not completed activation. In every branch generateLink
-    // reuses the existing auth user or creates one exactly once (no
-    // duplicates): 'invite' creates the user without a password (or re-invites
-    // an unconfirmed user), 'recovery' hands the confirmed-but-not-activated
-    // trainer a link that lands on /activate where they set their password.
+    // No user / unconfirmed user -> 'invite' (goTrue creates the user without
+    // a password exactly once, or re-invites the unconfirmed user; the
+    // existing handle_new_user + sync_brand_owner_to_workspaces architecture
+    // provisions the workspace ownership). Confirmed but not activated ->
+    // 'recovery' (only request valid for an existing confirmed user; never
+    // creates a duplicate). Both land on /activate to set the password.
     const needsRecovery = !!existing && !!existing.email_confirmed_at;
     const linkType = needsRecovery ? 'recovery' : 'invite';
     const accountState = !existing ? 'new_user' : needsRecovery ? 'needs_activation' : 'unconfirmed';
 
-    // generateLink is a discriminated union on `type`; call the exact variant.
     let linkData: { properties: { action_link: string } } | null = null;
     if (linkType === 'recovery') {
       const { data, error: linkErr } = await admin.auth.admin.generateLink({
@@ -198,29 +183,40 @@ Deno.serve(async (req) => {
         email,
         options: { redirectTo: redirectUrl },
       });
-      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the invitation link.', 500);
+      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the activation link.', 500);
       linkData = data;
     } else {
       const { data, error: linkErr } = await admin.auth.admin.generateLink({
         type: 'invite',
         email,
-        options: { redirectTo: redirectUrl },
+        options: {
+          redirectTo: redirectUrl,
+          data: { full_name: ws.owner_name || ws.name || email, role: 'workspace_owner' },
+        },
       });
-      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the invitation link.', 500);
+      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the activation link.', 500);
       linkData = data;
     }
     if (!linkData?.properties?.action_link) {
-      return error('generate_failed', 'Could not generate the invitation link.', 500);
+      return error('generate_failed', 'Could not generate the activation link.', 500);
     }
 
-    await logAudit(admin, caller, email, workspaceId, role, invite?.id, `invite_link_generated:${accountState}`);
+    await logAudit(admin, caller, `owner_activation_link_generated:${accountState}`, {
+      workspace_id: workspaceId,
+      workspace_name: ws.name || workspaceId,
+      email,
+      role: 'workspace_owner',
+    });
 
     return json({
       status: 'ok',
       account_state: accountState,
       link_type: linkType,
       invite_url: linkData.properties.action_link,
-      ...response,
+      email,
+      workspace_id: workspaceId,
+      message:
+        'Activation link generated — no email is sent. Share this link directly with the workspace owner; opening it takes them to set their password.',
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
