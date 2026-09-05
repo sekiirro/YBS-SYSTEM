@@ -5,11 +5,12 @@ import { PartnershipTypesService } from '@/services/partnershipTypes';
 import { AuditService } from '@/services/audit';
 import { useAuth } from '@/lib/AuthContext';
 import { getAppBaseUrl } from '@/lib/app-params';
+import { toast } from '@/components/ui/use-toast';
 import { PageHeader, StatCard, LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import {
   Building2, Users, CheckCircle2, AlertTriangle, Plus, Pause, Play,
-  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2
+  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2, Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +54,7 @@ export default function Workspaces() {
   const [partnershipTypesLoading, setPartnershipTypesLoading] = useState(false);
   const [partnershipTypesError, setPartnershipTypesError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [sendingInviteId, setSendingInviteId] = useState(null);
 
   const load = async () => {
     try {
@@ -111,6 +113,38 @@ export default function Workspaces() {
       load();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const resendInvite = async (ws) => {
+    const email = ws.owner_email;
+    if (!email) return;
+    try {
+      setSendingInviteId(ws.id);
+      const activationUrl = `${getAppBaseUrl()}/activate?email=${encodeURIComponent(email)}`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: activationUrl,
+          data: {
+            full_name: ws.owner_name || email,
+            role: 'workspace_owner',
+          },
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: 'Invitation sent',
+        description: `Activation email sent to ${email}.`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Invitation failed',
+        description: err.message || 'Could not send the invitation email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingInviteId(null);
     }
   };
 
@@ -271,6 +305,20 @@ export default function Workspaces() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="secondary" size="sm" onClick={() => handleOpenWorkspace(w)}>
                       <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open Workspace
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => resendInvite(w)}
+                      disabled={sendingInviteId === w.id}
+                      title={w.owner_email ? `Resend activation invite to ${w.owner_email}` : 'Resend activation invite'}
+                    >
+                      {sendingInviteId === w.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <Mail className="w-3.5 h-3.5 mr-1 text-primary" />
+                      )}
+                      {sendingInviteId === w.id ? 'Sending…' : 'Resend Invitation'}
                     </Button>
                     <Button
                       variant="ghost"
