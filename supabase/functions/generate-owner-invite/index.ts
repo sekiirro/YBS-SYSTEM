@@ -55,7 +55,7 @@ async function logAudit(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 204, headers: CORS });
+    return new Response(null, { status: 204, headers: CORS });
   }
   if (req.method !== 'POST') {
     return error('method_not_allowed', 'POST requests only.', 405);
