@@ -18,6 +18,7 @@ export default function PendingApplications() {
   const [apps, setApps] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
   const [trainers, setTrainers] = useState([]);
+  const [packagesByWs, setPackagesByWs] = useState({});
   const [statusFilter, setStatusFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
@@ -26,6 +27,7 @@ export default function PendingApplications() {
   const [moreInfo, setMoreInfo] = useState('');
   const [wsChoice, setWsChoice] = useState('');
   const [trainerChoice, setTrainerChoice] = useState('');
+  const [packageChoice, setPackageChoice] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function PendingApplications() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [appsRes, wsRes, trainersRes] = await Promise.all([
+      const [appsRes, wsRes, trainersRes, pkgRes] = await Promise.all([
         supabase
           .from('client_applications')
           .select('*')
@@ -49,11 +51,26 @@ export default function PendingApplications() {
           .eq('platform_role', 'platform_trainer')
           .eq('account_status', 'active')
           .order('full_name'),
+        supabase
+          .from('packages')
+          .select('id, name, tier, duration, duration_unit, workspace_id, is_active')
+          .eq('is_active', true)
+          .order('price'),
       ]);
 
       if (appsRes.data) setApps(appsRes.data);
       if (wsRes.data) setWorkspaces(wsRes.data);
       if (trainersRes.data) setTrainers(trainersRes.data);
+
+      if (pkgRes.data) {
+        const map = {};
+        (pkgRes.data || []).forEach((p) => {
+          const wsId = p.workspace_id || 'global';
+          if (!map[wsId]) map[wsId] = [];
+          map[wsId].push(p);
+        });
+        setPackagesByWs(map);
+      }
     } catch (e) {
       console.error('Error loading pending applications:', e);
     } finally {
@@ -88,6 +105,7 @@ export default function PendingApplications() {
     setMoreInfo('');
     setWsChoice(a.assigned_workspace_id || '');
     setTrainerChoice(a.assigned_ybs_trainer_id || '');
+    setPackageChoice(a.assigned_package_id || '');
   };
 
   const runAction = async () => {
@@ -100,14 +118,16 @@ export default function PendingApplications() {
 
     try {
       if (action === 'approve') {
-        // When the trainee registered through a workspace link, the
-        // workspace is already established on the application
-        // (assigned_workspace_id). Pass NULL so the RPC resolves it
-        // from the application context instead of an admin choice.
+        // When the trainee registered through a package registration
+        // link, workspace/coach/package are established on the
+        // application server-side. Pass NULLs so the RPC resolves them
+        // from the application context; only an explicit admin choice
+        // overrides.
         const { data, error } = await supabase.rpc('approve_client_application', {
           p_application_id: selected.id,
           p_workspace_id: selected.assigned_workspace_id ? null : wsChoice,
           p_trainer_id: trainerChoice || null,
+          p_package_id: packageChoice || null,
         });
         if (error) throw error;
       } else if (action === 'reject') {
@@ -143,6 +163,14 @@ export default function PendingApplications() {
 
   const pendingCount = apps.filter((a) => a.status === 'pending' || a.status === 'under_review').length;
   const workspaceName = (id) => (id ? workspaces.find((w) => w.id === id)?.name || '—' : '—');
+  const packageName = (id) => {
+    if (!id) return '—';
+    for (const list of Object.values(packagesByWs)) {
+      const found = list.find((p) => p.id === id);
+      if (found) return found.name;
+    }
+    return '—';
+  };
 
   return (
     <div>
@@ -192,7 +220,7 @@ export default function PendingApplications() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {['Applicant', 'Workspace / Brand', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
+                  {['Applicant', 'Workspace / Brand', 'Package', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -214,6 +242,9 @@ export default function PendingApplications() {
                       {a.assigned_workspace_id && (
                         <p className="text-[11px] text-muted-foreground">via registration link</p>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[12px] text-muted-foreground">{packageName(a.assigned_package_id)}</span>
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground font-mono">{a.applicant_phone}</td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">
@@ -345,6 +376,10 @@ export default function PendingApplications() {
                 </>
               }
             />
+            <DetailRow
+              label="Package"
+              value={packageName(selected.assigned_package_id) || 'No package (will be unassigned)'}
+            />
             <DetailRow label="Registered Date" value={formatDate(selected.submitted_at || selected.created_at)} />
             <DetailRow
               label="Status"
@@ -400,6 +435,48 @@ export default function PendingApplications() {
                       {t.full_name || t.email} ({t.phone || 'No phone'})
                     </option>
                   ))}
+                </Select>
+
+                <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                  Package
+                </p>
+                {selected.assigned_package_id ? (
+                  <div className="p-3 rounded-md bg-primary/5 border border-primary/15">
+                    <p className="text-[12px] font-medium text-foreground">
+                      <Check className="w-3.5 h-3.5 inline mr-1 text-success" />
+                      Package confirmed via registration link
+                    </p>
+                    <p className="text-[12px] text-muted-foreground mt-1">
+                      {packageName(selected.assigned_package_id)} was selected on the registration link. You may change
+                      it below if needed.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-muted-foreground mb-1">
+                    No package was selected on the registration link. Choose one to assign a subscription.
+                  </p>
+                )}
+                <Select
+                  label="Package"
+                  value={packageChoice}
+                  onChange={(e) => setPackageChoice(e.target.value)}
+                >
+                  <option value="">
+                    {selected.assigned_package_id
+                      ? `Keep ${packageName(selected.assigned_package_id)}`
+                      : 'No package assigned'}
+                  </option>
+                  {((selected.assigned_workspace_id || wsChoice) && (packagesByWs[selected.assigned_workspace_id || wsChoice] || []).length)
+                    ? (packagesByWs[selected.assigned_workspace_id || wsChoice] || []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.tier} · {p.duration} {p.duration_unit})
+                        </option>
+                      ))
+                    : (packagesByWs['global'] || []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.tier} · {p.duration} {p.duration_unit})
+                        </option>
+                      ))}
                 </Select>
               </div>
             )}

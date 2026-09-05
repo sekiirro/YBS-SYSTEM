@@ -23,6 +23,8 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
+  const isScopedLink = !!(workspace && workspace.package_tier);
+
   const submitForm = async (e) => {
     e.preventDefault();
     setError("");
@@ -49,24 +51,28 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
     setLoading(true);
 
     try {
-      // 1. Register with Supabase Auth
-      //    When the trainee arrived via a workspace registration link,
-      //    carry the validated join token through signup metadata. The
-      //    server-side handle_new_user() trigger resolves that token
-      //    back to the workspace and creates the pending application
-      //    for it — the client never submits a workspace_id.
+      // 1. Register with Supabase Auth.
+      //    When the trainee arrived via a package-scoped client
+      //    registration link, carry the validated link token through
+      //    signup metadata. The server-side handle_new_user() trigger
+      //    resolves it back to the workspace + coach + package — the
+      //    client never submits workspace_id/trainer/package.
+      const meta = {
+        full_name: form.full_name.trim(),
+        phone: normalizedPhone,
+        platform_role: "none",
+        account_status: "pending_approval",
+      };
+      if (isScopedLink) {
+        meta.link_token = joinToken;
+      } else if (joinToken) {
+        meta.join_token = joinToken;
+      }
+
       const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        options: {
-          data: {
-            full_name: form.full_name.trim(),
-            phone: normalizedPhone,
-            platform_role: "none",
-            account_status: "pending_approval",
-            ...(joinToken ? { join_token: joinToken } : {}),
-          },
-        },
+        options: { data: meta },
       });
 
       if (authErr) {
@@ -182,17 +188,28 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
             <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <Building2 className="w-4 h-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[13px] font-semibold text-foreground">Joining {workspace.workspace_name || workspace.brand_name}</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">
-                Your application will be submitted to this workspace automatically. You do not need to choose a brand or workspace.
-              </p>
+              {isScopedLink ? (
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  Your selected package is <strong className="text-foreground">{workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}</strong>
+                  {workspace.coach_name ? `, coached by ${workspace.coach_name}` : ''}. This cannot be changed during registration.
+                </p>
+              ) : (
+                <p className="text-[12px] text-muted-foreground mt-0.5">
+                  Your application will be submitted to this workspace automatically. You do not need to choose a brand or workspace.
+                </p>
+              )}
             </div>
           </div>
         </div>
       )}
       <div className="mb-5 p-3 rounded-md bg-primary/5 border border-primary/15 text-[12px] text-muted-foreground">
-        Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to your workspace and can access your coaching portal.
+        {isScopedLink ? (
+          <>Your registration is submitted for the selected package ({workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}). Once approved you will be assigned to {workspace.coach_name || 'your coach'} and can access your coaching portal.</>
+        ) : (
+          <>Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to your workspace and can access your coaching portal.</>
+        )}
       </div>
       {error && (
         <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">

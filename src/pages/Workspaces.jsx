@@ -2,45 +2,88 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { WorkspacesService } from '@/services/workspaces';
 import { PartnershipTypesService } from '@/services/partnershipTypes';
+import { TeamService } from '@/services/team';
 import { AuditService } from '@/services/audit';
+import { RegistrationLinksService } from '@/services/registrationLinks';
 import { useAuth } from '@/lib/AuthContext';
 import { getAppBaseUrl } from '@/lib/app-params';
 import { PageHeader, StatCard, LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import {
   Building2, Users, CheckCircle2, AlertTriangle, Plus, Pause, Play,
-  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2
+  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2, UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-function RegistrationLinkRow({ token, label = 'Trainee Registration Link' }) {
-  const [copied, setCopied] = useState(false);
-  if (!token) return null;
-  const joinUrl = `${window.location.origin}/join/${token}`;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(joinUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+const REG_LINK_TIERS = ['silver', 'gold'];
+
+function tierLabel(tier) {
+  return tier === 'gold' ? 'Gold' : 'Silver';
+}
+
+// Four package-scoped client registration links for a workspace
+// (Silver 1M/3M + Gold 1M/3M), each resolving server-side to the
+// workspace + coach + package.
+function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = '' }) {
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopy = async (link) => {
+    try {
+      await navigator.clipboard.writeText(RegistrationLinksService.buildUrl(link.token));
+      setCopiedId(link.id);
+      setTimeout(() => setCopiedId(null), 2500);
+    } catch {
+      // fall back to manual selection
+    }
   };
+
+  if (!links || links.length === 0) {
+    return (
+      <div className="surface-card p-3 border border-border">
+        <p className="text-[12px] text-muted-foreground">Client registration links are being generated…</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="surface-card p-3 border border-border space-y-1.5">
-      <div className="flex items-center justify-between">
+    <div className="surface-card p-3 border border-border space-y-2.5">
+      <div className="flex items-center justify-between flex-wrap gap-1">
         <span className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
-          <Link2 className="w-3.5 h-3.5 text-muted-foreground" /> {label}
+          <Link2 className="w-3.5 h-3.5 text-muted-foreground" /> Client Registration Links
         </span>
-        <span className="text-[11px] text-muted-foreground">Share this link so trainees can register directly</span>
+        <span className="text-[11px] text-muted-foreground">
+          {coachName ? `Coach: ${coachName}` : 'No coach assigned yet'} · {workspaceName || ''}
+        </span>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          readOnly
-          value={joinUrl}
-          className="flex-1 h-9 px-3 rounded-md bg-secondary/50 border border-border text-[12px] font-mono text-muted-foreground select-all"
-        />
-        <Button variant="secondary" size="sm" onClick={handleCopy}>
-          {copied ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
-          {copied ? 'Copied' : 'Copy Link'}
-        </Button>
-      </div>
+      {REG_LINK_TIERS.map((tier) => (
+        <div key={tier} className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {tierLabel(tier)}
+          </p>
+          {links
+            .filter((l) => l.tier === tier)
+            .map((link) => (
+              <div key={link.id} className="flex items-center gap-2">
+                <span className="text-[12px] text-muted-foreground w-20 shrink-0">
+                  {link.duration_months} Month{link.duration_months > 1 ? 's' : ''}
+                </span>
+                <input
+                  readOnly
+                  value={RegistrationLinksService.buildUrl(link.token)}
+                  className="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-[11px] font-mono text-muted-foreground select-all"
+                />
+                <Button variant="secondary" size="sm" onClick={() => handleCopy(link)}>
+                  {copiedId === link.id ? (
+                    <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  {copiedId === link.id ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -57,6 +100,10 @@ export default function Workspaces() {
   const [inviteLinks, setInviteLinks] = useState({});
   const [copiedInviteId, setCopiedInviteId] = useState(null);
   const [inviteError, setInviteError] = useState('');
+  const [regLinks, setRegLinks] = useState({});
+  const [trainers, setTrainers] = useState([]);
+  const [coachSavingId, setCoachSavingId] = useState(null);
+  const [coachError, setCoachError] = useState('');
 
   const load = async () => {
     try {
@@ -65,6 +112,35 @@ export default function Workspaces() {
       setPartnershipTypesError('');
       const ws = await WorkspacesService.list();
       setWorkspaces(ws);
+
+      // YBS coaches available for workspace assignment (platform trainers).
+      try {
+        const team = await TeamService.list();
+        setTrainers(
+          (team || []).filter(
+            (t) => t.platform_role === 'platform_trainer' && t.account_status !== 'disabled'
+          )
+        );
+      } catch (err) {
+        console.warn('Error loading coaches:', err);
+      }
+
+      // The four package-scoped client registration links per workspace.
+      try {
+        const results = await Promise.all(
+          (ws || []).map(async (w) => {
+            try {
+              return { id: w.id, links: await RegistrationLinksService.listForWorkspace(w.id) };
+            } catch (err) {
+              console.warn('Error loading registration links:', err);
+              return { id: w.id, links: [] };
+            }
+          })
+        );
+        setRegLinks(Object.fromEntries(results.map((r) => [r.id, r.links])));
+      } catch (err) {
+        console.warn('Error loading registration links:', err);
+      }
     } catch (err) {
       console.error('Error loading workspaces:', err);
     } finally {
@@ -85,6 +161,35 @@ export default function Workspaces() {
   useEffect(() => {
     load();
   }, []);
+
+  const assignCoach = async (w, coachId) => {
+    try {
+      setCoachSavingId(w.id);
+      setCoachError('');
+      await RegistrationLinksService.assignCoach(w.id, coachId);
+      const updated = await WorkspacesService.getById(w.id);
+      const coach = (trainers || []).find((t) => t.id === coachId);
+      setWorkspaces((prev) =>
+        prev.map((x) =>
+          x.id === w.id
+            ? {
+                ...x,
+                ...updated,
+                assigned_coach_id: coachId || null,
+                assigned_coach_name: coach?.full_name || null,
+                assigned_coach_email: coach?.email || null,
+              }
+            : x
+        )
+      );
+      const links = await RegistrationLinksService.listForWorkspace(w.id);
+      setRegLinks((prev) => ({ ...prev, [w.id]: links }));
+    } catch (err) {
+      setCoachError(err.message || 'Failed to update the assigned coach.');
+    } finally {
+      setCoachSavingId(null);
+    }
+  };
 
   const handleOpenWorkspace = async (w) => {
     try {
@@ -292,20 +397,32 @@ export default function Workspaces() {
                       )}
                     </div>
 
-                    {/* Persistent trainee registration link */}
-                    <div className="pt-1 max-w-md">
-                      <a
-                        href={`${window.location.origin}/join/${w.public_join_token}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-primary hover:underline truncate max-w-full"
-                        title="Open trainee registration page"
-                      >
-                        <Link2 className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          {window.location.origin}/join/{w.public_join_token}
+                    {/* Package-scoped client registration links (Silver/Gold x 1/3 months) */}
+                    <div className="pt-1">
+                      <RegistrationLinksBlock
+                        links={regLinks[w.id] || []}
+                        workspaceName={w.name}
+                        coachName={w.assigned_coach_name || ''}
+                      />
+                      <div className="flex items-center gap-2 mt-2 max-w-xl">
+                        <span className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1">
+                          <UserCheck className="w-3 h-3" /> Coach
                         </span>
-                      </a>
+                        <select
+                          value={w.assigned_coach_id || ''}
+                          onChange={(e) => assignCoach(w, e.target.value)}
+                          disabled={coachSavingId === w.id}
+                          className="flex-1 h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40"
+                        >
+                          <option value="">No coach assigned</option>
+                          {trainers.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.full_name || t.email}
+                            </option>
+                          ))}
+                        </select>
+                        {coachSavingId === w.id && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                      </div>
                     </div>
                   </div>
 
@@ -395,11 +512,18 @@ export default function Workspaces() {
         </div>
       )}
 
+      {coachError && (
+        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+          {coachError}
+        </div>
+      )}
+
       {showCreate && (
         <CreateWorkspaceModal
           partnershipTypes={partnershipTypes}
           partnershipTypesLoading={partnershipTypesLoading}
           partnershipTypesError={partnershipTypesError}
+          trainers={trainers}
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);
@@ -415,6 +539,7 @@ function CreateWorkspaceModal({
   partnershipTypes = [],
   partnershipTypesLoading = false,
   partnershipTypesError = '',
+  trainers = [],
   onClose,
   onCreated,
 }) {
@@ -424,6 +549,7 @@ function CreateWorkspaceModal({
     owner_email: '',
     owner_phone: '',
     partnership_type_id: '',
+    assigned_coach_id: '',
     is_unlimited: true,
     client_capacity: 50,
     timezone: 'Africa/Cairo',
@@ -436,6 +562,7 @@ function CreateWorkspaceModal({
   const [error, setError] = useState('');
   const [provisionResult, setProvisionResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [createdLinks, setCreatedLinks] = useState([]);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -483,6 +610,7 @@ function CreateWorkspaceModal({
         owner_email: email,
         owner_phone: form.owner_phone.trim() || null,
         partnership_type_id: form.partnership_type_id || null,
+        assigned_coach_id: form.assigned_coach_id || null,
         platform_plan: selectedPt?.code === 'enterprise' ? 'enterprise' : 'starter',
         client_capacity: capacityVal,
         timezone: form.timezone,
@@ -496,6 +624,14 @@ function CreateWorkspaceModal({
         },
         notes: form.notes,
       });
+
+      // Fetch the four auto-provisioned package registration links.
+      try {
+        setCreatedLinks(await RegistrationLinksService.listForWorkspace(ws.id));
+      } catch (linksErr) {
+        console.warn('Error loading new registration links:', linksErr);
+        setCreatedLinks([]);
+      }
 
       // 2. Provision / Invite Authenticated Brand Owner
       let inviteStatus = 'sent';
@@ -594,7 +730,15 @@ function CreateWorkspaceModal({
             </p>
           </div>
 
-          <RegistrationLinkRow token={provisionResult.workspace.public_join_token} />
+          <RegistrationLinksBlock
+            links={createdLinks}
+            workspaceName={provisionResult.workspace.name}
+            coachName={
+              (trainers || []).find(
+                (t) => t.id === provisionResult.workspace.assigned_coach_id
+              )?.full_name || ''
+            }
+          />
 
           <div className="flex justify-end pt-2">
             <Button onClick={onCreated}>Done</Button>
@@ -687,6 +831,23 @@ function CreateWorkspaceModal({
             <option value="suspended">Suspended</option>
           </Select>
         </div>
+
+        <Select
+          label="Assigned YBS Coach (for Client Registration Links)"
+          value={form.assigned_coach_id}
+          onChange={set('assigned_coach_id')}
+        >
+          <option value="">No coach assigned yet</option>
+          {trainers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.full_name || t.email}
+            </option>
+          ))}
+        </Select>
+        <p className="text-[11px] text-muted-foreground -mt-2">
+          The four generated registration links (Silver/Gold × 1/3 months) will be scoped to this coach. You can
+          change the coach later from the workspace card.
+        </p>
 
         {/* Client Capacity Configuration */}
         <div className="surface-card p-3 border border-border space-y-3">

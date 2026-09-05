@@ -13,3 +13,4 @@ export * from './team';
 export * from './notifications';
 export * from './audit';
 export * from './partnershipTypes';
+export * from './registrationLinks';

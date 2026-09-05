@@ -10,7 +10,7 @@ import { hasPermission, getClientFilterForUser } from '@/lib/permissions';
 import { getActiveWorkspaceId, getRoleCategory, isPlatformTrainer, isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Input, Select, Modal } from '@/components/ui';
 import { formatDate, getSubscriptionStatusColor, generateClientCode, getInitials } from '@/lib/ybs-utils';
-import { Users, Search, Plus, X } from 'lucide-react';
+import { Users, Search, Plus, X, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Clients() {
@@ -20,6 +20,7 @@ export default function Clients() {
   const [trainers, setTrainers] = useState([]);
   const [packages, setPackages] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [activeWsTab, setActiveWsTab] = useState('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [trainerFilter, setTrainerFilter] = useState('all');
@@ -32,7 +33,7 @@ export default function Clients() {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [user, activeWsTab]);
 
   const loadData = async () => {
     try {
@@ -41,6 +42,12 @@ export default function Clients() {
       const cat = getRoleCategory(user);
       if (cat === 'workspace' && activeWsId) {
         filter = { ...filter, workspace_id: activeWsId };
+      }
+      // Platform Owner / Admin: "All Clients" plus one tab per workspace.
+      // Workspace scoping is applied server-side via ClientsService.list({ workspace_id })
+      // so each tab always reflects the authoritative client set.
+      if (isAdmin && cat !== 'workspace' && activeWsTab !== 'all') {
+        filter = { ...filter, workspace_id: activeWsTab };
       }
 
       const promises = [
@@ -104,6 +111,51 @@ export default function Clients() {
         }
         icon={Users}
       />
+
+      {/* Platform Owner / Admin client tabs: All Clients + one per workspace */}
+      {isAdmin && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 mb-4 surface-card p-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveWsTab('all')}
+            className={cn(
+              'flex items-center gap-1.5 px-3.5 py-2 rounded-md text-[13px] font-medium whitespace-nowrap transition-colors',
+              activeWsTab === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+            )}
+          >
+            <Users className="w-3.5 h-3.5" />
+            All Clients
+          </button>
+          {workspaces.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() => setActiveWsTab(w.id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3.5 py-2 rounded-md text-[13px] font-medium whitespace-nowrap transition-colors',
+                activeWsTab === w.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+              )}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              {w.name}
+              {typeof w.active_clients_count === 'number' && (
+                <span
+                  className={cn(
+                    'ml-0.5 text-[11px] px-1.5 py-0.5 rounded-full',
+                    activeWsTab === w.id ? 'bg-primary-foreground/20' : 'bg-secondary text-muted-foreground'
+                  )}
+                >
+                  {w.active_clients_count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters bar */}
       <div className="surface-card p-4 mb-4">

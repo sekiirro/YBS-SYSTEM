@@ -7,15 +7,18 @@ import { Link } from 'react-router-dom';
 import { Building2, Loader2, AlertTriangle } from 'lucide-react';
 
 // Public workspace-specific trainee registration page.
-// Resolves the join token to exactly one workspace via the trusted
-// resolve_workspace_join RPC, then delegates the form to ClientSignup
-// with the validated context. The trainee never picks a brand or
-// workspace, and the client code never submits a workspace_id.
+// Resolves a token to ONE workspace via the trusted
+// resolve_registration_link (?token) RPC — or, for legacy single
+// workspace /join/:token links, falls back to resolve_workspace_join.
+// The resolved context includes the workspace + coach + chosen package,
+// all derived from the trusted registration-link configuration on the
+// server. The trainee never submits workspace/coach/package values, and
+// the client code never passes them to signup beyond the token itself.
 export default function JoinWorkspace() {
   const { token } = useParams();
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState({
-    status: 'loading', // loading | ready | invalid | inactive | error
+    status: 'loading', // loading | ready | inactive | invalid | error
     workspace: null,
   });
 
@@ -26,7 +29,30 @@ export default function JoinWorkspace() {
         if (active) setState({ status: 'invalid', workspace: null });
         return;
       }
+
       try {
+        // Preferred path: a package-scoped client registration link
+        // (workspace_registration_links). Returns rich onboarding context.
+        const { data: linkData, error: linkErr } = await supabase.rpc('resolve_registration_link', {
+          p_token: token,
+        });
+
+        if (!linkErr && linkData?.valid) {
+          if (!active) return;
+          if (linkData.active === false) {
+            setState({ status: 'inactive', workspace: linkData });
+            return;
+          }
+          if (linkData.registration_enabled === false) {
+            setState({ status: 'inactive', workspace: linkData });
+            return;
+          }
+          setState({ status: 'ready', workspace: linkData });
+          return;
+        }
+
+        // Legacy path: single workspace join token (workspace only,
+        // no package scoping).
         const { data, error } = await supabase.rpc('resolve_workspace_join', {
           p_token: token,
         });
