@@ -51,6 +51,27 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
     setLoading(true);
 
     try {
+      // 0. Guard against phone collisions. profiles.phone is UNIQUE, and
+      //    handle_new_user() inserts the trainee profile during signup. If
+      //    this phone already exists that INSERT aborts and Supabase Auth
+      //    reports the opaque "Database error saving new user". Resolve the
+      //    phone up front (same RPC the Login page already uses) so we can
+      //    show a clear message instead of failing deep inside the trigger.
+      const { data: phoneRes, error: phoneErr } = await supabase.rpc("resolve_phone_identifier", {
+        p_phone: normalizedPhone,
+      });
+
+      if (phoneErr) {
+        console.error("Phone resolution error:", phoneErr);
+        throw new Error("Unable to verify phone number. Please try again or use a different phone number.");
+      }
+
+      if (phoneRes && phoneRes.found) {
+        throw new Error(
+          "This phone number is already registered to an account. Please sign in instead, or use a different phone number."
+        );
+      }
+
       // 1. Register with Supabase Auth.
       //    When the trainee arrived via a package-scoped client
       //    registration link, carry the validated link token through
