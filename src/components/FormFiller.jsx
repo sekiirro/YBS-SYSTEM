@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, AlertCircle, Save, Send } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Save, Send, Smartphone } from 'lucide-react';
 
 /**
  * Client-facing form filler.
@@ -52,7 +52,9 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
     return questions.map((q) => ({
       question_id: q.id,
       question_label: q.label,
-      response_value: responses[q.id] != null ? responses[q.id] : '',
+      response_value: (q.question_type === 'file_upload' || q.question_type === 'image_upload')
+        ? (responses[q.id] || 'يتم الإرسال على رقم المتابعة')
+        : (responses[q.id] != null ? responses[q.id] : ''),
     }));
   };
 
@@ -74,6 +76,8 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
   const validate = () => {
     const errs = {};
     questions.forEach((q) => {
+      // file_upload and image_upload are handled via direct follow-up communication, never block submission
+      if (q.question_type === 'file_upload' || q.question_type === 'image_upload') return;
       if (!q.required) return;
       const val = responses[q.id];
       if (val === undefined || val === null || val === '') {
@@ -128,32 +132,52 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
             </div>
           )}
 
-          {questions.map((q, idx) => (
-            <div key={q.id} className="space-y-2">
-              <div className="flex items-start gap-2">
-                <span className="text-[11px] font-medium text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded mt-0.5">
-                  {idx + 1}
-                </span>
-                <div className="flex-1">
-                  <p className="text-[13px] font-medium text-foreground">
-                    {q.label}
-                    {q.required && <span className="text-red-400 ml-1">*</span>}
-                  </p>
-                  {q.description && <p className="text-[11px] text-muted-foreground mt-0.5">{q.description}</p>}
-                </div>
-              </div>
+          {questions.map((q, idx) => {
+            const currentSection = q.conditional_rules?.section;
+            const prevSection = idx > 0 ? questions[idx - 1]?.conditional_rules?.section : null;
+            const isNewSection = currentSection && currentSection !== prevSection;
 
-              <div className="pl-7">
-                <QuestionInput
-                  question={q}
-                  value={responses[q.id]}
-                  onChange={(val) => updateResponse(q.id, val)}
-                  disabled={isSubmitted}
-                  error={validationErrors[q.id]}
-                />
-              </div>
-            </div>
-          ))}
+            return (
+              <React.Fragment key={q.id}>
+                {isNewSection && (
+                  <div className={cn("pt-4 pb-2 border-b border-border/60 mb-3", idx > 0 && "mt-6")}>
+                    <h3 className="text-sm font-semibold text-primary font-display flex items-center gap-2" dir="auto">
+                      <span className="w-1.5 h-4 rounded-full bg-primary inline-block" />
+                      {currentSection}
+                    </h3>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[11px] font-medium text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded mt-0.5 shrink-0">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground" dir="auto">
+                        {q.label}
+                        {q.required && <span className="text-red-400 ml-1">*</span>}
+                      </p>
+                      {q.description && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5" dir="auto">
+                          {q.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pl-7">
+                    <QuestionInput
+                      question={q}
+                      value={responses[q.id]}
+                      onChange={(val) => updateResponse(q.id, val)}
+                      disabled={isSubmitted}
+                      error={validationErrors[q.id]}
+                    />
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Footer */}
@@ -186,6 +210,55 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
 }
 
 /**
+ * Generates natural Arabic instructions for file/image questions directing
+ * the client to send the asset to their follow-up number (رقم المتابعة).
+ */
+function getUploadInstruction(question) {
+  const text = `${question?.label || ''} ${question?.description || ''}`.toLowerCase();
+
+  // InBody
+  if (text.includes('inbody') || text.includes('إنبادي') || text.includes('انبودي') || text.includes('ان بادي') || text.includes('إن بادي')) {
+    return {
+      title: 'إرسال تقرير الـInBody:',
+      instruction: 'برجاء إرسال صورة واضحة أو ملف التقرير على رقم المتابعة الخاص بك.',
+    };
+  }
+
+  // Progress photos
+  if (text.includes('progress') || (text.includes('صور') && (text.includes('تقدم') || text.includes('البداية') || text.includes('بداية') || text.includes('جسم') || text.includes('شكل')))) {
+    return {
+      title: 'إرسال صور التقدم:',
+      instruction: 'برجاء إرسال صور التقدم المطلوبة على رقم المتابعة الخاص بك.',
+    };
+  }
+
+  // Gym / Equipment
+  if (text.includes('جيم') || text.includes('gym') || text.includes('معدات') || text.includes('أجهزة') || text.includes('اجهزة')) {
+    return {
+      title: 'إرسال صور/فيديو الجيم:',
+      instruction: 'برجاء إرسال صور أو فيديو لمعدات الجيم المتاحة لديك على رقم المتابعة الخاص بك.',
+    };
+  }
+
+  // Workout plan
+  if (text.includes('برنامج') || text.includes('تمرين') || text.includes('split') || text.includes('workout')) {
+    return {
+      title: 'إرسال برنامج التمرين:',
+      instruction: 'برجاء إرسال صورة أو ملف برنامج التمرين الحالي على رقم المتابعة الخاص بك.',
+    };
+  }
+
+  // General image vs general file
+  const isImage = question?.question_type === 'image_upload' || text.includes('صورة') || text.includes('صور');
+  return {
+    title: isImage ? 'إرسال الصورة:' : 'إرسال الملف:',
+    instruction: isImage
+      ? 'برجاء إرسال الصورة المطلوبة على رقم المتابعة الخاص بك.'
+      : 'برجاء إرسال الملف المطلوب على رقم المتابعة الخاص بك.',
+  };
+}
+
+/**
  * Renders the appropriate input control per question type.
  */
 function QuestionInput({ question, value, onChange, disabled, error }) {
@@ -196,21 +269,52 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
   const renderInput = () => {
     switch (question_type) {
       case 'short_answer':
-        return <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="Your answer…" className={cn(baseInput, errorBorder)} />;
+        return (
+          <input
+            type="text"
+            dir="auto"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Your answer…"
+            className={cn(baseInput, errorBorder)}
+          />
+        );
 
       case 'long_answer':
-        return <textarea rows={3} value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="Your answer…"
-          className={cn('w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-colors resize-none disabled:opacity-60', errorBorder)} />;
+        return (
+          <textarea
+            rows={3}
+            dir="auto"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Your answer…"
+            className={cn('w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-colors resize-none disabled:opacity-60', errorBorder)}
+          />
+        );
 
       case 'single_choice':
         return (
           <div className="space-y-2">
             {(options || []).map((opt, i) => (
-              <label key={i} className={cn('flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors', disabled && 'opacity-60',
-                value === opt ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:border-border')}>
-                <input type="radio" name={`q_${question.id}`} checked={value === opt} onChange={() => onChange(opt)} disabled={disabled}
-                  className="accent-primary" />
-                <span className="text-[13px]">{opt}</span>
+              <label
+                key={i}
+                className={cn(
+                  'flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors',
+                  disabled && 'opacity-60',
+                  value === opt ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:border-border'
+                )}
+              >
+                <input
+                  type="radio"
+                  name={`q_${question.id}`}
+                  checked={value === opt}
+                  onChange={() => onChange(opt)}
+                  disabled={disabled}
+                  className="accent-primary shrink-0"
+                />
+                <span className="text-[13px]" dir="auto">{opt}</span>
               </label>
             ))}
           </div>
@@ -221,29 +325,47 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
         return (
           <div className="space-y-2">
             {(options || []).map((opt, i) => (
-              <label key={i} className={cn('flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors', disabled && 'opacity-60',
-                arrVal.includes(opt) ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:border-border')}>
-                <input type="checkbox" checked={arrVal.includes(opt)} disabled={disabled}
+              <label
+                key={i}
+                className={cn(
+                  'flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors',
+                  disabled && 'opacity-60',
+                  arrVal.includes(opt) ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:border-border'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={arrVal.includes(opt)}
+                  disabled={disabled}
                   onChange={(e) => {
                     if (e.target.checked) onChange([...arrVal, opt]);
                     else onChange(arrVal.filter(v => v !== opt));
                   }}
-                  className="accent-primary" />
-                <span className="text-[13px]">{opt}</span>
+                  className="accent-primary shrink-0"
+                />
+                <span className="text-[13px]" dir="auto">{opt}</span>
               </label>
             ))}
           </div>
         );
 
       case 'yes_no':
+        const yesNoOptions = (options && options.length > 0) ? options : ['Yes', 'No'];
         return (
           <div className="flex gap-3">
-            {['Yes', 'No'].map((opt) => (
-              <button key={opt} type="button" disabled={disabled}
+            {yesNoOptions.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                disabled={disabled}
                 onClick={() => onChange(opt)}
-                className={cn('flex-1 h-10 rounded-lg border text-[13px] font-medium transition-all',
+                className={cn(
+                  'flex-1 h-10 rounded-lg border text-[13px] font-medium transition-all',
                   value === opt ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-border hover:text-foreground',
-                  disabled && 'opacity-60')}>
+                  disabled && 'opacity-60'
+                )}
+                dir="auto"
+              >
                 {opt}
               </button>
             ))}
@@ -252,50 +374,118 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
 
       case 'dropdown':
         return (
-          <select value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled}
-            className={cn(baseInput, errorBorder)}>
+          <select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            dir="auto"
+            className={cn(baseInput, errorBorder)}
+          >
             <option value="">Select…</option>
             {(options || []).map((opt, i) => (
-              <option key={i} value={opt}>{opt}</option>
+              <option key={i} value={opt} dir="auto">{opt}</option>
             ))}
           </select>
         );
 
       case 'number':
-        return <input type="number" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="0" className={cn(baseInput, errorBorder)} />;
+        return (
+          <input
+            type="number"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="0"
+            className={cn(baseInput, errorBorder)}
+          />
+        );
 
       case 'date':
-        return <input type="date" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={cn(baseInput, errorBorder)} />;
+        return (
+          <input
+            type="date"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className={cn(baseInput, errorBorder)}
+          />
+        );
 
       case 'time':
-        return <input type="time" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={cn(baseInput, errorBorder)} />;
+        return (
+          <input
+            type="time"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            className={cn(baseInput, errorBorder)}
+          />
+        );
 
       case 'rating':
         const numVal = parseInt(value) || 0;
+        const scaleItems = (options && options.length >= 5)
+          ? options
+          : [1, 2, 3, 4, 5];
         return (
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" disabled={disabled}
-                onClick={() => onChange(n)}
-                className={cn('w-10 h-10 rounded-lg border text-[14px] font-semibold transition-all',
-                  numVal >= n ? 'border-amber-400/50 bg-amber-500/15 text-amber-400' : 'border-border text-muted-foreground hover:text-foreground',
-                  disabled && 'opacity-60')}>
-                {n}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-1.5">
+            {scaleItems.map((n, i) => {
+              const valNum = typeof n === 'number' ? n : (parseInt(n) || (i + 1));
+              const isSelected = value === n || value === String(n) || numVal === valNum;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChange(n)}
+                  className={cn(
+                    'min-w-9 h-9 px-2 rounded-lg border text-[13px] font-semibold transition-all',
+                    isSelected ? 'border-amber-400/50 bg-amber-500/15 text-amber-400' : 'border-border text-muted-foreground hover:text-foreground',
+                    disabled && 'opacity-60'
+                  )}
+                >
+                  {n}
+                </button>
+              );
+            })}
           </div>
         );
 
       case 'file_upload':
       case 'image_upload':
+        const { title, instruction } = getUploadInstruction(question);
         return (
-          <div className={cn('p-4 rounded-lg border border-dashed text-center', errorBorder || 'border-border/50')}>
-            <p className="text-[12px] text-muted-foreground">File upload coming soon</p>
+          <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 space-y-2 transition-all">
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-[13px] font-semibold text-primary" dir="auto">
+                {title}
+              </p>
+            </div>
+            <p className="text-[12px] text-foreground/90 leading-relaxed pr-1" dir="auto">
+              {instruction.replace('رقم المتابعة الخاص بك.', '')}
+              <strong className="text-foreground font-bold">رقم المتابعة الخاص بك</strong>.
+            </p>
+            <div className="pt-0.5">
+              <span className="inline-flex items-center text-[11px] text-muted-foreground bg-secondary/80 px-2.5 py-0.5 rounded-full border border-border/40" dir="auto">
+                يتم الإرسال عبر قنوات المتابعة المباشرة — لا يتطلب رفع ملف هنا
+              </span>
+            </div>
           </div>
         );
 
       default:
-        return <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="Your answer…" className={cn(baseInput, errorBorder)} />;
+        return (
+          <input
+            type="text"
+            dir="auto"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            placeholder="Your answer…"
+            className={cn(baseInput, errorBorder)}
+          />
+        );
     }
   };
 

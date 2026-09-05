@@ -612,17 +612,37 @@ export default function Assessments() {
               </Badge>
             </div>
 
-            {(viewingForm.questions_snapshot || []).sort((a, b) => a.sort_order - b.sort_order).map((q, idx) => {
-              const resp = (viewingForm.assessment_responses || []).find(r => r.question_id === q.id);
-              const val = resp?.response_value;
-              const displayVal = val == null ? '—' : (Array.isArray(val) ? val.join(', ') : String(val));
-              return (
-                <div key={q.id} className="space-y-1">
-                  <p className="text-[12px] font-medium text-muted-foreground">Q{idx + 1}. {q.label}</p>
-                  <p className="text-[13px] text-foreground pl-4">{displayVal || '—'}</p>
-                </div>
-              );
-            })}
+            {(() => {
+              const sortedQuestions = [...(viewingForm.questions_snapshot || [])].sort((a, b) => a.sort_order - b.sort_order);
+              return sortedQuestions.map((q, idx) => {
+                const resp = (viewingForm.assessment_responses || []).find(r => r.question_id === q.id);
+                const val = resp?.response_value;
+                const displayVal = val == null ? '—' : (Array.isArray(val) ? val.join(', ') : String(val));
+                const currentSection = q.conditional_rules?.section;
+                const prevSection = idx > 0 ? sortedQuestions[idx - 1]?.conditional_rules?.section : null;
+                const isNewSection = currentSection && currentSection !== prevSection;
+
+                return (
+                  <React.Fragment key={q.id}>
+                    {isNewSection && (
+                      <div className={cn("pt-4 pb-1 border-b border-border/50 mb-2", idx > 0 && "mt-4")}>
+                        <p className="text-[12px] font-semibold text-primary uppercase tracking-wider" dir="auto">
+                          {currentSection}
+                        </p>
+                      </div>
+                    )}
+                    <div className="space-y-1 py-1">
+                      <p className="text-[12px] font-medium text-muted-foreground" dir="auto">Q{idx + 1}. {q.label}</p>
+                      <p className="text-[13px] text-foreground pl-4" dir="auto">
+                        {(q.question_type === 'file_upload' || q.question_type === 'image_upload')
+                          ? (displayVal && displayVal !== '—' && displayVal !== '""' ? displayVal : 'يتم الإرسال على رقم المتابعة')
+                          : (displayVal || '—')}
+                      </p>
+                    </div>
+                  </React.Fragment>
+                );
+              });
+            })()}
           </div>
         )}
       </Modal>

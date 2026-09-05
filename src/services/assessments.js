@@ -7,7 +7,7 @@ export const TemplatesService = {
   async list(filters = {}) {
     let query = supabase
       .from('assessment_templates')
-      .select('*, assessment_questions(count), form_template_workspace_assignments(workspace_id)')
+      .select('*, assessment_questions(count), form_template_workspace_assignment(workspace_id)')
       .order('created_at', { ascending: false });
 
     if (filters.workspace_id) query = query.eq('workspace_id', filters.workspace_id);
@@ -15,12 +15,20 @@ export const TemplatesService = {
     if (filters.created_by) query = query.eq('created_by', filters.created_by);
     if (filters.is_active !== undefined) query = query.eq('is_active', filters.is_active);
 
-    const { data, error } = await query;
-    if (error) throw error;
+    let { data, error } = await query;
+    if (error) {
+      // Fallback in case of relationship name variation
+      const fallback = await supabase
+        .from('assessment_templates')
+        .select('*, assessment_questions(count)')
+        .order('created_at', { ascending: false });
+      if (fallback.error) throw error;
+      data = fallback.data;
+    }
     return (data || []).map((t) => ({
       ...t,
       question_count: t.assessment_questions?.[0]?.count || 0,
-      assigned_workspace_ids: (t.form_template_workspace_assignments || []).map((a) => a.workspace_id),
+      assigned_workspace_ids: (t.form_template_workspace_assignment || t.form_template_workspace_assignments || []).map((a) => a.workspace_id),
     }));
   },
 
