@@ -4,6 +4,7 @@ import { WorkspacesService } from '@/services/workspaces';
 import { PartnershipTypesService } from '@/services/partnershipTypes';
 import { AuditService } from '@/services/audit';
 import { useAuth } from '@/lib/AuthContext';
+import { getAppBaseUrl } from '@/lib/app-params';
 import { PageHeader, StatCard, LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import {
@@ -399,7 +400,7 @@ function CreateWorkspaceModal({
 
       // 2. Provision / Invite Authenticated Brand Owner
       let inviteStatus = 'sent';
-      const activationUrl = `${window.location.origin}/activate?email=${encodeURIComponent(email)}`;
+      const activationUrl = `${getAppBaseUrl()}/activate?email=${encodeURIComponent(email)}`;
 
       // Check if profile exists already
       const { data: existingProfile } = await supabase

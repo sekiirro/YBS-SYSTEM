@@ -51,3 +51,12 @@ const getAppParams = () => {
 export const appParams = {
 	...getAppParams()
 }
+
+// Resolve the app base origin for building links that are embedded in
+// external emails (activation/password-setup redirects, etc.). Prefers the
+// configured VITE_APP_BASE_URL (or ?app_base_url= param), falling back to the
+// current browser origin so local development keeps working unchanged.
+export function getAppBaseUrl() {
+	const configured = appParams.appBaseUrl;
+	return (configured || window.location.origin).replace(/\/+$/, '');
+}
