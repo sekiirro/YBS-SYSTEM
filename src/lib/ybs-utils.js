@@ -28,6 +28,15 @@ export function timeAgo(dateStr) {
   }
 }
 
+export function getLocalDateKey(dateVal = new Date()) {
+  if (!dateVal) return null;
+  try {
+    return format(new Date(dateVal), 'yyyy-MM-dd');
+  } catch {
+    return null;
+  }
+}
+
 export function daysUntil(dateStr) {
   if (!dateStr) return null;
   try {

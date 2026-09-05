@@ -42,7 +42,7 @@ import Settings from '@/pages/Settings';
 import Workspaces from '@/pages/Workspaces';
 import PendingApplications from '@/pages/PendingApplications';
 import PortalDashboard from '@/pages/PortalDashboard';
-import { isPlatformAdmin } from '@/lib/ybs-auth';
+import { isPlatformAdmin, isClient } from '@/lib/ybs-auth';
 
 // Ensures the route only renders when the user actually belongs to the
 // requested workspace (or is the Platform Owner). UI-level safety net;
@@ -51,6 +51,7 @@ const WorkspaceRouteGuard = ({ children }) => {
   const { workspaceId } = useParams();
   const { user } = useAuth();
   if (isPlatformAdmin(user)) return children;
+  if (isClient(user)) return <Forbidden />;
   const managed = user?.managed_workspace_ids || [];
   const member = user?.workspace_ids || [];
   if (managed.includes(workspaceId) || member.includes(workspaceId)) return children;
@@ -134,12 +135,15 @@ const AuthenticatedApp = () => {
           <Route element={<RoleGuard allow={['client', 'admin']} />}>
             <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
             <Route path="/portal/dashboard" element={<PortalDashboard view="dashboard" />} />
-            <Route path="/portal/workout" element={<PortalDashboard view="workout" />} />
-            <Route path="/portal/nutrition" element={<PortalDashboard view="nutrition" />} />
-            <Route path="/portal/progress" element={<PortalDashboard view="progress" />} />
-            <Route path="/portal/forms" element={<PortalDashboard view="assessments" />} />
+            <Route path="/portal/forms" element={<PortalDashboard view="forms" />} />
             <Route path="/portal/assessments" element={<Navigate to="/portal/forms" replace />} />
-            <Route path="/portal/subscription" element={<PortalDashboard view="subscription" />} />
+            <Route path="/portal/metrics" element={<PortalDashboard view="metrics" />} />
+            <Route path="/portal/progress" element={<Navigate to="/portal/metrics" replace />} />
+            <Route path="/portal/nutrition" element={<PortalDashboard view="nutrition" />} />
+            <Route path="/portal/exercise" element={<PortalDashboard view="exercise" />} />
+            <Route path="/portal/workout" element={<Navigate to="/portal/exercise" replace />} />
+            <Route path="/portal/package" element={<PortalDashboard view="package" />} />
+            <Route path="/portal/subscription" element={<Navigate to="/portal/package" replace />} />
             <Route path="/portal/notifications" element={<PortalDashboard view="notifications" />} />
             <Route path="/portal/profile" element={<PortalDashboard view="profile" />} />
           </Route>

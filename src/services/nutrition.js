@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabase';
+import { getLocalDateKey } from '@/lib/ybs-utils';
 
 // ─── Plan / Meal Normalizer ─────────────────────────────────────────
 
@@ -295,5 +296,56 @@ export const NutritionService = {
       .eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  // ─── Daily Nutrition / Meal Completion ─────────────────────────────
+
+  async logDailyMeals({ clientId, workspaceId, nutritionPlanId, date, mealsCompleted = true, caloriesConsumed = null, notes = null }) {
+    const logDate = date || getLocalDateKey(new Date());
+    const { data, error } = await supabase
+      .from('daily_nutrition_logs')
+      .upsert({
+        client_id: clientId,
+        workspace_id: workspaceId,
+        nutrition_plan_id: nutritionPlanId || null,
+        log_date: logDate,
+        meals_completed: mealsCompleted,
+        calories_consumed: caloriesConsumed,
+        notes,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'client_id,log_date' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getDailyNutritionLog(clientId, date) {
+    const logDate = date || getLocalDateKey(new Date());
+    const { data, error } = await supabase
+      .from('daily_nutrition_logs')
+      .select('*')
+      .eq('client_id', clientId)
+      .eq('log_date', logDate)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data || null;
+  },
+
+  async getWeeklyNutritionLogs(clientId, startDate, endDate) {
+    let query = supabase
+      .from('daily_nutrition_logs')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('log_date', { ascending: false });
+
+    if (startDate) query = query.gte('log_date', startDate);
+    if (endDate) query = query.lte('log_date', endDate);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
   },
 };

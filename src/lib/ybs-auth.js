@@ -16,13 +16,13 @@ export function isPlatformTrainer(user) {
 }
 
 export function isWorkspaceOwner(user) {
-  if (!user || isPlatformAdmin(user)) return false;
+  if (!user || isPlatformAdmin(user) || isClient(user)) return false;
   const managed = Array.isArray(user.managed_workspace_ids) ? user.managed_workspace_ids : [];
   return managed.length > 0;
 }
 
 export function isWorkspaceMember(user) {
-  if (!user || isPlatformAdmin(user) || isPlatformTrainer(user)) return false;
+  if (!user || isPlatformAdmin(user) || isPlatformTrainer(user) || isClient(user)) return false;
   const managed = Array.isArray(user.managed_workspace_ids) ? user.managed_workspace_ids : [];
   const all = Array.isArray(user.workspace_ids) ? user.workspace_ids : [];
   return managed.length > 0 || all.length > 0;
@@ -37,8 +37,8 @@ export function getRoleCategory(user) {
   if (!user) return 'unknown';
   if (isPlatformAdmin(user)) return 'admin';
   if (isPlatformTrainer(user)) return 'coach';
-  if (isWorkspaceOwner(user) || isWorkspaceMember(user)) return 'workspace';
   if (isClient(user)) return 'client';
+  if (isWorkspaceOwner(user) || isWorkspaceMember(user)) return 'workspace';
   return 'unknown';
 }
 

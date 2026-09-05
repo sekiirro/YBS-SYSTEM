@@ -1,0 +1,17 @@
+-- ============================================================
+-- 20260905000011: fix get_workspace_registration_links volatility
+--
+-- get_workspace_registration_links is SECURITY DEFINER and calls
+-- provision_workspace_registration_links (which performs INSERTs) to
+-- backfill the four links for any old / partial workspace. The
+-- function was declared STABLE while performing writes. PostgREST
+-- executes STABLE/IMMUTABLE RPC functions inside a READ-ONLY
+-- transaction, so the internal INSERT failed with 25006 ("cannot
+-- execute INSERT in a read-only transaction") — visible only when
+-- called through PostgREST (browser / supabase-js), not via SQL.
+--
+-- Fix: mark the function VOLATILE so PostgREST runs it in a
+-- read-write transaction. The volatility flag does not change its
+-- external behavior; grants remain unchanged.
+-- ============================================================
+ALTER FUNCTION public.get_workspace_registration_links(p_workspace_id UUID) VOLATILE;

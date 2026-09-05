@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkoutsService } from '@/services/workouts';
-import { Badge, Button, Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
 import {
   Dumbbell,
@@ -8,13 +8,9 @@ import {
   CheckCircle2,
   Clock,
   Video,
-  Calendar,
   Layers,
-  ChevronRight,
   Flame,
   Coffee,
-  RotateCcw,
-  Sparkles,
   History,
   Check
 } from 'lucide-react';
