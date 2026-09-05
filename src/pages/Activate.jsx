@@ -32,11 +32,18 @@ export default function Activate() {
     setLoading(true);
 
     try {
-      const { data, error: signErr } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-      if (signErr) throw signErr;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (error) throw error;
+      }
 
       setSuccess(true);
       setTimeout(() => {
