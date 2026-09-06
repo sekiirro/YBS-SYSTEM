@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Modal, Button, Input, TextArea, Select, Badge } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import {
@@ -49,6 +49,21 @@ export default function FormBuilder({ open, onClose, onSave, initialData }) {
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Re-sync local state when the modal opens so "Edit template" always loads
+  // the selected template's data (the component stays mounted in between).
+  useEffect(() => {
+    if (!open) return;
+    setName(initialData?.name || '');
+    setDescription(initialData?.description || '');
+    setStatus(initialData?.status || 'draft');
+    setQuestions(
+      initialData?.assessment_questions?.length
+        ? initialData.assessment_questions.map((q) => ({ ...q, _key: q.id || crypto.randomUUID() }))
+        : [newQuestion(0)]
+    );
+    setErrors({});
+  }, [open, initialData?.id]);
 
   const addQuestion = () => {
     setQuestions((prev) => [...prev, newQuestion(prev.length)]);

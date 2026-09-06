@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { TeamService } from '@/services/team';
 import { ClientsService } from '@/services/clients';
 import { canManageTeam } from '@/lib/permissions';
+import { getRoleCategory } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select } from '@/components/ui';
 import { getInitials } from '@/lib/ybs-utils';
 import { UsersRound, Plus, Copy } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function Team() {
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
+  const isAdminView = getRoleCategory(user) === 'admin';
 
   useEffect(() => { loadTeam(); }, []);
 
@@ -35,7 +37,26 @@ export default function Team() {
 
   const getClientCount = (trainerId) => clients.filter((c) => c.assigned_trainer_id === trainerId).length;
 
-  const roleLabel = { owner: 'Owner', manager: 'Head Coach', trainer: 'Trainer' };
+  const roleLabel = { owner: 'Owner', manager: 'Head Coach', trainer: 'Trainer', sales: 'Sales', workspace_role: 'Workspace Member' };
+
+  const displayRole = (u) => {
+    const wr = u.workspace_role;
+    if (wr) {
+      if (wr === 'workspace_owner') return 'Workspace Owner';
+      if (wr === 'trainer') return 'Trainer';
+      if (wr === 'sales') return 'Sales';
+      return wr;
+    }
+    return u.role ? (roleLabel[u.role] || u.role) : '—';
+  };
+
+  const roleColor = (u) => {
+    const wr = u.workspace_role || u.role;
+    if (wr === 'workspace_owner' || wr === 'owner') return 'text-primary bg-primary/10 border-primary/20';
+    if (wr === 'manager') return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+    if (wr === 'sales') return 'text-violet-400 bg-violet-500/10 border-violet-500/20';
+    return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  };
 
   if (loading) return <LoadingState label="Loading team…" />;
 
@@ -43,7 +64,7 @@ export default function Team() {
     <div>
       <PageHeader
         title="Team"
-        description="Manage team members and permissions"
+        description={isAdminView ? 'Manage team members and permissions' : 'Your workspace\'s staff — trainers, sales, and owners'}
         icon={UsersRound}
         actions={canManageTeam(user) && <Button onClick={() => setShowInvite(true)}><Plus className="w-4 h-4" /> Invite Member</Button>}
       />
@@ -77,11 +98,7 @@ export default function Team() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={cn(
-                        u.role === 'owner' ? 'text-primary bg-primary/10 border-primary/20' :
-                        u.role === 'manager' ? 'text-sky-400 bg-sky-500/10 border-sky-500/20' :
-                        'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                      )}>{roleLabel[u.role] || u.role}</Badge>
+                      <Badge className={cn(roleColor(u))}>{displayRole(u)}</Badge>
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">{u.phone || '—'}</td>
                     <td className="px-4 py-3 text-[12px] text-right tabular-nums">{u.role === 'trainer' ? getClientCount(u.id) : '—'}</td>

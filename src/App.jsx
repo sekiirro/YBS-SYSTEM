@@ -91,13 +91,13 @@ const AuthenticatedApp = () => {
             <Route path="/admin/workspaces" element={<Workspaces />} />
             <Route path="/admin/applications" element={<PendingApplications />} />
             <Route path="/audit" element={<AuditLogs />} />
-            <Route path="/team" element={<Team />} />
           </Route>
 
           {/* Admin + workspace owner (workspace-scoped feature pages) */}
           <Route element={<RoleGuard allow={['admin', 'workspace']} />}>
             <Route path="/settings" element={<Settings />} />
             <Route path="/packages" element={<Packages />} />
+            <Route path="/team" element={<Team />} />
           </Route>
 
           {/* Admin + workspace + coach */}

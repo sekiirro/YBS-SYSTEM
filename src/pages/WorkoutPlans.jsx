@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { WorkoutsService } from '@/services/workouts';
+import { PlansService } from '@/services/plans';
 import { hasPermission } from '@/lib/permissions';
 import { getRoleCategory, getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal } from '@/components/ui';
@@ -21,8 +22,28 @@ export default function WorkoutPlans() {
   // New Plan Selection Modal State
   const [newPlanModalOpen, setNewPlanModalOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
 
   const canCreate = hasPermission(user, 'workout.create');
+
+  // Server-side template search (RLS-scoped to the active workspace / platform owner)
+  const runTemplateSearch = (q) => {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    PlansService.searchTemplates({
+      query: trimmed,
+      source: 'workout',
+      workspaceId: user?.active_workspace_id,
+    })
+      .then((rows) => setSearchResults(rows || []))
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearching(false));
+  };
 
   // Workspace owners are scoped to their own workspace exercise plans.
   // The platform owner and platform trainers see everything RLS allows.
@@ -65,8 +86,9 @@ export default function WorkoutPlans() {
   const filteredTemplatesForModal = useMemo(() => {
     const q = templateSearch.trim().toLowerCase();
     if (!q) return templates;
-    return templates.filter((t) => t.name?.toLowerCase().includes(q) || t.split_type?.toLowerCase().includes(q));
-  }, [templates, templateSearch]);
+    return searchResults !== null ? searchResults : templates.filter((t) => t.name?.toLowerCase().includes(q) || t.split_type?.toLowerCase().includes(q));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates, templateSearch, searchResults]);
 
   const handleDelete = async (id, e) => {
     e.stopPropagation();
@@ -319,7 +341,7 @@ export default function WorkoutPlans() {
               <Copy className="w-3.5 h-3.5 text-primary" /> Or Build from Existing Template
             </h4>
 
-            {templates.length === 0 ? (
+            {templates.length === 0 && searchResults === null ? (
               <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
                 No templates saved yet. You can create one or save any program as a template.
               </p>
@@ -331,14 +353,18 @@ export default function WorkoutPlans() {
                     type="text"
                     placeholder="Search templates…"
                     value={templateSearch}
-                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    onChange={(e) => { setTemplateSearch(e.target.value); runTemplateSearch(e.target.value); }}
                     className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
                   />
                 </div>
 
                 <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
-                  {filteredTemplatesForModal.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
+                  {searching ? (
+                    <p className="text-xs text-muted-foreground py-3 text-center">Searching…</p>
+                  ) : filteredTemplatesForModal.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-3 text-center">
+                      {templateSearch.trim() ? 'No matching templates.' : 'No templates saved yet.'}
+                    </p>
                   ) : (
                     filteredTemplatesForModal.map((t) => (
                       <button
@@ -353,7 +379,7 @@ export default function WorkoutPlans() {
                         <div>
                           <span className="font-medium text-foreground block">{t.name}</span>
                           <span className="text-[11px] text-muted-foreground font-mono">
-                            {(t.split_type || 'custom').replace(/_/g, ' ')} · {t.days?.length || 0} days · {t.total_working_sets || 0} working sets
+                            {(t.split_type || 'custom').replace(/_/g, ' ')} · {t.days_count ?? t.days?.length ?? 0} days · {t.working_sets ?? t.total_working_sets ?? 0} working sets
                           </span>
                         </div>
                         <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />

@@ -137,6 +137,21 @@ export const AuthProvider = ({ children }) => {
     return null;
   }, [session, loadUserProfile]);
 
+  /**
+   * Switches the caller's ACTIVE workspace (the one RLS data access is
+   * scoped to for trainer/sales/client membership roles). Persists to
+   * profiles.active_workspace_id, then reloads the trusted user object.
+   */
+  const switchActiveWorkspace = useCallback(async (workspaceId) => {
+    if (!session?.user?.id || !workspaceId) return null;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ active_workspace_id: workspaceId, updated_at: new Date().toISOString() })
+      .eq('id', session.user.id);
+    if (error) throw error;
+    return await refreshProfile();
+  }, [session, refreshProfile]);
+
   const logout = useCallback(async (redirectPath = '/login') => {
     try {
       await supabase.auth.signOut();
@@ -162,6 +177,7 @@ export const AuthProvider = ({ children }) => {
         authError,
         logout,
         refreshProfile,
+        switchActiveWorkspace,
       }}
     >
       {children}

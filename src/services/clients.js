@@ -109,6 +109,30 @@ export const ClientsService = {
       throw error;
     }
     return data;
+  },
+
+  /**
+   * Soft-archives a client (status -> 'archived'), cancels open
+   * subscriptions, ends coach allocations, and audits. Platform Owner
+   * or the Workspace Owner of the client's workspace.
+   */
+  async removeFromWorkspace(clientId) {
+    const { data, error } = await supabase.rpc('remove_client_from_workspace', {
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Permanent hard delete. Platform Owner ONLY, archive-first enforced.
+   */
+  async deletePermanently(clientId) {
+    const { data, error } = await supabase.rpc('delete_client_permanently', {
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    return data;
   }
 };
 

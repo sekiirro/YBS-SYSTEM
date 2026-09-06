@@ -86,12 +86,16 @@ export default function Clients() {
             !c.client_code?.toLowerCase().includes(q) &&
             !c.phone?.toLowerCase().includes(q)) return false;
       }
+      if (statusFilter === 'pending') return c.status === 'pending';
       if (statusFilter !== 'all' && c.subscription_status !== statusFilter) return false;
       if (trainerFilter !== 'all' && c.assigned_trainer_id !== trainerFilter) return false;
       if (packageFilter !== 'all' && c.package_id !== packageFilter) return false;
       return true;
     });
   }, [clients, search, statusFilter, trainerFilter, packageFilter]);
+
+  const wsName = (id) => (id ? workspaces.find((w) => w.id === id)?.name : null);
+  const showWsColumn = isAdmin && activeWsTab === 'all';
 
   const hasActiveFilters = search || statusFilter !== 'all' || trainerFilter !== 'all' || packageFilter !== 'all';
 
@@ -177,6 +181,7 @@ export default function Clients() {
               className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
             >
               <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
               <option value="active">Active</option>
               <option value="expiring_soon">Expiring Soon</option>
               <option value="expired">Expired</option>
@@ -235,6 +240,7 @@ export default function Clients() {
                 <tr className="border-b border-border">
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Code</th>
+                  {showWsColumn && <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>}
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Package</th>
                   {!isTrainer && <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Trainer</th>}
@@ -257,14 +263,26 @@ export default function Clients() {
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className="text-[12px] font-mono text-muted-foreground">{c.client_code}</span></td>
+                    {showWsColumn && (
+                      <td className="px-4 py-3">
+                        <span className="text-[12px] text-muted-foreground flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5" /> {wsName(c.workspace_id) || '—'}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.phone || '—'}</span></td>
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.package_name || '—'}</span></td>
                     {!isTrainer && <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.assigned_trainer_name || '—'}</span></td>}
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{formatDate(c.subscription_end_date)}</span></td>
                     <td className="px-4 py-3">
-                      <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
-                        {c.subscription_status?.replace('_', ' ') || 'none'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        {c.status === 'pending' && (
+                          <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Pending</Badge>
+                        )}
+                        <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
+                          {c.subscription_status?.replace('_', ' ') || 'none'}
+                        </Badge>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -276,25 +294,36 @@ export default function Clients() {
           <div className="lg:hidden divide-y divide-border">
             {filtered.map((c) => (
               <Link key={c.id} to={`/clients/${c.id}`} className="block p-4 hover:bg-secondary/30 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
-                      {getInitials(c.full_name)}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
+                        {getInitials(c.full_name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium truncate">{c.full_name}</p>
+                        <p className="text-[11px] text-muted-foreground font-mono">{c.client_code} · {c.phone || 'No phone'}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-medium truncate">{c.full_name}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">{c.client_code} · {c.phone || 'No phone'}</p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {c.status === 'pending' && (
+                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Pending</Badge>
+                      )}
+                      <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
+                        {c.subscription_status?.replace('_', ' ') || 'none'}
+                      </Badge>
                     </div>
                   </div>
-                  <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'shrink-0 capitalize')}>
-                    {c.subscription_status?.replace('_', ' ') || 'none'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 mt-2.5 text-[11px] text-muted-foreground">
-                  <span>{c.package_name || 'No package'}</span>
-                  <span>·</span>
-                  <span>Ends {formatDate(c.subscription_end_date)}</span>
-                </div>
+                  <div className="flex items-center gap-4 mt-2.5 text-[11px] text-muted-foreground">
+                    <span>{c.package_name || 'No package'}</span>
+                    <span>·</span>
+                    <span>Ends {formatDate(c.subscription_end_date)}</span>
+                    {showWsColumn && (
+                      <>
+                        <span>·</span>
+                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{wsName(c.workspace_id) || '—'}</span>
+                      </>
+                    )}
+                  </div>
               </Link>
             ))}
           </div>

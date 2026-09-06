@@ -353,6 +353,7 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [featureInput, setFeatureInput] = useState('');
 
   const handleSave = async () => {
     try {
@@ -367,6 +368,8 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
         : {
             name: form.name.trim(),
             price: parseFloat(form.price) || 0,
+            features: form.features || [],
+            is_active: !!form.is_active,
           };
       await PackagesService.update(pkg.id, updates);
       onUpdated();
@@ -383,8 +386,10 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
       <div className="space-y-4">
         {!isAdmin && (
           <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-[12px] text-muted-foreground">
-            Workspace Owner view: you can only edit the package <span className="text-foreground font-medium">name</span> and{' '}
-            <span className="text-foreground font-medium">price</span>. Platform policy is enforced server-side.
+            Workspace Owner view: you can edit the package <span className="text-foreground font-medium">name</span>,{' '}
+            <span className="text-foreground font-medium">price</span>,{' '}
+            <span className="text-foreground font-medium">features</span>, and{' '}
+            <span className="text-foreground font-medium">availability</span>. Tier, duration, and currency are protected.
           </div>
         )}
         {error && (
@@ -425,7 +430,52 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
               <Input label="Tier" value={form.tier} readOnly />
               <Input label={`Duration (${form.duration_unit})`} value={form.duration} readOnly />
             </div>
-            <TextArea label="Description" rows={2} value={form.description} readOnly />
+            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.is_active}
+                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                className="text-primary focus:ring-primary"
+              />
+              <span>Active package (visible to clients in this workspace)</span>
+            </label>
+            <div>
+              <label className="text-[12px] font-medium text-muted-foreground">Features</label>
+              <div className="flex gap-2 mt-1.5">
+                <input
+                  type="text"
+                  value={featureInput}
+                  onChange={(e) => setFeatureInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (featureInput) {
+                        setForm({ ...form, features: [...(form.features || []), featureInput] });
+                        setFeatureInput('');
+                      }
+                    }
+                  }}
+                  placeholder="Add feature and press Enter"
+                  className="flex-1 h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                />
+              </div>
+              {form.features?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.features.map((f, i) => (
+                    <span key={i} className="px-2 py-1 rounded-md bg-secondary text-[12px] flex items-center gap-1.5">
+                      {f}
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, features: form.features.filter((_, idx) => idx !== i) })}
+                        className="text-muted-foreground hover:text-red-400"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
         <div className="flex justify-end gap-2 pt-2">

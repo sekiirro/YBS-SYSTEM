@@ -22,7 +22,7 @@ export default function PendingApplications() {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
-  const [action, setAction] = useState(null); // approve | reject | moreinfo
+  const [action, setAction] = useState(null); // approve | reject | moreinfo | activate
   const [reason, setReason] = useState('');
   const [moreInfo, setMoreInfo] = useState('');
   const [wsChoice, setWsChoice] = useState('');
@@ -31,6 +31,7 @@ export default function PendingApplications() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [activateSubId, setActivateSubId] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -108,10 +109,44 @@ export default function PendingApplications() {
     setPackageChoice(a.assigned_package_id || '');
   };
 
+  // Fetch the client's (pending) subscriptions — used to pick which to activate.
+  const loadClientSubscriptions = useCallback(async (clientId) => {
+    setActivateSubId('');
+    if (!clientId) return;
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('id, package_name, price, currency, start_date, end_date, status')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    if (data && data.length > 0) {
+      const active = data.find((s) => s.status === 'active') || data[0];
+      setActivateSubId(active.id);
+      setSelected((prev) => (prev ? { ...prev, __subscriptions: data } : prev));
+    } else {
+      setErr('No subscription found for this approved client. Assign a package on approval to enable activation.');
+      setSelected((prev) => (prev ? { ...prev, __subscriptions: [] } : prev));
+    }
+    return data || [];
+  }, []);
+
+  useEffect(() => {
+    if (action === 'activate' && selected?.created_client_id) {
+      loadClientSubscriptions(selected.created_client_id);
+    }
+  }, [action, selected?.created_client_id, loadClientSubscriptions]);
+
   const runAction = async () => {
     setErr('');
     if (action === 'approve' && !selected.assigned_workspace_id && !wsChoice) {
       setErr('Please select a workspace for the client');
+      return;
+    }
+    if (action === 'activate' && !activateSubId) {
+      setErr('Please select a subscription to activate');
       return;
     }
     setBusy(true);
@@ -128,6 +163,11 @@ export default function PendingApplications() {
           p_workspace_id: selected.assigned_workspace_id ? null : wsChoice,
           p_trainer_id: trainerChoice || null,
           p_package_id: packageChoice || null,
+        });
+        if (error) throw error;
+      } else if (action === 'activate') {
+        const { data, error } = await supabase.rpc('activate_client_package', {
+          p_subscription_id: activateSubId,
         });
         if (error) throw error;
       } else if (action === 'reject') {
@@ -290,6 +330,11 @@ export default function PendingApplications() {
                             </Button>
                           </>
                         )}
+                        {a.status === 'approved' && (
+                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => openAction(a, 'activate')}>
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -335,6 +380,11 @@ export default function PendingApplications() {
                         Reject
                       </Button>
                     </>
+                  )}
+                  {a.status === 'approved' && (
+                    <Button size="sm" className="text-primary" onClick={() => openAction(a, 'activate')}>
+                      Activate
+                    </Button>
                   )}
                 </div>
               </div>
@@ -491,6 +541,29 @@ export default function PendingApplications() {
               />
             )}
 
+            {action === 'activate' && (
+              <div className="pt-2 border-t border-border space-y-3">
+                <div className="p-3 rounded-md bg-primary/5 border border-primary/15">
+                  <p className="text-[12px] font-medium text-foreground">
+                    <Check className="w-3.5 h-3.5 inline mr-1 text-success" />
+                    Client approved — confirm the package subscription
+                  </p>
+                  <p className="text-[12px] text-muted-foreground mt-1">
+                    Activating starts coaching: the subscription becomes active regardless of payment
+                    status, the client becomes active, and their intake form is auto-assigned.
+                  </p>
+                </div>
+                <Select label="Subscription to activate" value={activateSubId} onChange={(e) => setActivateSubId(e.target.value)}>
+                  <option value="">Select subscription…</option>
+                  {(selected.__subscriptions || []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.package_name} · {s.currency} {s.price} · {formatDate(s.start_date)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
             {action === 'moreinfo' && (
               <TextArea
                 label="Information requested *"
@@ -533,6 +606,12 @@ export default function PendingApplications() {
                   </Button>
                 </>
               )}
+              {!action && selected.status === 'approved' && (
+                <Button onClick={() => openAction(selected, 'activate')}>
+                  <Check className="w-4 h-4 mr-1" />
+                  Activate Client
+                </Button>
+              )}
             </div>
           </div>
 
@@ -548,6 +627,8 @@ export default function PendingApplications() {
                           ? workspaceName(selected.assigned_workspace_id)
                           : workspaces.find((w) => w.id === wsChoice)?.name || 'the selected workspace'
                       }" and activate account?`
+                    : action === 'activate'
+                    ? `Confirm the package and activate coaching for ${selected.applicant_name}?`
                     : `Are you sure you want to ${action === 'reject' ? 'reject' : 'request more info from'} ${
                         selected.applicant_name
                       }?`}
@@ -579,6 +660,8 @@ export default function PendingApplications() {
 function actionLabel(a) {
   return a === 'approve'
     ? 'Approve Client'
+    : a === 'activate'
+    ? 'Activate Client'
     : a === 'reject'
     ? 'Reject Application'
     : a === 'moreinfo'

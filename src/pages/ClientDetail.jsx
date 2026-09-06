@@ -10,11 +10,12 @@ import { NutritionService } from '@/services/nutrition';
 import { WorkoutsService } from '@/services/workouts';
 import { AuditService } from '@/services/audit';
 import { hasPermission } from '@/lib/permissions';
+import { isPlatformAdmin, isWorkspaceOwner } from '@/lib/ybs-auth';
 import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatDate, getSubscriptionStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
 import {
   ArrowLeft, Phone, Mail, Calendar, User, Package, CreditCard,
-  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus
+  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ export default function ClientDetail() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [forms, setForms] = useState([]);
   const [metrics, setMetrics] = useState([]);
+  const [dangerAction, setDangerAction] = useState(null); // 'remove' | 'delete' | null
 
   useEffect(() => {
     loadClient();
@@ -71,6 +73,26 @@ export default function ClientDetail() {
   if (!client) return <div className="text-center py-16 text-muted-foreground">Client not found</div>;
 
   const canEdit = hasPermission(user, 'clients.update') && (user.role !== 'trainer');
+  const isAdmin = isPlatformAdmin(user);
+  const canManageClient = (c) =>
+    isAdmin ||
+    (isWorkspaceOwner(user) && (user.managed_workspace_ids || []).includes(c.workspace_id));
+
+  const handleDanger = async () => {
+    try {
+      if (dangerAction === 'remove') {
+        await ClientsService.removeFromWorkspace(id);
+      } else if (dangerAction === 'delete') {
+        await ClientsService.deletePermanently(id);
+      }
+      setDangerAction(null);
+      navigate('/clients');
+    } catch (err) {
+      console.error('Client management action failed:', err);
+      window.alert(err.message || 'Action failed.');
+      setDangerAction(null);
+    }
+  };
 
   return (
     <div>
@@ -89,6 +111,9 @@ export default function ClientDetail() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-display font-semibold tracking-tight">{client.full_name}</h1>
+                {client.status === 'pending' && (
+                  <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
+                )}
                 <Badge className={cn(getSubscriptionStatusColor(client.subscription_status), 'capitalize')}>
                   {client.subscription_status?.replace('_', ' ') || 'none'}
                 </Badge>
@@ -101,11 +126,28 @@ export default function ClientDetail() {
               </div>
             </div>
           </div>
-          {canEdit && (
-            <Button variant="secondary" onClick={() => setShowEdit(true)}>
-              <Edit className="w-4 h-4" /> Edit
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button variant="secondary" onClick={() => setShowEdit(true)}>
+                <Edit className="w-4 h-4" /> Edit
+              </Button>
+            )}
+            {client.status === 'pending' && canEdit && (
+              <ActivateClientButton clientId={id} onUpdated={loadClient} />
+            )}
+            {canManageClient(client) && (
+              <>
+                <Button variant="ghost" size="sm" className="text-destructive/90 hover:text-destructive" onClick={() => setDangerAction('remove')}>
+                  <Archive className="w-4 h-4" /> Remove
+                </Button>
+                {isPlatformAdmin(user) && (
+                  <Button variant="ghost" size="sm" className="text-destructive/90 hover:text-destructive" onClick={() => setDangerAction('delete')}>
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -142,6 +184,28 @@ export default function ClientDetail() {
       </div>
 
       {showEdit && <EditClientModal client={client} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); loadClient(); }} />}
+      {dangerAction && (
+        <Modal open onClose={() => setDangerAction(null)} title={dangerAction === 'remove' ? 'Remove Client from Workspace' : 'Delete Client Permanently'} size="md">
+          <div className="space-y-4">
+            <p className="text-[13px] text-muted-foreground">
+              {dangerAction === 'remove'
+                ? <>This will archive <strong className="text-foreground">{client.full_name}</strong>, cancel open subscriptions, and end coach allocations. The record can be restored later.</>
+                : <>This will permanently delete <strong className="text-foreground">{client.full_name}</strong> and all associated records (subscriptions, metrics, assessments, plans, timeline). This cannot be undone.</>}
+            </p>
+            <p className="text-[12px] text-red-400 bg-destructive/10 border border-destructive/20 rounded-md p-3">
+              {dangerAction === 'remove'
+                ? 'This action is audited and reversible via a workspace restore.'
+                : 'Platform Owner only. Permanent and irreversible.'}
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setDangerAction(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDanger}>
+                {dangerAction === 'remove' ? 'Remove Client' : 'Delete Permanently'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -182,11 +246,15 @@ function OverviewTab({ client }) {
 
 function SubscriptionTab({ client, subscriptions, user, onUpdated }) {
   const canManage = hasPermission(user, 'clients.update') && user.role !== 'trainer';
+  const pendingSub = (subscriptions || []).find((s) => s.status === 'pending');
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-display font-semibold">Subscription History</h3>
-        {canManage && <Button size="sm"><Plus className="w-4 h-4" /> New Subscription</Button>}
+        <div className="flex items-center gap-2">
+          {pendingSub && <ActivateClientButton clientId={client.id} onUpdated={onUpdated} />}
+          {canManage && <Button size="sm"><Plus className="w-4 h-4" /> New Subscription</Button>}
+        </div>
       </div>
       {subscriptions.length === 0 ? (
         <p className="text-[13px] text-muted-foreground py-8 text-center">No subscription history</p>
@@ -246,6 +314,16 @@ function MetricsTab({ metrics, clientId, client, onUpdated }) {
   const { user } = useAuth();
   const canEdit = hasPermission(user, 'metrics.update');
 
+  const handleDelete = async (metricId) => {
+    if (!window.confirm('Delete this metrics entry? This cannot be undone.')) return;
+    try {
+      await MetricsService.delete(metricId);
+      onUpdated();
+    } catch (err) {
+      console.error('Failed to delete metric:', err);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -260,7 +338,18 @@ function MetricsTab({ metrics, clientId, client, onUpdated }) {
             <div key={m.id} className="p-4 rounded-lg bg-secondary/30 border border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[13px] font-medium">{formatDate(m.entry_date)}</p>
-                {m.ai_analysis && <Badge className="text-primary bg-primary/10 border-primary/20">AI Analyzed</Badge>}
+                <div className="flex items-center gap-2">
+                  {m.ai_analysis && <Badge className="text-primary bg-primary/10 border-primary/20">AI Analyzed</Badge>}
+                  {canEdit && (
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Delete entry"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-[12px]">
                 {m.weight != null && <Metric label="Weight" value={`${m.weight} kg`} />}
@@ -400,6 +489,85 @@ function TimelineTab({ timeline }) {
         </div>
       )}
     </div>
+  );
+}
+
+function ActivateClientButton({ clientId, onUpdated }) {
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [subId, setSubId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  // Load the client's (pending) subscriptions when opening.
+  const loadSubs = async () => {
+    setErr('');
+    setSubId('');
+    const subs = await SubscriptionsService.list({ client_id: clientId }).catch(() => []);
+    setSubscriptions(subs || []);
+    const active = (subs || []).find((s) => s.status === 'active') || (subs || [])[0];
+    if (active) setSubId(active.id);
+    setLoaded(true);
+  };
+
+  const handleOpen = async () => {
+    setOpen(true);
+    if (!loaded) await loadSubs();
+  };
+
+  const handleActivate = async () => {
+    if (!subId) { setErr('Please select a subscription to activate'); return; }
+    setBusy(true);
+    setErr('');
+    try {
+      await SubscriptionsService.activate(subId);
+      setOpen(false);
+      onUpdated();
+    } catch (e) {
+      setErr(e.message || 'Activation failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Button onClick={handleOpen}>
+        <Check className="w-4 h-4 mr-1" /> Activate Client
+      </Button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Activate Client Package" size="md">
+        <div className="space-y-4">
+          <p className="text-[13px] text-muted-foreground">
+            Confirm the client's package subscription to start coaching. The client is activated and their
+            intake form is auto-assigned.
+          </p>
+          {err && (
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{err}</div>
+          )}
+          {subscriptions.length === 0 ? (
+            <div className="p-3 rounded-md bg-primary/5 border border-primary/15 text-[13px] text-muted-foreground">
+              No subscriptions found. Assign a package to this client first.
+            </div>
+          ) : (
+            <Select label="Subscription" value={subId} onChange={(e) => setSubId(e.target.value)}>
+              <option value="">Select subscription…</option>
+              {subscriptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.package_name || 'Package'} · {s.currency} {s.price} · {formatDate(s.start_date)}
+                </option>
+              ))}
+            </Select>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={handleActivate} disabled={busy || subscriptions.length === 0}>
+              {busy ? 'Activating…' : 'Activate'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }
 

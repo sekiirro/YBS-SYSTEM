@@ -43,6 +43,15 @@ export const MetricsService = {
     return data;
   },
 
+  async delete(id) {
+    const { error } = await supabase
+      .from('metrics')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
   async uploadPhoto({ clientId, metricId, workspaceId, file, angle = 'front' }) {
     const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
     const filePath = `clients/${clientId}/${Date.now()}_${angle}.${fileExt}`;

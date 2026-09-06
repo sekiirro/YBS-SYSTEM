@@ -51,5 +51,18 @@ export const SubscriptionsService = {
       .single();
     if (error) throw error;
     return data;
-  }
+  },
+
+  /**
+   * Activates a client's package (approval-vs-activation lifecycle).
+   * Server-side enforced: Platform Owner or the Workspace Owner of the
+   * subscription's workspace. Idempotent.
+   */
+  async activate(subscriptionId) {
+    const { data, error } = await supabase.rpc('activate_client_package', {
+      p_subscription_id: subscriptionId,
+    });
+    if (error) throw error;
+    return data;
+  },
 };

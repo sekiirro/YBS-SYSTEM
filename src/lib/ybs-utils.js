@@ -49,6 +49,8 @@ export function daysUntil(dateStr) {
 export function getSubscriptionStatusColor(status) {
   const map = {
     active: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    pending: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    paid: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     expiring_soon: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
     expired: 'text-red-400 bg-red-500/10 border-red-500/20',
     frozen: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
