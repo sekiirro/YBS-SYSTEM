@@ -16,10 +16,12 @@ function formatPlan(p) {
       items: rawItems.map((it) => ({
         ...it,
         amount: Number(it.amount) || 0,
+        unit: it.unit || 'g',
         calories: Number(it.calories) || 0,
         protein: Number(it.protein) || 0,
         carbs: Number(it.carbs) || 0,
         fat: Number(it.fat) || 0,
+        base_food: it.foods || it.base_food || null,
       })),
       nutrition_items: rawItems,
     };
@@ -121,7 +123,7 @@ export const NutritionService = {
   async list(filters = {}) {
     let query = supabase
       .from('nutrition_plans')
-      .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*))')
+      .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*, foods(*)))')
       .order('created_at', { ascending: false });
 
     if (filters.is_archived !== undefined) {
@@ -148,7 +150,7 @@ export const NutritionService = {
   async getById(id) {
     const { data, error } = await supabase
       .from('nutrition_plans')
-      .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*))')
+      .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*, foods(*)))')
       .eq('id', id)
       .single();
     if (error) throw error;

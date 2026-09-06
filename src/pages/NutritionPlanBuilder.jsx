@@ -95,6 +95,7 @@ export default function NutritionPlanBuilder() {
                 protein: it.protein,
                 carbs: it.carbs,
                 fat: it.fat,
+                base_food: it.base_food || it.foods || null,
               })),
             }));
             setMeals(copiedMeals);

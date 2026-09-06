@@ -64,6 +64,16 @@
     font-feature-settings: "cv01", "cv02", "ss01", "tnum";
   }
 
+  /* Remove native browser number input spinner arrows */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

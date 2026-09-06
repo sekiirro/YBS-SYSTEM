@@ -3,6 +3,7 @@ import { Button, Badge } from '@/components/ui';
 import NutritionItemRow from './NutritionItemRow';
 import FoodPickerModal from './FoodPickerModal';
 import { scaleFoodNutrients } from '@/services/nutrition';
+import { calculateFoodNutrients } from '@/lib/nutritionUnits';
 import { ChevronUp, ChevronDown, Trash2, Plus, Utensils } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,28 +40,35 @@ export default function MealSection({
     );
   }, [items]);
 
-  const handleUpdateAmount = (itemIndex, newAmount) => {
+  const handleUpdateQuantity = (itemIndex, newAmount, newUnit) => {
     const item = items[itemIndex];
     if (!item) return;
 
-    // Scale using base_food if present, or fallback to item's own base serving
+    const unit = newUnit || item.unit || 'g';
+
+    // Scale using base_food if present, or reconstruct base 100g values
     const baseFood = item.base_food || {
-      calories: item.calories && item.amount ? (item.calories / item.amount) * 100 : 0,
-      protein: item.protein && item.amount ? (item.protein / item.amount) * 100 : 0,
-      carbs: item.carbs && item.amount ? (item.carbs / item.amount) * 100 : 0,
-      fat: item.fat && item.amount ? (item.fat / item.amount) * 100 : 0,
+      name: item.food_name,
+      brand: item.brand,
       serving_size: 100,
-      serving_unit: item.unit || 'g',
+      serving_unit: 'g',
+      calories: item.calories && item.amount ? (Number(item.calories) / Number(item.amount)) * 100 : 0,
+      protein: item.protein && item.amount ? (Number(item.protein) / Number(item.amount)) * 100 : 0,
+      carbs: item.carbs && item.amount ? (Number(item.carbs) / Number(item.amount)) * 100 : 0,
+      fat: item.fat && item.amount ? (Number(item.fat) / Number(item.amount)) * 100 : 0,
     };
 
-    const scaled = scaleFoodNutrients(baseFood, newAmount);
+    const scaled = calculateFoodNutrients(baseFood, newAmount, unit);
     onUpdateItemAmount(itemIndex, {
       ...item,
       amount: newAmount,
+      unit: unit,
       calories: scaled.calories,
       protein: scaled.protein,
       carbs: scaled.carbs,
       fat: scaled.fat,
+      gram_weight: scaled.gramWeight,
+      base_food: baseFood,
     });
   };
 
@@ -160,7 +168,7 @@ export default function MealSection({
             <NutritionItemRow
               key={it.id || `${it.food_id}-${itIdx}`}
               item={it}
-              onUpdateAmount={(newAmt) => handleUpdateAmount(itIdx, newAmt)}
+              onUpdateQuantity={(newAmt, newUnit) => handleUpdateQuantity(itIdx, newAmt, newUnit)}
               onRemove={() => onRemoveItem(itIdx)}
             />
           ))
