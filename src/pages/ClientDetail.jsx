@@ -18,6 +18,7 @@ import {
   ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: User },
@@ -155,18 +156,28 @@ export default function ClientDetail() {
       <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
         {TABS.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all',
-                activeTab === tab.id
-                  ? 'bg-secondary text-foreground border border-border'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                'relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors duration-200',
+                isActive
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
               )}
             >
-              <Icon className="w-4 h-4" /> {tab.label}
+              {isActive && (
+                <motion.div
+                  layoutId="activeClientTab"
+                  className="absolute inset-0 rounded-lg bg-secondary border border-border"
+                  transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Icon className="w-4 h-4" /> {tab.label}
+              </span>
             </button>
           );
         })}
@@ -174,13 +185,23 @@ export default function ClientDetail() {
 
       {/* Tab content */}
       <div className="surface-card p-5">
-        {activeTab === 'overview' && <OverviewTab client={client} />}
-        {activeTab === 'subscription' && <SubscriptionTab client={client} subscriptions={subscriptions} user={user} onUpdated={loadClient} />}
-        {activeTab === 'forms' && <FormsTab forms={forms} />}
-        {activeTab === 'metrics' && <MetricsTab metrics={metrics} clientId={id} client={client} onUpdated={loadClient} />}
-        {activeTab === 'nutrition' && <NutritionTab clientId={id} />}
-        {activeTab === 'workout' && <WorkoutTab clientId={id} />}
-        {activeTab === 'timeline' && <TimelineTab timeline={timeline} />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {activeTab === 'overview' && <OverviewTab client={client} />}
+            {activeTab === 'subscription' && <SubscriptionTab client={client} subscriptions={subscriptions} user={user} onUpdated={loadClient} />}
+            {activeTab === 'forms' && <FormsTab forms={forms} />}
+            {activeTab === 'metrics' && <MetricsTab metrics={metrics} clientId={id} client={client} onUpdated={loadClient} />}
+            {activeTab === 'nutrition' && <NutritionTab clientId={id} />}
+            {activeTab === 'workout' && <WorkoutTab clientId={id} />}
+            {activeTab === 'timeline' && <TimelineTab timeline={timeline} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {showEdit && <EditClientModal client={client} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); loadClient(); }} />}

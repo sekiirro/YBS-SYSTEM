@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Package, ClipboardList, TrendingUp,
   Apple, Dumbbell, Bell, UsersRound, ScrollText, Settings,
@@ -87,7 +88,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
   const wsId = getActiveWorkspaceId(user);
 
   let sections = SECTIONS[cat] || SECTIONS.workspace;
-  // Resolve workspace placeholder in dashboard path.
   sections = sections.map((s) => ({
     ...s,
     items: s.items.map((it) => ({
@@ -105,29 +105,52 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
   return (
     <>
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
-      )}
-      <aside
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside
         className={cn(
           'fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col',
-          'bg-sidebar border-r border-sidebar-border transition-all duration-300',
-          collapsed ? 'w-[64px]' : 'w-[220px]',
+          'bg-sidebar border-r border-sidebar-border',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
+        animate={{ width: collapsed ? 64 : 220 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
           <div className={cn('flex items-center gap-2.5', collapsed && 'justify-center w-full')}>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 glow-primary">
-              <span className="text-primary-foreground font-bold text-sm tracking-tight font-display">Y</span>
-            </div>
-            {!collapsed && (
-              <div className="flex flex-col leading-none">
-                <span className="font-display font-semibold text-[15px] tracking-tight text-foreground">YBS</span>
-                <span className="text-[10px] text-muted-foreground tracking-wider uppercase mt-0.5">Coaching OS</span>
-              </div>
-            )}
+            <motion.div
+              className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_hsl(var(--primary)/0.7)]"
+              whileHover={{ scale: 1.08, rotate: 3 }}
+              transition={{ duration: 0.2 }}
+            >
+              <span className="text-primary-foreground font-bold text-sm tracking-tight">Y</span>
+            </motion.div>
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.div
+                  className="flex flex-col leading-none overflow-hidden"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <span className="font-bold text-[15px] tracking-tight text-foreground whitespace-nowrap">YBS</span>
+                  <span className="text-[10px] text-muted-foreground tracking-wider uppercase mt-0.5 whitespace-nowrap">Coaching OS</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <button className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
             <X className="w-5 h-5" />
@@ -140,13 +163,23 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-          {visibleSections.map((section) => (
+          {visibleSections.map((section, si) => (
             <div key={section.label}>
-              {!collapsed && (
-                <p className="px-3 mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{section.label}</p>
-              )}
+              <AnimatePresence>
+                {!collapsed && (
+                  <motion.p
+                    className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {section.label}
+                  </motion.p>
+                )}
+              </AnimatePresence>
               <div className="space-y-0.5">
-                {section.items.map((item) => {
+                {section.items.map((item, ii) => {
                   const isActive = location.pathname === item.path ||
                     (item.path !== '/' && item.path !== '/admin/dashboard' && item.path !== '/coach/dashboard' && !item.path.endsWith('/dashboard') && location.pathname.startsWith(item.path));
                   const Icon = item.icon;
@@ -155,15 +188,51 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all',
-                        collapsed && 'justify-center',
-                        isActive ? 'nav-item-active text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50'
-                      )}
                       title={collapsed ? item.label : undefined}
                     >
-                      <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-primary')} />
-                      {!collapsed && <span>{item.label}</span>}
+                      <motion.div
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium',
+                          collapsed && 'justify-center',
+                          isActive
+                            ? 'bg-primary/15 text-primary'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                        whileHover={!isActive ? {
+                          backgroundColor: 'rgba(255,255,255,0.04)',
+                          x: 1,
+                          transition: { duration: 0.15 }
+                        } : {}}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Icon className={cn(
+                          'shrink-0 transition-colors duration-150',
+                          collapsed ? 'w-[18px] h-[18px]' : 'w-[17px] h-[17px]',
+                          isActive ? 'text-primary' : 'text-muted-foreground'
+                        )} />
+                        <AnimatePresence>
+                          {!collapsed && (
+                            <motion.span
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="whitespace-nowrap overflow-hidden"
+                            >
+                              {item.label}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                        {/* Active indicator dot */}
+                        {isActive && collapsed && (
+                          <motion.div
+                            className="absolute right-1 w-1 h-1 rounded-full bg-primary"
+                            layoutId="active-dot"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          />
+                        )}
+                      </motion.div>
                     </Link>
                   );
                 })}
@@ -173,15 +242,34 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         </nav>
 
         <div className="hidden lg:block border-t border-sidebar-border p-2">
-          <button
+          <motion.button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+            whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+            whileTap={{ scale: 0.97 }}
           >
-            <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
-            {!collapsed && <span className="text-xs">Collapse</span>}
-          </button>
+            <motion.div
+              animate={{ rotate: collapsed ? 180 : 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </motion.div>
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.span
+                  className="text-xs"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  Collapse
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

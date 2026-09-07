@@ -6,9 +6,9 @@ module.exports = {
   	extend: {
   		opacity: Object.fromEntries(Array.from({ length: 101 }, (_, i) => [i, `${i / 100}`])),
   		borderRadius: {
-  			lg: '12px',
-  			md: '8px',
-  			sm: '6px'
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
   			background: 'hsl(var(--background))',
@@ -75,13 +75,6 @@ module.exports = {
   			body: ['var(--font-body)'],
   			display: ['var(--font-display)'],
   			mono: ['var(--font-mono)']
-  		},
-  		fontSize: {
-  			'display': ['32px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
-  			'title': ['20px', { lineHeight: '1.3', letterSpacing: '-0.01em' }],
-  			'subtitle': ['14px', { lineHeight: '1.4' }],
-  			'body': ['13px', { lineHeight: '1.5' }],
-  			'label': ['11px', { lineHeight: '1.2', letterSpacing: '0.04em' }]
   		},
   		keyframes: {
   			'accordion-down': {

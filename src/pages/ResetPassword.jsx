@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
@@ -48,17 +49,29 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout icon={Lock} title="Set new password" subtitle="Enter your new password below">
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {success ? (
-        <div className="text-center py-4 space-y-3">
-          <CheckCircle2 className="w-10 h-10 text-success mx-auto" />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="text-center py-4 space-y-3"
+        >
+          <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto" />
           <p className="text-sm font-medium text-foreground">Password updated successfully!</p>
           <p className="text-xs text-muted-foreground">Redirecting you to sign in…</p>
-        </div>
+        </motion.div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

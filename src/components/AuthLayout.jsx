@@ -7,11 +7,11 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         <div className="text-center mb-8">
           {brand ? (
             <div className="flex flex-col items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center glow-primary">
-                <span className="text-primary-foreground font-bold text-lg tracking-tight font-display">Y</span>
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-[0_0_30px_-6px_hsl(var(--primary)/0.8)]">
+                <span className="text-primary-foreground font-bold text-xl tracking-tight">Y</span>
               </div>
-              <div className="flex flex-col leading-none">
-                <span className="font-display font-bold text-2xl tracking-tight text-foreground">YBS</span>
+              <div className="flex flex-col leading-none items-center">
+                <span className="font-bold text-2xl tracking-tight text-foreground">YBS</span>
                 <span className="text-[11px] text-muted-foreground tracking-[0.2em] uppercase mt-1">Coaching OS</span>
               </div>
             </div>
@@ -23,7 +23,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
           {!brand && <h1 className="text-3xl font-bold tracking-tight text-foreground font-display">{title}</h1>}
           {subtitle && <p className="text-muted-foreground mt-2 text-sm">{subtitle}</p>}
         </div>
-        <div className="bg-card rounded-xl shadow-sm border border-border p-7">
+        <div className="bg-card rounded-xl shadow-2xl shadow-black/30 border border-white/[0.08] p-7">
           {children}
         </div>
         {footer && (

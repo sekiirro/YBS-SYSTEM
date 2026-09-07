@@ -19,6 +19,8 @@ import {
   Building2, ClipboardCheck, UsersRound, AlertCircle, Gauge, Handshake, Globe, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { cardGridVariants, fadeUp, listVariants, listItemVariants } from '@/lib/motion';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -100,7 +102,7 @@ export default function Dashboard() {
       const unreviewed = forms.filter((f) => f.submission_status === 'submitted');
 
       // Today's check-ins (follow-up day = today)
-      const dayName = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+      const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const todayCheckins = clients.filter((c) => c.follow_up_day === dayName);
 
       setStats({
@@ -230,7 +232,12 @@ export default function Dashboard() {
 
       {/* Top stats grid */}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 mb-6">
+      <motion.div
+        variants={cardGridVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 mb-6"
+      >
         {isAdmin && (
           <>
             <StatCard label="Active Workspaces" value={adminStats.activeWorkspaces} icon={Building2} accent />
@@ -248,11 +255,16 @@ export default function Dashboard() {
         {canViewFinancials(user) && (
           <StatCard label="Total Revenue" value={formatCurrency(revenueData?.totalRevenue || 0)} icon={DollarSign} accent />
         )}
-      </div>
+      </motion.div>
 
       {/* Financial section — owner only */}
       {canViewFinancials(user) && revenueData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <motion.div
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
+        >
           <div className="surface-card p-5 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <DollarSign className="w-4 h-4 text-primary" />
@@ -303,29 +315,34 @@ export default function Dashboard() {
               <h3 className="text-[14px] font-display font-semibold">Quick Actions</h3>
             </div>
             <div className="space-y-2">
-              <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors group">
+              <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
                 <span className="text-[13px] font-medium">View Clients</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors group">
+              <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
                 <span className="text-[13px] font-medium">Manage Subscriptions</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors group">
+              <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
                 <span className="text-[13px] font-medium">Review Forms</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors group">
+              <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
                 <span className="text-[13px] font-medium">Team Management</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Two column: expiring + activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+      >
         {/* Expiring soon */}
         <div className="surface-card p-5">
           <div className="flex items-center justify-between mb-4">
@@ -379,11 +396,16 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Unreviewed forms */}
       {pendingForms.length > 0 && (
-        <div className="surface-card p-5 mt-4">
+        <motion.div
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+          className="surface-card p-5 mt-4"
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <FileClock className="w-4 h-4 text-sky-400" />
@@ -393,7 +415,7 @@ export default function Dashboard() {
           </div>
           <div className="space-y-2">
             {pendingForms.map((f) => (
-              <Link key={f.id} to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors">
+              <Link key={f.id} to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/60 hover:translate-x-1 transition-all duration-200">
                 <div>
                   <p className="text-[13px] font-medium">{f.name}</p>
                   <p className="text-[11px] text-muted-foreground">{f.assigned_client_name} · Submitted {formatDate(f.submitted_date)}</p>
@@ -402,7 +424,7 @@ export default function Dashboard() {
               </Link>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

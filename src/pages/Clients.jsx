@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fadeUp, cardHover } from '@/lib/motion';
 
 import { useAuth } from '@/lib/AuthContext';
 import { ClientsService } from '@/services/clients';
@@ -14,6 +16,7 @@ import { Users, Search, Plus, X, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Clients() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
@@ -232,7 +235,12 @@ export default function Clients() {
           description={hasActiveFilters ? 'Try adjusting your filters' : 'Add your first client to get started'}
         />
       ) : (
-        <div className="surface-card overflow-hidden">
+        <motion.div
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+          className="surface-card overflow-hidden"
+        >
           {/* Desktop table */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
@@ -250,7 +258,7 @@ export default function Clients() {
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer group" onClick={() => window.location.href = `/clients/${c.id}`}>
+                  <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer group" onClick={() => navigate(`/clients/${c.id}`)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-semibold">
@@ -327,7 +335,7 @@ export default function Clients() {
               </Link>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {showCreate && (
