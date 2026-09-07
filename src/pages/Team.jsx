@@ -134,10 +134,21 @@ function InviteModal({ workspaceId, onClose }) {
       setSaving(true);
       setError('');
       setResult(null);
-      const { data } = await supabase.functions.invoke('generate-trainer-invite', {
-        body: { email: email.trim(), role: inviteRole, workspace_id: workspaceId },
-      });
-      if (!data) throw new Error('No response from the invitation service');
+      const { data, error: invokeErr } = await supabase.functions.invoke(
+        'generate-trainer-invite',
+        {
+          body: { email: email.trim(), role: inviteRole, workspace_id: workspaceId },
+        }
+      );
+
+      if (invokeErr) {
+        throw invokeErr;
+      }
+
+      if (!data) {
+        throw new Error('No response from the invitation service');
+      }
+
       setResult(data);
     } catch (err) {
       setError(err?.context?.error?.message || err?.message || 'Failed to generate invitation link');

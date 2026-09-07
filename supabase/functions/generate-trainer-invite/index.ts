@@ -138,89 +138,31 @@ Deno.serve(async (req) => {
       return error('invite_failed', inviteErr.message || 'Could not record the invitation.', 500);
     }
 
-    // 4. Resolve the account state (Cases A/B/C) without trusting client input.
-    let existing = null;
-    for (let page = 1; page <= 10; page += 1) {
-      const { data: pageData, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-      if (listErr) return error('lookup_failed', listErr.message || 'Could not look up the account.', 500);
-      const found = (pageData.users || []).find((u) => (u.email || '').toLowerCase() === email);
-      if (found) {
-        existing = found;
-        break;
-      }
-      if ((pageData.users || []).length < 1000) break;
+    // 4. External-invite model. The ledger row minted above carries its own
+    //    crypto-random token; THAT is the invitation credential. No
+    //    auth.users lookup, no GoTrue invite/recovery admin link, and no
+    //    Auth user is created at generation time — the invited trainer
+    //    becomes a platform user only when they open the link and set their
+    //    password (/activate -> signUp -> handle_new_user consumes the row).
+    const inviteToken = invite?.token ? String(invite.token) : null;
+    if (!inviteToken) {
+      return error('invite_failed', 'The invitation could not be secured.', 500);
     }
 
-    const response = {
+    const inviteUrl = `${redirectUrl}?token=${encodeURIComponent(inviteToken)}`;
+
+    await logAudit(admin, caller, email, workspaceId, role, invite?.id, 'invite_link_generated:external');
+
+    return json({
+      status: 'ok',
+      account_state: 'external',
+      invite_url: inviteUrl,
       email,
       role,
       workspace_id: workspaceId,
       invite_id: invite?.id ?? null,
-    };
-
-    // Case resolution (A/B/C). email_confirmed_at is NEVER proof of a fully
-    // activated account: GoTrue does not expose password presence via the
-    // Admin API, and a confirmed user may still be unable to sign in because
-    // they never completed activation. The authoritative signal is the
-    // server-side marker written by mark_activation_complete() into
-    // auth.users.raw_app_meta_data.activated.
-    const isActivated =
-      !!existing &&
-      !!existing.email_confirmed_at &&
-      (existing.app_metadata?.activated === true || existing.app_metadata?.activated === 'true');
-
-    // Case A — confirmed and activation completed; never mint a duplicate
-    // invitation and never hand out a password-reset link for this account.
-    if (isActivated) {
-      await logAudit(admin, caller, email, workspaceId, role, invite?.id, 'invite_already_active');
-      return json({
-        status: 'already_active',
-        message: `${email} already has an active account. No new invitation was created. Use the normal login / password reset flow instead.`,
-        ...response,
-      });
-    }
-
-    // Cases B and C — no existing user, an unconfirmed user, or a CONFIRMED
-    // user who has not completed activation. In every branch generateLink
-    // reuses the existing auth user or creates one exactly once (no
-    // duplicates): 'invite' creates the user without a password (or re-invites
-    // an unconfirmed user), 'recovery' hands the confirmed-but-not-activated
-    // trainer a link that lands on /activate where they set their password.
-    const needsRecovery = !!existing && !!existing.email_confirmed_at;
-    const linkType = needsRecovery ? 'recovery' : 'invite';
-    const accountState = !existing ? 'new_user' : needsRecovery ? 'needs_activation' : 'unconfirmed';
-
-    // generateLink is a discriminated union on `type`; call the exact variant.
-    let linkData: { properties: { action_link: string } } | null = null;
-    if (linkType === 'recovery') {
-      const { data, error: linkErr } = await admin.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: { redirectTo: redirectUrl },
-      });
-      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the invitation link.', 500);
-      linkData = data;
-    } else {
-      const { data, error: linkErr } = await admin.auth.admin.generateLink({
-        type: 'invite',
-        email,
-        options: { redirectTo: redirectUrl },
-      });
-      if (linkErr) return error('generate_failed', linkErr.message || 'Could not generate the invitation link.', 500);
-      linkData = data;
-    }
-    if (!linkData?.properties?.action_link) {
-      return error('generate_failed', 'Could not generate the invitation link.', 500);
-    }
-
-    await logAudit(admin, caller, email, workspaceId, role, invite?.id, `invite_link_generated:${accountState}`);
-
-    return json({
-      status: 'ok',
-      account_state: accountState,
-      link_type: linkType,
-      invite_url: linkData.properties.action_link,
-      ...response,
+      message:
+        'Invitation link generated — no email is sent. Share this link directly with the invited trainer; opening it takes them to set their password.',
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
