@@ -299,6 +299,7 @@ function CreatePackageModal({ title = 'Create Package', workspaceId, onClose, on
           <Select label="Tier" value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })}>
             <option value="silver">Silver</option>
             <option value="gold">Gold</option>
+            <option value="platinum">Platinum</option>
             <option value="custom">Custom</option>
           </Select>
           <Input label="Duration" type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
@@ -402,6 +403,7 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
               <Select label="Tier" value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })}>
                 <option value="silver">Silver</option>
                 <option value="gold">Gold</option>
+                <option value="platinum">Platinum</option>
                 <option value="custom">Custom</option>
               </Select>
               <Input label="Duration" type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />

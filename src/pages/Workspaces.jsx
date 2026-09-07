@@ -16,15 +16,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const REG_LINK_TIERS = ['silver', 'gold'];
+const REG_LINK_TIERS = ['silver', 'gold', 'platinum'];
 
 function tierLabel(tier) {
-  return tier === 'gold' ? 'Gold' : 'Silver';
+  if (tier === 'gold') return 'Gold';
+  if (tier === 'platinum') return 'Platinum';
+  return 'Silver';
 }
 
-// Four package-scoped client registration links for a workspace
-// (Silver 1M/3M + Gold 1M/3M), each resolving server-side to the
-// workspace + coach + package.
+// Package-scoped client registration links for a workspace
+// (Silver 1M/3M + Gold 1M/3M + Platinum 3M), each resolving server-side
+// to the workspace + coach + package.
 function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = '' }) {
   const [copiedId, setCopiedId] = useState(null);
 
@@ -624,7 +626,7 @@ export default function Workspaces() {
                       )}
                     </div>
 
-                    {/* Package-scoped client registration links (Silver/Gold x 1/3 months) */}
+                    {/* Package-scoped client registration links (Silver/Gold x 1/3, Platinum x 3) */}
                     <div className="pt-1">
                       <RegistrationLinksBlock
                         links={regLinks[w.id] || []}
@@ -1094,8 +1096,8 @@ function CreateWorkspaceModal({
           ))}
         </Select>
         <p className="text-[11px] text-muted-foreground -mt-2">
-          The four generated registration links (Silver/Gold × 1/3 months) will be scoped to this coach. You can
-          change the coach later from the workspace card.
+          The generated registration links (Silver/Gold × 1/3 months, Platinum × 3 months) will be scoped to this coach.
+          You can change the coach later from the workspace card.
         </p>
 
         {/* Client Capacity Configuration */}
