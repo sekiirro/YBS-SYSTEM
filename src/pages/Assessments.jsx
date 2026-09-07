@@ -168,6 +168,17 @@ export default function Assessments() {
   // ── Edit template ──
   const openEdit = async (template) => {
     try {
+      // Global master templates are protected from trainer edits. On first
+      // edit, clone the master into the trainer's active workspace so they
+      // get their own editable local copy; the master stays untouched.
+      const isGlobal = template.workspace_id == null;
+      if (isGlobal && !isPlatformAdmin(user)) {
+        const clone = await TemplatesService.cloneToWorkspace(template.id, wsId);
+        setEditingTemplate(clone);
+        setBuilderOpen(true);
+        await loadData();
+        return;
+      }
       const full = await TemplatesService.getById(template.id);
       setEditingTemplate(full);
       setBuilderOpen(true);

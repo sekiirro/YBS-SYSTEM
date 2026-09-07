@@ -76,6 +76,21 @@ export const TemplatesService = {
   },
 
   /**
+   * Clone a GLOBAL master template into a specific workspace so its staff
+   * get their own editable local copy. The global master stays untouched.
+   * Resolves to the workspace's existing clone when one already exists.
+   * Enforced server-side by the guarded clone_form_template_to_workspace RPC.
+   */
+  async cloneToWorkspace(templateId, workspaceId) {
+    const { data, error } = await supabase.rpc('clone_form_template_to_workspace', {
+      p_template_id: templateId,
+      p_workspace_id: workspaceId,
+    });
+    if (error) throw error;
+    return this.getById(data?.template_id);
+  },
+
+  /**
    * Platform-owner only: assign a GLOBAL master template to a workspace.
    * Enforced server-side by the guarded assign_form_template RPC.
    */
