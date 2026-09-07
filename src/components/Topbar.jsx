@@ -19,6 +19,8 @@ export default function Topbar({ onMenuClick }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState([]);
+  const [workspacesLoading, setWorkspacesLoading] = useState(false);
+  const [workspacesError, setWorkspacesError] = useState('');
   const [switching, setSwitching] = useState(false);
 
   const cat = getRoleCategory(user);
@@ -27,14 +29,17 @@ export default function Topbar({ onMenuClick }) {
 
   const loadSwitchableWorkspaces = useCallback(async () => {
     if (!switchable) return;
+    setWorkspacesLoading(true);
+    setWorkspacesError('');
     try {
-      const all = await WorkspacesService.list();
-      const mine = all.filter((w) =>
-        (user?.workspace_ids || []).includes(w.id) || (user?.managed_workspace_ids || []).includes(w.id)
-      );
-      setWorkspaces(mine || []);
-    } catch { /* ignore */ }
-  }, [switchable, user?.workspace_ids, user?.managed_workspace_ids]);
+      const mine = await WorkspacesService.listMemberWorkspaces();
+      setWorkspaces((mine || []).map((m) => ({ id: m.workspace_id, name: m.name, is_active: m.is_active })));
+    } catch (err) {
+      setWorkspacesError(err?.message || 'Failed to load workspaces.');
+    } finally {
+      setWorkspacesLoading(false);
+    }
+  }, [switchable]);
 
   const openMenu = () => {
     setMenuOpen((v) => !v);
@@ -183,10 +188,22 @@ export default function Topbar({ onMenuClick }) {
                           <Repeat className="w-3 h-3" /> Switch Workspace
                         </p>
                         <div className="max-h-44 overflow-y-auto px-1">
-                          {workspaces.length === 0 && (
+                          {workspacesLoading ? (
                             <p className="px-3 py-2 text-[11px] text-muted-foreground">Loading workspaces…</p>
-                          )}
-                          {workspaces.map((w) => (
+                          ) : workspacesError ? (
+                            <div className="px-3 py-2">
+                              <p className="text-[11px] text-red-400">{workspacesError}</p>
+                              <button
+                                type="button"
+                                onClick={loadSwitchableWorkspaces}
+                                className="text-[11px] text-primary hover:underline mt-1"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          ) : workspaces.length === 0 ? (
+                            <p className="px-3 py-2 text-[11px] text-muted-foreground">No workspaces assigned yet.</p>
+                          ) : workspaces.map((w) => (
                             <motion.button
                               key={w.id}
                               onClick={() => handleSwitch(w.id)}

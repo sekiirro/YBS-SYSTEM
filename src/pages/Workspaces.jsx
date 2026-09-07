@@ -11,7 +11,8 @@ import { PageHeader, StatCard, LoadingState, Badge, Button, Modal, Input, Select
 import { formatDate } from '@/lib/ybs-utils';
 import {
   Building2, Users, CheckCircle2, AlertTriangle, Plus, Pause, Play,
-  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2, UserCheck
+  ExternalLink, Loader2, Globe, DollarSign, Copy, Check, ShieldAlert, Link2,
+  UserCheck, Search, X, UserPlus, UserMinus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -88,6 +89,161 @@ function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = ''
   );
 }
 
+// Membership-backed multi-trainer assignment panel. Assigned trainers
+// come from workspace_memberships (role 'trainer', status 'active'); the
+// picker adds/reactivates memberships without overwriting existing ones.
+function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, onRemove }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const assignedIds = new Set(assigned.map((t) => t.user_id));
+  const available = (allTrainers || []).filter((t) => !assignedIds.has(t.id));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? available.filter(
+        (t) =>
+          (t.full_name || '').toLowerCase().includes(q) ||
+          (t.email || '').toLowerCase().includes(q)
+      )
+    : available;
+  const chosen = new Set(selected);
+
+  const toggle = (id) => {
+    const next = new Set(chosen);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(Array.from(next));
+  };
+
+  const handleAdd = async () => {
+    if (chosen.size === 0) return;
+    setSaving(true);
+    setError('');
+    try {
+      await onAssign(Array.from(chosen));
+      setSelected([]);
+      setOpen(false);
+      setQuery('');
+    } catch (err) {
+      setError(err.message || 'Failed to assign trainers.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (trainerId, name) => {
+    if (!window.confirm(`Remove ${name} from "${workspace.name}"? They will lose access to this workspace.`)) return;
+    setSaving(true);
+    setError('');
+    try {
+      await onRemove(trainerId);
+    } catch (err) {
+      setError(err.message || 'Failed to remove trainer.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-primary" /> Assigned Trainers
+          <span className="text-[11px] font-normal text-muted-foreground">({assigned.length})</span>
+        </span>
+        <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)}>
+          {open ? <X className="w-3.5 h-3.5 mr-1" /> : <UserPlus className="w-3.5 h-3.5 mr-1" />}
+          {open ? 'Close' : 'Add Trainer'}
+        </Button>
+      </div>
+
+      {assigned.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground mt-2">No trainers assigned yet.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {assigned.map((t) => (
+            <span
+              key={t.user_id}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-[12px] font-medium"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className="text-foreground truncate max-w-[140px]">{t.full_name || t.email}</span>
+              <span className="text-[10px] text-muted-foreground font-mono uppercase shrink-0">Trainer</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(t.user_id, t.full_name || t.email)}
+                className="text-muted-foreground hover:text-red-400 shrink-0"
+                title={`Remove ${t.full_name || 'trainer'}`}
+              >
+                <UserMinus className="w-3.5 h-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="text-[11px] text-red-400 mt-2">{error}</p>}
+
+      {open && (
+        <div className="mt-2 p-3 rounded-lg bg-secondary/30 border border-border">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search trainers by name or email…"
+              className="w-full h-8 pl-8 pr-3 rounded-md bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40"
+            />
+          </div>
+
+          <div className="mt-2 max-h-44 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg">
+            {filtered.length === 0 ? (
+              <p className="text-[12px] text-muted-foreground py-3 text-center">
+                {q ? 'No matching trainers.' : 'All platform trainers are already assigned here.'}
+              </p>
+            ) : (
+              filtered.map((t) => {
+                const on = chosen.has(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-secondary/50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggle(t.id)}
+                      className="text-primary focus:ring-primary"
+                    />
+                    <span className="text-[12px] font-medium text-foreground flex-1 truncate">
+                      {t.full_name || t.email}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">{t.email}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+
+          <div className="flex justify-end mt-2">
+            <Button size="sm" onClick={handleAdd} disabled={saving || chosen.size === 0}>
+              {saving ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5 mr-1" />
+              )}
+              {saving ? 'Assigning…' : `Assign Selected (${chosen.size})`}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Workspaces() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -105,6 +261,8 @@ export default function Workspaces() {
   const [coachSavingId, setCoachSavingId] = useState(null);
   const [coachError, setCoachError] = useState('');
   const [openError, setOpenError] = useState('');
+  const [wsTrainers, setWsTrainers] = useState({});
+  const [trainersError, setTrainersError] = useState('');
 
   const load = async () => {
     try {
@@ -141,6 +299,23 @@ export default function Workspaces() {
         setRegLinks(Object.fromEntries(results.map((r) => [r.id, r.links])));
       } catch (err) {
         console.warn('Error loading registration links:', err);
+      }
+
+      // Assigned trainers per workspace (membership-backed, 0..N).
+      try {
+        const trResults = await Promise.all(
+          (ws || []).map(async (w) => {
+            try {
+              return { id: w.id, trainers: await WorkspacesService.listTrainers(w.id) };
+            } catch (err) {
+              console.warn('Error loading trainers:', err);
+              return { id: w.id, trainers: [] };
+            }
+          })
+        );
+        setWsTrainers(Object.fromEntries(trResults.map((r) => [r.id, r.trainers])));
+      } catch (err) {
+        console.warn('Error loading workspace trainers:', err);
       }
     } catch (err) {
       console.error('Error loading workspaces:', err);
@@ -189,6 +364,42 @@ export default function Workspaces() {
       setCoachError(err.message || 'Failed to update the assigned coach.');
     } finally {
       setCoachSavingId(null);
+    }
+  };
+
+  const refreshTrainers = async () => {
+    const ws = await WorkspacesService.list();
+    setWorkspaces(ws);
+    const trResults = await Promise.all(
+      (ws || []).map(async (w) => {
+        try {
+          return { id: w.id, trainers: await WorkspacesService.listTrainers(w.id) };
+        } catch (err) {
+          console.warn('Error loading trainers:', err);
+          return { id: w.id, trainers: [] };
+        }
+      })
+    );
+    setWsTrainers(Object.fromEntries(trResults.map((r) => [r.id, r.trainers])));
+  };
+
+  const assignWorkspaceTrainers = async (w, ids) => {
+    try {
+      setTrainersError('');
+      await WorkspacesService.assignTrainers(w.id, ids);
+      await refreshTrainers();
+    } catch (err) {
+      setTrainersError(err.message || 'Failed to assign trainers.');
+    }
+  };
+
+  const removeWorkspaceTrainer = async (w, trainerId) => {
+    try {
+      setTrainersError('');
+      await WorkspacesService.removeTrainer(w.id, trainerId);
+      await refreshTrainers();
+    } catch (err) {
+      setTrainersError(err.message || 'Failed to remove trainer.');
     }
   };
 
@@ -420,9 +631,16 @@ export default function Workspaces() {
                         workspaceName={w.name}
                         coachName={w.assigned_coach_name || ''}
                       />
-                      <div className="flex items-center gap-2 mt-2 max-w-xl">
-                        <span className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1">
-                          <UserCheck className="w-3 h-3" /> Coach
+                      <TrainersBlock
+                        workspace={w}
+                        assigned={wsTrainers[w.id] || []}
+                        allTrainers={trainers}
+                        onAssign={(ids) => assignWorkspaceTrainers(w, ids)}
+                        onRemove={(trainerId) => removeWorkspaceTrainer(w, trainerId)}
+                      />
+                      <div className="flex items-center gap-2 mt-3 max-w-xl">
+                        <span className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1" title="Primary coach used to scope the four client registration links">
+                          <UserCheck className="w-3 h-3" /> Primary Coach
                         </span>
                         <select
                           value={w.assigned_coach_id || ''}
@@ -430,7 +648,7 @@ export default function Workspaces() {
                           disabled={coachSavingId === w.id}
                           className="flex-1 h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40"
                         >
-                          <option value="">No coach assigned</option>
+                          <option value="">No primary coach</option>
                           {trainers.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.full_name || t.email}
@@ -531,6 +749,12 @@ export default function Workspaces() {
       {coachError && (
         <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
           {coachError}
+        </div>
+      )}
+
+      {trainersError && (
+        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+          {trainersError}
         </div>
       )}
 
@@ -647,6 +871,15 @@ function CreateWorkspaceModal({
       } catch (linksErr) {
         console.warn('Error loading new registration links:', linksErr);
         setCreatedLinks([]);
+      }
+
+      // The initially selected coach becomes an actual trainer member.
+      if (form.assigned_coach_id) {
+        try {
+          await WorkspacesService.assignTrainers(ws.id, [form.assigned_coach_id]);
+        } catch (assignErr) {
+          console.warn('Error creating coach membership:', assignErr);
+        }
       }
 
       // 2. Provision / Invite Authenticated Brand Owner

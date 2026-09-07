@@ -19,6 +19,42 @@ export const WorkspacesService = {
     return data || [];
   },
 
+  // Every ACTIVE membership of the caller (drives the workspace
+  // switcher/sidebar). The overview RPC only yields the active
+  // workspace by design; this returns all switch-able ones.
+  async listMemberWorkspaces() {
+    const { data, error } = await supabase.rpc('get_member_workspaces');
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Membership-backed trainer assignment (0..N trainers per workspace).
+  async listTrainers(workspaceId) {
+    const { data, error } = await supabase.rpc('get_workspace_trainers', {
+      p_workspace_id: workspaceId,
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async assignTrainers(workspaceId, trainerIds = []) {
+    const { data, error } = await supabase.rpc('assign_workspace_trainers', {
+      p_workspace_id: workspaceId,
+      p_trainer_ids: trainerIds,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async removeTrainer(workspaceId, trainerId) {
+    const { data, error } = await supabase.rpc('remove_workspace_trainer', {
+      p_workspace_id: workspaceId,
+      p_trainer_id: trainerId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   async getById(id) {
     const { data, error } = await supabase
       .from('workspaces')
