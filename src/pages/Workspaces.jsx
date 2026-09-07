@@ -25,7 +25,7 @@ function tierLabel(tier) {
 }
 
 // Package-scoped client registration links for a workspace
-// (Silver 1M/3M + Gold 1M/3M + Platinum 3M), each resolving server-side
+// (Silver 1M/3M + Gold 1M/3M + Platinum 1M/3M), each resolving server-side
 // to the workspace + coach + package.
 function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = '' }) {
   const [copiedId, setCopiedId] = useState(null);
@@ -626,7 +626,7 @@ export default function Workspaces() {
                       )}
                     </div>
 
-                    {/* Package-scoped client registration links (Silver/Gold x 1/3, Platinum x 3) */}
+                    {/* Package-scoped client registration links (Silver/Gold x 1/3, Platinum x 1/3) */}
                     <div className="pt-1">
                       <RegistrationLinksBlock
                         links={regLinks[w.id] || []}
@@ -1096,7 +1096,7 @@ function CreateWorkspaceModal({
           ))}
         </Select>
         <p className="text-[11px] text-muted-foreground -mt-2">
-          The generated registration links (Silver/Gold × 1/3 months, Platinum × 3 months) will be scoped to this coach.
+          The generated registration links (Silver/Gold × 1/3 months, Platinum × 1/3 months) will be scoped to this coach.
           You can change the coach later from the workspace card.
         </p>
 
