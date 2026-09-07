@@ -402,6 +402,10 @@ export default function WorkoutPlanBuilder() {
 
   // ─── 5. Save Workflows ──────────────────────────────────────────────
   const validatePlan = () => {
+    if (!wsId) {
+      setError('No active workspace found. Join or switch to a workspace before saving this plan.');
+      return false;
+    }
     if (!name.trim()) {
       setError('Please enter a plan name.');
       return false;

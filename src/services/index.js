@@ -8,6 +8,7 @@ export * from './assessments';
 export * from './nutrition';
 export * from './workouts';
 export * from './foods';
+export * from './foodReplacement';
 export * from './exercises';
 export * from './team';
 export * from './notifications';

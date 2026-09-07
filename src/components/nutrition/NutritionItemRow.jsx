@@ -1,12 +1,13 @@
 import React from 'react';
 import FoodQuantityInput from './FoodQuantityInput';
-import { Trash2, AlertCircle } from 'lucide-react';
+import { Trash2, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function NutritionItemRow({
   item,
   onUpdateQuantity,
   onRemove,
+  onReplace,
 }) {
   const numAmount = Number(item.amount);
   const isInvalid = !numAmount || numAmount <= 0 || isNaN(numAmount);
@@ -88,6 +89,17 @@ export default function NutritionItemRow({
             <span className="text-foreground">{Math.round((item.fat || 0) * 10) / 10}g</span>
           </div>
         </div>
+
+        {/* Replace Button */}
+        <button
+          type="button"
+          onClick={onReplace}
+          className="p-1.5 rounded-lg text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors"
+          title="Find replacement foods"
+          aria-label="Find replacement foods"
+        >
+          <ArrowLeftRight className="w-4 h-4" />
+        </button>
 
         {/* Remove Button */}
         <button

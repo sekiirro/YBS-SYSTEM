@@ -104,6 +104,7 @@ export default function Workspaces() {
   const [trainers, setTrainers] = useState([]);
   const [coachSavingId, setCoachSavingId] = useState(null);
   const [coachError, setCoachError] = useState('');
+  const [openError, setOpenError] = useState('');
 
   const load = async () => {
     try {
@@ -192,6 +193,7 @@ export default function Workspaces() {
   };
 
   const handleOpenWorkspace = async (w) => {
+    setOpenError('');
     try {
       await AuditService.log({
         actor_id: user?.id,
@@ -205,11 +207,19 @@ export default function Workspaces() {
         metadata: { note: 'Platform Owner opened Workspace administratively' },
       });
 
-      if (user?.id) {
-        await supabase.from('profiles').update({ active_workspace_id: w.id }).eq('id', user.id);
+      if (!user?.id) {
+        throw new Error('No active user session. Please refresh and try again.');
       }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ active_workspace_id: w.id })
+        .eq('id', user.id);
+      if (error) throw error;
     } catch (e) {
       console.warn(e);
+      setOpenError(e?.message || 'Failed to open this workspace. Please try again.');
+      return;
     }
     window.location.href = `/workspace/${w.id}/dashboard`;
   };
@@ -282,6 +292,12 @@ export default function Workspaces() {
           </Button>
         }
       />
+
+      {openError && (
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+          {openError}
+        </div>
+      )}
 
       {/* KPI strip */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -427,9 +443,9 @@ export default function Workspaces() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenWorkspace(w)}>
-                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open Workspace
-                    </Button>
+<Button variant="secondary" size="sm" onClick={() => handleOpenWorkspace(w)}>
+                        <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open Workspace
+                      </Button>
                     <Button
                       variant="ghost"
                       size="sm"

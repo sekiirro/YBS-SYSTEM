@@ -1,13 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { Button, Badge } from '@/components/ui';
+import { toast } from '@/components/ui/use-toast';
 import NutritionItemRow from './NutritionItemRow';
 import FoodPickerModal from './FoodPickerModal';
+import ReplaceFoodModal from './ReplaceFoodModal';
 import { scaleFoodNutrients } from '@/services/nutrition';
 import { calculateFoodNutrients } from '@/lib/nutritionUnits';
 import { ChevronUp, ChevronDown, Trash2, Plus, Utensils } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SUGGESTED_NAMES = ['Breakfast', 'Lunch', 'Dinner', 'Pre-workout', 'Post-workout', 'Snack', 'Snack 1', 'Snack 2'];
+
+function fmtAmount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? String(Math.round(n * 10) / 10) : '0';
+}
 
 export default function MealSection({
   meal,
@@ -20,8 +27,11 @@ export default function MealSection({
   onAddItem,
   onUpdateItemAmount,
   onRemoveItem,
+  onReplaceItem,
+  workspaceId,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [replacementIndex, setReplacementIndex] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
 
   const items = meal.items || [];
@@ -69,6 +79,40 @@ export default function MealSection({
       fat: scaled.fat,
       gram_weight: scaled.gramWeight,
       base_food: baseFood,
+    });
+  };
+
+  // Apply a smart-food-replacement candidate to the target item. Uses the
+  // engine's recommended quantity + estimated macros verbatim, preserves every
+  // unrelated item property, and persists through the existing draft state
+  // (saved via the usual Save Plan flow → full-plan re-snapshot on save).
+  const handleApplyReplacement = async (candidate) => {
+    const itIdx = replacementIndex;
+    const current = itIdx != null ? items[itIdx] : null;
+    if (!current || !candidate) {
+      throw new Error('Replacement target is no longer available.');
+    }
+
+    const updated = {
+      ...current,
+      food_id: candidate.food_id,
+      food_name: candidate.name,
+      brand: candidate.food?.brand || current.brand || null,
+      amount: Number(candidate.recommended_amount),
+      unit: candidate.recommended_unit || 'g',
+      calories: Number(candidate.estimated_calories) || 0,
+      protein: Number(candidate.estimated_protein) || 0,
+      carbs: Number(candidate.estimated_carbs) || 0,
+      fat: Number(candidate.estimated_fat) || 0,
+      gram_weight: null,
+      base_food: candidate.food || current.base_food || null,
+    };
+
+    await onReplaceItem(itIdx, updated);
+    setReplacementIndex(null);
+    toast({
+      title: 'Food replaced',
+      description: `"${current.food_name}" replaced with ${candidate.name} (${fmtAmount(candidate.recommended_amount)} ${candidate.recommended_unit || 'g'}).`,
     });
   };
 
@@ -170,6 +214,7 @@ export default function MealSection({
               item={it}
               onUpdateQuantity={(newAmt, newUnit) => handleUpdateQuantity(itIdx, newAmt, newUnit)}
               onRemove={() => onRemoveItem(itIdx)}
+              onReplace={() => setReplacementIndex(itIdx)}
             />
           ))
         )}
@@ -192,6 +237,14 @@ export default function MealSection({
           onAddItem(foodItem);
           setPickerOpen(false);
         }}
+      />
+
+      <ReplaceFoodModal
+        open={replacementIndex !== null}
+        onClose={() => setReplacementIndex(null)}
+        item={replacementIndex !== null ? items[replacementIndex] : null}
+        workspaceId={workspaceId}
+        onApply={handleApplyReplacement}
       />
     </div>
   );

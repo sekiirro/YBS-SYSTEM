@@ -220,6 +220,11 @@ export default function NutritionPlanBuilder() {
 
   // ── 4. Save Plan ──
   const handleSave = async () => {
+    if (!wsId) {
+      setError('No active workspace found. Join or switch to a workspace before saving this plan.');
+      return;
+    }
+
     setError('');
 
     if (!name.trim()) {
@@ -268,6 +273,11 @@ export default function NutritionPlanBuilder() {
 
   // ── 5. Save as Independent Template ──
   const handleSaveAsTemplate = async () => {
+    if (!wsId) {
+      setError('No active workspace found. Join or switch to a workspace before saving this plan.');
+      return;
+    }
+
     if (!templateName.trim()) return;
 
     try {
@@ -458,6 +468,7 @@ export default function NutritionPlanBuilder() {
               meal={m}
               index={mIdx}
               totalMeals={meals.length}
+              workspaceId={wsId}
               onRename={(newName) => handleRenameMeal(mIdx, newName)}
               onMoveUp={() => handleMoveMeal(mIdx, -1)}
               onMoveDown={() => handleMoveMeal(mIdx, 1)}
@@ -465,6 +476,7 @@ export default function NutritionPlanBuilder() {
               onAddItem={(item) => handleAddItemToMeal(mIdx, item)}
               onUpdateItemAmount={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
               onRemoveItem={(itIdx) => handleRemoveItemFromMeal(mIdx, itIdx)}
+              onReplaceItem={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
             />
           ))
         )}
