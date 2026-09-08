@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
 import { ClientsService } from '@/services/clients';
@@ -12,10 +12,10 @@ import { AuditService } from '@/services/audit';
 import { hasPermission } from '@/lib/permissions';
 import { isPlatformAdmin, isWorkspaceOwner } from '@/lib/ybs-auth';
 import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
-import { formatDate, getSubscriptionStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
+import { formatDate, getSubscriptionStatusColor, getFormStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
 import {
   ArrowLeft, Phone, Mail, Calendar, User, Package, CreditCard,
-  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive
+  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,10 +33,11 @@ const TABS = [
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
   const [showEdit, setShowEdit] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
@@ -302,6 +303,22 @@ function SubscriptionTab({ client, subscriptions, user, onUpdated }) {
 }
 
 function FormsTab({ forms }) {
+  const [viewingForm, setViewingForm] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const openViewer = async (f) => {
+    if (f.submission_status !== 'submitted' && f.submission_status !== 'reviewed') return;
+    setViewLoading(true);
+    try {
+      const full = await AssessmentsService.getById(f.id);
+      setViewingForm(full);
+    } catch (err) {
+      console.error('Failed to load form responses:', err);
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
   return (
     <div>
       <h3 className="text-[14px] font-display font-semibold mb-4">Assigned Forms</h3>
@@ -309,24 +326,77 @@ function FormsTab({ forms }) {
         <p className="text-[13px] text-muted-foreground py-8 text-center">No forms assigned</p>
       ) : (
         <div className="space-y-2">
-          {forms.map((f) => (
-            <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
-              <div>
-                <p className="text-[13px] font-medium">{f.name}</p>
-                <p className="text-[11px] text-muted-foreground">Due {formatDate(f.due_date)}</p>
+          {forms.map((f) => {
+            const isSubmitted = f.submission_status === 'submitted' || f.submission_status === 'reviewed';
+            return (
+              <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
+                <div>
+                  <p className="text-[13px] font-medium">{f.name}</p>
+                  <p className="text-[11px] text-muted-foreground">Due {formatDate(f.due_date)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSubmitted && (
+                    <Button size="sm" variant="secondary" onClick={() => openViewer(f)} disabled={viewLoading}>
+                      <Eye className="w-3.5 h-3.5 mr-1" /> View Form
+                    </Button>
+                  )}
+                  <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{f.submission_status}</Badge>
+                </div>
               </div>
-              <Badge className={cn(
-                f.submission_status === 'reviewed' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                f.submission_status === 'submitted' ? 'text-sky-400 bg-sky-500/10 border-sky-500/20' :
-                f.submission_status === 'overdue' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
-                'text-amber-400 bg-amber-500/10 border-amber-500/20',
-                'capitalize'
-              )}>{f.submission_status}</Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+      {viewingForm && <ViewResponsesModal form={viewingForm} onClose={() => setViewingForm(null)} />}
     </div>
+  );
+}
+
+function ViewResponsesModal({ form, onClose }) {
+  const sortedQuestions = [...(form.questions_snapshot || [])].sort((a, b) => a.sort_order - b.sort_order);
+  return (
+    <Modal open onClose={onClose} title="Form Responses" size="lg">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+          <div>
+            <p className="text-[13px] font-medium">{form.name}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {formatDate(form.submitted_at)}</p>
+          </div>
+          <Badge className={cn(getFormStatusColor(form.submission_status), 'capitalize')}>
+            {form.submission_status}
+          </Badge>
+        </div>
+
+        {sortedQuestions.map((q, idx) => {
+          const resp = (form.assessment_responses || []).find((r) => r.question_id === q.id);
+          const val = resp?.response_value;
+          const displayVal = val == null ? '—' : (Array.isArray(val) ? val.join(', ') : String(val));
+          const currentSection = q.conditional_rules?.section;
+          const prevSection = idx > 0 ? sortedQuestions[idx - 1]?.conditional_rules?.section : null;
+          const isNewSection = currentSection && currentSection !== prevSection;
+
+          return (
+            <React.Fragment key={q.id}>
+              {isNewSection && (
+                <div className={cn('pt-4 pb-1 border-b border-border/50 mb-2', idx > 0 && 'mt-4')}>
+                  <p className="text-[12px] font-semibold text-primary uppercase tracking-wider" dir="auto">
+                    {currentSection}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1 py-1">
+                <p className="text-[12px] font-medium text-muted-foreground" dir="auto">Q{idx + 1}. {q.label}</p>
+                <p className="text-[13px] text-foreground pl-4" dir="auto">
+                  {(q.question_type === 'file_upload' || q.question_type === 'image_upload')
+                    ? (displayVal && displayVal !== '—' && displayVal !== '""' ? displayVal : 'يتم الإرسال على رقم المتابعة')
+                    : (displayVal || '—')}
+                </p>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </Modal>
   );
 }
 
@@ -399,6 +469,7 @@ function Metric({ label, value }) {
 }
 
 function NutritionTab({ clientId }) {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -409,10 +480,19 @@ function NutritionTab({ clientId }) {
       .finally(() => setLoading(false));
   }, [clientId]);
 
+  const handleNewPlan = () => {
+    navigate(`/nutrition/builder?clientId=${clientId}&returnTo=${encodeURIComponent(`/clients/${clientId}?tab=nutrition`)}`);
+  };
+
   if (loading) return <LoadingState label="Loading nutrition plans…" />;
   return (
     <div>
-      <h3 className="text-[14px] font-display font-semibold mb-4">Nutrition Plans</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[14px] font-display font-semibold">Nutrition Plans</h3>
+        <Button size="sm" onClick={handleNewPlan}>
+          <Plus className="w-3.5 h-3.5" /> New Plan
+        </Button>
+      </div>
       {plans.length === 0 ? (
         <p className="text-[13px] text-muted-foreground py-8 text-center">No nutrition plans assigned</p>
       ) : (

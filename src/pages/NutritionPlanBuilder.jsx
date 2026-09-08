@@ -15,6 +15,7 @@ export default function NutritionPlanBuilder() {
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('templateId');
   const queryClientId = searchParams.get('clientId');
+  const returnTo = searchParams.get('returnTo');
   const navigate = useNavigate();
   const { user } = useAuth();
   const wsId = getActiveWorkspaceId(user);
@@ -262,7 +263,7 @@ export default function NutritionPlanBuilder() {
         await NutritionService.create(planPayload, meals);
       }
 
-      navigate('/nutrition');
+      navigate(returnTo || '/nutrition');
     } catch (err) {
       console.error('Save failed:', err);
       setError(err.message || 'Failed to save nutrition plan');

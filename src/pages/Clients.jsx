@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { fadeUp, cardHover } from '@/lib/motion';
@@ -29,13 +29,17 @@ export default function Clients() {
   const [trainerFilter, setTrainerFilter] = useState('all');
   const [packageFilter, setPackageFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const aliveRef = useRef(true);
 
   const isTrainer = isPlatformTrainer(user) || user?.role === 'trainer';
   const isAdmin = isPlatformAdmin(user);
   const activeWsId = getActiveWorkspaceId(user);
 
   useEffect(() => {
+    aliveRef.current = true;
     loadData();
+    return () => { aliveRef.current = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, activeWsTab]);
 
   const loadData = async () => {
@@ -53,20 +57,30 @@ export default function Clients() {
         filter = { ...filter, workspace_id: activeWsTab };
       }
 
-      const promises = [
-        ClientsService.list(filter),
-        TeamService.list(),
-        cat === 'workspace' && activeWsId ? PackagesService.list(activeWsId) : PackagesService.list(),
-      ];
-      if (isAdmin) {
-        promises.push(WorkspacesService.list().catch(() => []));
-      }
+      // Load the client list independently from the auxiliary data so a
+      // transient failure (e.g. after navigating back from a client profile)
+      // never empties the list or leaves loading stuck.
+      const [clientResult, auxResults] = await Promise.all([
+        Promise.resolve().then(() => ClientsService.list(filter)).catch((err) => {
+          console.error('Failed to load clients:', err);
+          return [];
+        }),
+        Promise.allSettled([
+          TeamService.list(),
+          cat === 'workspace' && activeWsId ? PackagesService.list(activeWsId) : PackagesService.list(),
+          isAdmin ? WorkspacesService.list() : Promise.resolve([]),
+        ]),
+      ]);
 
-      const results = await Promise.all(promises);
-      const clientData = results[0] || [];
-      const userData = results[1] || [];
-      let pkgData = results[2] || [];
-      if (isAdmin) setWorkspaces(results[3] || []);
+      if (!aliveRef.current) return;
+
+      const clientData = clientResult || [];
+      let pkgData = [];
+      let wsData = [];
+      const userData = auxResults[0]?.status === 'fulfilled' ? (auxResults[0].value || []) : [];
+      if (auxResults[1]?.status === 'fulfilled') pkgData = auxResults[1].value || [];
+      if (auxResults[2]?.status === 'fulfilled') wsData = auxResults[2].value || [];
+
       if (cat === 'workspace' && activeWsId) {
         pkgData = pkgData.filter((p) => p.workspace_id === activeWsId);
       }
@@ -74,10 +88,11 @@ export default function Clients() {
       setClients(clientData);
       setTrainers(userData.filter((u) => (u.platform_role === 'platform_trainer' || u.ybs_coach === true || u.role === 'trainer') && u.status !== 'disabled'));
       setPackages(pkgData);
+      if (isAdmin) setWorkspaces(wsData);
     } catch (err) {
       console.error('Load error:', err);
     } finally {
-      setLoading(false);
+      if (aliveRef.current) setLoading(false);
     }
   };
 
