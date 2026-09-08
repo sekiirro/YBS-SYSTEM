@@ -83,6 +83,7 @@ export default function NutritionPlanBuilder() {
             const copiedMeals = (tpl.meals || []).map((m, mIdx) => ({
               id: `copied-meal-${mIdx}-${Date.now()}`,
               meal_name: m.meal_name,
+              notes: m.notes || null,
               sort_order: mIdx,
               day_number: 1,
               items: (m.items || []).map((it, itIdx) => ({
@@ -111,9 +112,9 @@ export default function NutritionPlanBuilder() {
           setName('New Nutrition Plan');
           setIsTemplate(searchParams.get('type') === 'template');
           setMeals([
-            { id: `meal-1-${Date.now()}`, meal_name: 'Breakfast', sort_order: 0, day_number: 1, items: [] },
-            { id: `meal-2-${Date.now()}`, meal_name: 'Lunch', sort_order: 1, day_number: 1, items: [] },
-            { id: `meal-3-${Date.now()}`, meal_name: 'Dinner', sort_order: 2, day_number: 1, items: [] },
+            { id: `meal-1-${Date.now()}`, meal_name: 'Breakfast', notes: '', sort_order: 0, day_number: 1, items: [] },
+            { id: `meal-2-${Date.now()}`, meal_name: 'Lunch', notes: '', sort_order: 1, day_number: 1, items: [] },
+            { id: `meal-3-${Date.now()}`, meal_name: 'Dinner', notes: '', sort_order: 2, day_number: 1, items: [] },
           ]);
 
           if (queryClientId) {
@@ -143,6 +144,7 @@ export default function NutritionPlanBuilder() {
       {
         id: `meal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         meal_name: mealName,
+        notes: '',
         sort_order: prev.length,
         day_number: 1,
         items: [],
@@ -154,6 +156,14 @@ export default function NutritionPlanBuilder() {
     setMeals((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], meal_name: newName };
+      return next;
+    });
+  };
+
+  const handleChangeMealNotes = (index, notes) => {
+    setMeals((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], notes: notes || '' };
       return next;
     });
   };
@@ -471,6 +481,7 @@ export default function NutritionPlanBuilder() {
               totalMeals={meals.length}
               workspaceId={wsId}
               onRename={(newName) => handleRenameMeal(mIdx, newName)}
+              onChangeNotes={(notes) => handleChangeMealNotes(mIdx, notes)}
               onMoveUp={() => handleMoveMeal(mIdx, -1)}
               onMoveDown={() => handleMoveMeal(mIdx, 1)}
               onRemove={() => handleRemoveMeal(mIdx)}

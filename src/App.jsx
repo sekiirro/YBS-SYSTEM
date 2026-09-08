@@ -33,6 +33,7 @@ import Assessments from '@/pages/Assessments';
 import Metrics from '@/pages/Metrics';
 import NutritionPlans from '@/pages/NutritionPlans';
 import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
+import NutritionReplacementRequests from '@/pages/NutritionReplacementRequests';
 import WorkoutPlans from '@/pages/WorkoutPlans';
 import WorkoutPlanBuilder from '@/pages/WorkoutPlanBuilder';
 import Team from '@/pages/Team';
@@ -120,6 +121,7 @@ const AuthenticatedApp = () => {
             <Route path="/nutrition" element={<NutritionPlans />} />
             <Route path="/nutrition/builder" element={<NutritionPlanBuilder />} />
             <Route path="/nutrition/builder/:id" element={<NutritionPlanBuilder />} />
+            <Route path="/nutrition/requests" element={<NutritionReplacementRequests />} />
             <Route path="/foods" element={<Foods />} />
             <Route path="/workouts" element={<WorkoutPlans />} />
             <Route path="/workouts/builder" element={<WorkoutPlanBuilder />} />

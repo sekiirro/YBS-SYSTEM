@@ -9,6 +9,7 @@ export * from './nutrition';
 export * from './workouts';
 export * from './foods';
 export * from './foodReplacement';
+export * from './mealReplacementRequests';
 export * from './exercises';
 export * from './team';
 export * from './notifications';

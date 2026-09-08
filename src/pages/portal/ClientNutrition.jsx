@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { NutritionService } from '@/services/nutrition';
+import { MealReplacementRequestsService } from '@/services/mealReplacementRequests';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
+import MealReplacementRequestModal from '@/components/nutrition/MealReplacementRequestModal';
 import { LoadingState, Badge } from '@/components/ui';
-import { Apple, Utensils, MessageSquare } from 'lucide-react';
+import { Apple, Utensils, MessageSquare, ArrowLeftRight } from 'lucide-react';
 
 export default function ClientNutrition() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState([]);
   const [activePlan, setActivePlan] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [requestModalMeal, setRequestModalMeal] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!user?.self_client_id) {
@@ -18,9 +22,13 @@ export default function ClientNutrition() {
     }
     try {
       setLoading(true);
-      const list = await NutritionService.list({ client_id: user.self_client_id });
+      const [list, reqs] = await Promise.all([
+        NutritionService.list({ client_id: user.self_client_id }),
+        MealReplacementRequestsService.listForClient(user.self_client_id).catch(() => []),
+      ]);
       setPlans(list || []);
-      setActivePlan(list?.[0] || null);
+      setActivePlan((prev) => list?.[0] || prev || null);
+      setRequests(reqs || []);
     } catch (err) {
       console.error('Error loading client nutrition:', err);
     } finally {
@@ -31,6 +39,20 @@ export default function ClientNutrition() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const refreshRequests = useCallback(async () => {
+    if (!user?.self_client_id) return;
+    try {
+      const reqs = await MealReplacementRequestsService.listForClient(user.self_client_id);
+      setRequests(reqs || []);
+    } catch (err) {
+      console.error('Failed to refresh replacement requests:', err);
+    }
+  }, [user?.self_client_id]);
+
+  const pendingByMeal = new Map(
+    requests.filter((r) => r.status === 'pending').map((r) => [r.meal_id, r])
+  );
 
   if (loading) return <LoadingState label="Loading your nutrition plan…" />;
 
@@ -228,13 +250,29 @@ export default function ClientNutrition() {
                       <h3 className="text-sm font-semibold text-foreground font-display">
                         {meal.meal_name || `Meal ${idx + 1}`}
                       </h3>
+                      {pendingByMeal.has(meal.id) && (
+                        <Badge className="text-[10px] text-amber-400 bg-amber-500/10 border-amber-500/25">
+                          Pending request
+                        </Badge>
+                      )}
                     </div>
 
-                    {mealKcal > 0 && (
-                      <span className="text-xs font-mono font-bold text-primary px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
-                        {mealKcal} kcal
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {mealKcal > 0 && (
+                        <span className="text-xs font-mono font-bold text-primary px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
+                          {mealKcal} kcal
+                        </span>
+                      )}
+                      {items.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setRequestModalMeal(meal)}
+                          className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5"
+                        >
+                          <ArrowLeftRight className="w-3 h-3" /> Replace
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {meal.notes && (
@@ -268,6 +306,18 @@ export default function ClientNutrition() {
           </div>
         )}
       </div>
+    {/* Replacement request modal (read-only request flow) */}
+      <MealReplacementRequestModal
+        open={requestModalMeal !== null}
+        onClose={() => setRequestModalMeal(null)}
+        meal={requestModalMeal}
+        planId={activePlan?.id}
+        workspaceId={activePlan?.workspace_id}
+        clientId={user?.self_client_id}
+        requestedById={user?.id}
+        pendingRequests={requests.filter((r) => r.status === 'pending')}
+        onSubmitted={refreshRequests}
+      />
     </div>
   );
 }

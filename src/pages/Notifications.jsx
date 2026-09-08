@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/lib/AuthContext';
 import { NotificationsService } from '@/services/notifications';
@@ -9,12 +10,13 @@ import { cn } from '@/lib/utils';
 
 export default function Notifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => { loadNotifications(); }, [user]);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
     try {
       setLoading(true);
@@ -23,7 +25,7 @@ export default function Notifications() {
     } catch (err) {
       console.error(err);
     } finally { setLoading(false); }
-  };
+  }, [user?.id]);
 
   const markAllRead = async () => {
     try {
@@ -37,6 +39,13 @@ export default function Notifications() {
       await NotificationsService.markAsRead(id);
       loadNotifications();
     } catch (err) { console.error(err); }
+  };
+
+  const handleClick = async (n) => {
+    if (!n.is_read) await markRead(n.id);
+    if (n.related_entity_type === 'meal_replacement_request') {
+      navigate('/nutrition/requests');
+    }
   };
 
   if (loading) return <LoadingState label="Loading notifications…" />;
@@ -59,7 +68,7 @@ export default function Notifications() {
             <div
               key={n.id}
               className={cn('flex items-start gap-3 p-4 hover:bg-secondary/30 transition-colors cursor-pointer', !n.is_read && 'bg-primary/5')}
-              onClick={() => !n.is_read && markRead(n.id)}
+              onClick={() => handleClick(n)}
             >
               <div className={cn('w-2 h-2 rounded-full mt-2 shrink-0', n.is_read ? 'bg-transparent' : 'bg-primary')} />
               <div className="flex-1 min-w-0">

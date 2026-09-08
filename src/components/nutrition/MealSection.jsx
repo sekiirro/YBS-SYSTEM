@@ -6,7 +6,7 @@ import FoodPickerModal from './FoodPickerModal';
 import ReplaceFoodModal from './ReplaceFoodModal';
 import { scaleFoodNutrients } from '@/services/nutrition';
 import { calculateFoodNutrients } from '@/lib/nutritionUnits';
-import { ChevronUp, ChevronDown, Trash2, Plus, Utensils } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Plus, Utensils, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SUGGESTED_NAMES = ['Breakfast', 'Lunch', 'Dinner', 'Pre-workout', 'Post-workout', 'Snack', 'Snack 1', 'Snack 2'];
@@ -21,6 +21,7 @@ export default function MealSection({
   index,
   totalMeals,
   onRename,
+  onChangeNotes,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -33,6 +34,7 @@ export default function MealSection({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [replacementIndex, setReplacementIndex] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   const items = meal.items || [];
 
@@ -200,6 +202,43 @@ export default function MealSection({
           </button>
         </div>
       </div>
+
+      {/* Meal Notes */}
+      <div className="flex items-start gap-1.5">
+        <button
+          type="button"
+          onClick={() => setIsEditingNotes((v) => !v)}
+          className={cn(
+            'text-[11px] font-medium flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors',
+            meal.notes
+              ? 'text-primary bg-primary/10 border border-primary/20'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 border border-transparent'
+          )}
+          title={meal.notes ? 'Edit meal notes' : 'Add a note for this meal'}
+        >
+          <StickyNote className="w-3.5 h-3.5" />
+          {meal.notes ? 'Notes' : 'Add note'}
+          {isEditingNotes && <ChevronUp className="w-3 h-3" />}
+        </button>
+      </div>
+      {isEditingNotes ? (
+        <div className="space-y-1.5">
+          <textarea
+            value={meal.notes || ''}
+            onChange={(e) => onChangeNotes(e.target.value)}
+            placeholder="Optional note for this meal — shown to your client on their plan (e.g. 'Swap to a lighter dinner on training days')."
+            className="w-full min-h-[64px] px-3 py-2 rounded-lg bg-secondary/40 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 resize-y"
+          />
+          <p className="text-[10px] text-muted-foreground">Saved when you hit "Save Plan".</p>
+        </div>
+      ) : (
+        meal.notes && (
+          <p className="text-[11px] text-muted-foreground italic bg-secondary/30 px-3 py-1.5 rounded-lg border border-border/30 flex items-start gap-1.5">
+            <StickyNote className="w-3 h-3 shrink-0 mt-0.5 text-primary" />
+            {meal.notes}
+          </p>
+        )
+      )}
 
       {/* Items List */}
       <div className="space-y-2">

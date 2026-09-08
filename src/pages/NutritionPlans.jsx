@@ -135,6 +135,13 @@ export default function NutritionPlans() {
         >
           Templates ({templates.length})
         </button>
+        <button
+          type="button"
+          onClick={() => navigate('/nutrition/requests')}
+          className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 flex items-center gap-1.5"
+        >
+          <ArrowRight className="w-3.5 h-3.5" /> Replacement Requests
+        </button>
       </div>
 
       {/* Search Input */}
