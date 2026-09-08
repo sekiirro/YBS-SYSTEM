@@ -171,33 +171,88 @@ export const QuestionsService = {
   },
 
   async bulkUpsert(templateId, questions) {
-    // Delete existing questions for this template and re-insert
-    // This is used when saving the full form builder state
-    const { error: delErr } = await supabase
+    // ID-preserving sync. Never delete-and-recreate unchanged questions:
+    // clients' saved assessment_responses and frozen questions_snapshot rows
+    // reference assessment_questions.id, so ids must stay stable across edits.
+    //   * incoming question with an id          -> UPDATE that exact row
+    //   * incoming question without an id       -> INSERT a new row
+    //   * persisted rows absent from the set    -> DELETE (intentionally removed)
+    const incoming = questions || [];
+
+    if (incoming.length === 0) {
+      const { error: delErr } = await supabase
+        .from('assessment_questions')
+        .delete()
+        .eq('template_id', templateId);
+      if (delErr) throw delErr;
+      return [];
+    }
+
+    const { data: existing, error: fetchErr } = await supabase
       .from('assessment_questions')
-      .delete()
+      .select('id')
       .eq('template_id', templateId);
-    if (delErr) throw delErr;
+    if (fetchErr) throw fetchErr;
 
-    if (questions.length === 0) return [];
+    const incomingIds = new Set(incoming.map((q) => q.id).filter(Boolean));
+    const positioned = incoming.map((q, sort_order) => ({ q, sort_order }));
+    const toUpdate = positioned.filter(({ q }) => q.id);
+    const toInsert = positioned.filter(({ q }) => !q.id);
 
-    const records = questions.map((q, idx) => ({
-      template_id: templateId,
-      sort_order: idx,
-      question_type: q.question_type,
-      label: q.label,
-      description: q.description || null,
-      required: q.required || false,
-      options: q.options || [],
-      conditional_rules: q.conditional_rules || null,
-    }));
+    const requests = [];
 
-    const { data, error } = await supabase
-      .from('assessment_questions')
-      .insert(records)
-      .select();
-    if (error) throw error;
-    return data || [];
+    for (const { q, sort_order } of toUpdate) {
+      requests.push(
+        supabase
+          .from('assessment_questions')
+          .update({
+            template_id: templateId,
+            sort_order,
+            question_type: q.question_type,
+            label: q.label,
+            description: q.description || null,
+            required: q.required || false,
+            options: q.options || [],
+            conditional_rules: q.conditional_rules || null,
+          })
+          .eq('id', q.id)
+          .eq('template_id', templateId)
+      );
+    }
+
+    if (toInsert.length > 0) {
+      requests.push(
+        supabase
+          .from('assessment_questions')
+          .insert(
+            toInsert.map(({ q, sort_order }) => ({
+              template_id: templateId,
+              sort_order,
+              question_type: q.question_type,
+              label: q.label,
+              description: q.description || null,
+              required: q.required || false,
+              options: q.options || [],
+              conditional_rules: q.conditional_rules || null,
+            }))
+          )
+      );
+    }
+
+    const results = await Promise.all(requests);
+    const failed = results.find((r) => r.error);
+    if (failed) throw failed.error;
+
+    const removedIds = (existing || []).map((r) => r.id).filter((id) => !incomingIds.has(id));
+    if (removedIds.length > 0) {
+      const { error: delErr } = await supabase
+        .from('assessment_questions')
+        .delete()
+        .in('id', removedIds);
+      if (delErr) throw delErr;
+    }
+
+    return [];
   },
 };
 

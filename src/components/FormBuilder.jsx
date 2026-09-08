@@ -138,6 +138,7 @@ export default function FormBuilder({ open, onClose, onSave, initialData }) {
         description: description.trim() || null,
         status: saveStatus,
         questions: questions.map((q, idx) => ({
+          id: q.id,
           question_type: q.question_type,
           label: q.label.trim(),
           description: q.description?.trim() || null,
