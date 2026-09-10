@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '@/lib/AuthContext';
-import { getActiveWorkspaceId } from '@/lib/ybs-auth';
+import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkoutsService, calculateWorkoutVolume } from '@/services/workouts';
 import { ClientsService } from '@/services/clients';
+import { WorkspacesService } from '@/services/workspaces';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
 import ExerciseSearchModal from '@/components/workouts/ExerciseSearchModal';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
@@ -25,7 +26,8 @@ import {
   Info,
   Search,
   Check,
-  GripVertical
+  GripVertical,
+  Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -154,8 +156,15 @@ export default function WorkoutPlanBuilder() {
 
   // Workspace the current plan belongs to. For an existing plan this is
   // loaded from the plan row; for new plans it is the current workspace.
-  // The exercise picker is scoped to THIS workspace, not the user's active one.
+  // The exercise picker is NOT necessarily scoped to this workspace — it is
+  // scoped to exerciseLibraryWorkspaceId below.
   const [planWorkspaceId, setPlanWorkspaceId] = useState(wsId || null);
+
+  // Workspace whose exercise library this plan's picker reads exercises from.
+  // Defaults to the plan's own workspace. Only the Platform Owner can point a
+  // plan at a different workspace's library; authorization is enforced
+  // server-side by guard_workout_plan_library_source.
+  const [exerciseLibraryWorkspaceId, setExerciseLibraryWorkspaceId] = useState(wsId || null);
 
   // Training Days State
   const [days, setDays] = useState([]);
@@ -174,6 +183,12 @@ export default function WorkoutPlanBuilder() {
   const [templateName, setTemplateName] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
 
+  // Workspaces available to the current user (RLS-authorized). Used to name
+  // the current exercise library source and (Platform Owner only) to build
+  // the "Change source" selector options.
+  const [workspaces, setWorkspaces] = useState([]);
+  const [librarySourceOpen, setLibrarySourceOpen] = useState(false);
+
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
 
@@ -187,11 +202,20 @@ export default function WorkoutPlanBuilder() {
         const clientList = await ClientsService.list({});
         if (isMounted) setClients(clientList || []);
 
+        WorkspacesService.list()
+          .then((wsList) => {
+            if (isMounted) setWorkspaces(wsList || []);
+          })
+          .catch((err) => console.error('Error loading workspaces for builder:', err));
+
         if (id) {
           const plan = await WorkoutsService.getById(id);
           if (isMounted && plan) {
             setPlanId(plan.id);
             setPlanWorkspaceId(plan.workspace_id || wsId || null);
+            setExerciseLibraryWorkspaceId(
+              plan.exercise_library_workspace_id || plan.workspace_id || wsId || null
+            );
             setName(plan.name || '');
             setSplitType(plan.split_type || 'upper_lower');
             setCustomSplitName(plan.custom_split_name || '');
@@ -232,6 +256,7 @@ export default function WorkoutPlanBuilder() {
                 plan.split_type || 'upper_lower',
                 plan.custom_split_name || '',
                 plan.notes || '',
+                plan.exercise_library_workspace_id || plan.workspace_id || wsId || null,
                 migratedDays,
               ]));
             }
@@ -327,7 +352,7 @@ export default function WorkoutPlanBuilder() {
   // "Save & Assign" flow — autosave never creates rows on its own and never
   // reassigns a plan to a client.
   const autosaveEnabled = !!planId;
-  const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, days]);
+  const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, exerciseLibraryWorkspaceId, days]);
   const autosave = useAutosave({
     id: planId,
     enabled: autosaveEnabled,
@@ -339,6 +364,7 @@ export default function WorkoutPlanBuilder() {
         split_type: splitType,
         custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
         notes: notes.trim() || null,
+        exercise_library_workspace_id: exerciseLibraryWorkspaceId,
       };
       await WorkoutsService.update(planId, payload, days);
     },
@@ -517,6 +543,7 @@ export default function WorkoutPlanBuilder() {
         custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
         is_template: true,
         notes: notes.trim() || null,
+        exercise_library_workspace_id: exerciseLibraryWorkspaceId || planWorkspaceId || wsId,
       };
 
       await WorkoutsService.create(templatePayload, days);
@@ -550,6 +577,7 @@ export default function WorkoutPlanBuilder() {
         is_template: false,
         source_template_id: isTemplate ? planId : null,
         notes: notes.trim() || null,
+        exercise_library_workspace_id: exerciseLibraryWorkspaceId || planWorkspaceId || wsId,
       };
 
       const assigned = await WorkoutsService.create(planPayload, days);
@@ -582,6 +610,7 @@ export default function WorkoutPlanBuilder() {
         split_type: splitType,
         custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
         notes: notes.trim() || null,
+        exercise_library_workspace_id: exerciseLibraryWorkspaceId,
       };
       const updated = await WorkoutsService.update(planId, payload, days);
       setPlanId(updated.id);
@@ -598,6 +627,9 @@ export default function WorkoutPlanBuilder() {
   };
 
   if (loading) return <LoadingState label="Loading workout program builder…" />;
+
+  const libraryWorkspace = workspaces.find((w) => w.id === exerciseLibraryWorkspaceId);
+  const canChooseLibrarySource = isPlatformAdmin(user);
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-16">
@@ -737,6 +769,38 @@ export default function WorkoutPlanBuilder() {
               />
             </div>
           )}
+        </div>
+
+        {/* Exercise Library Source */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-secondary/20 border border-border/60 px-3 py-2.5">
+          <div className="min-w-0">
+            <label className="text-xs font-semibold text-foreground">Exercise Library Source</label>
+            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+              <Info className="w-3 h-3 shrink-0" />
+              The exercise picker browses exercises owned by this workspace.
+              {libraryWorkspace && (
+                <span>
+                  Currently:{' '}
+                  <span className="font-semibold text-foreground">{libraryWorkspace.name}</span>
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {canChooseLibrarySource ? (
+              <Button variant="secondary" onClick={() => setLibrarySourceOpen(true)} className="text-xs">
+                Change
+              </Button>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                title="Only the Platform Owner can point a plan at another workspace's exercise library."
+              >
+                <Lock className="w-3 h-3" />
+                Locked
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Plan Notes */}
@@ -1169,7 +1233,7 @@ export default function WorkoutPlanBuilder() {
         open={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
         onSelectExercise={handleAddExerciseToActiveDay}
-        workspaceId={planWorkspaceId || undefined}
+        workspaceId={exerciseLibraryWorkspaceId || planWorkspaceId || undefined}
       />
 
       {/* 2. Exercise Video Modal */}
@@ -1275,6 +1339,57 @@ export default function WorkoutPlanBuilder() {
 
           <div className="flex justify-end pt-1">
             <Button variant="secondary" onClick={() => setClientPickerOpen(false)} className="text-xs">
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 5. Exercise Library Source Modal */}
+      <Modal
+        open={librarySourceOpen}
+        onClose={() => setLibrarySourceOpen(false)}
+        title="Exercise Library Source"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Choose which workspace's exercise library this plan browses. Only workspaces you have access to are listed. Exercises already added to this plan are kept unchanged.
+          </p>
+
+          {workspaces.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No workspaces available.</p>
+          ) : (
+            <div className="space-y-2">
+              {workspaces.map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => {
+                    setExerciseLibraryWorkspaceId(w.id);
+                    setLibrarySourceOpen(false);
+                  }}
+                  className={cn(
+                    'w-full text-left px-3 py-2.5 rounded-xl border text-xs transition-all',
+                    exerciseLibraryWorkspaceId === w.id
+                      ? 'bg-primary/10 border-primary/50 text-foreground'
+                      : 'bg-secondary/40 border-border/60 text-foreground hover:bg-secondary'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{w.name}</span>
+                    {exerciseLibraryWorkspaceId === w.id && (
+                      <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{w.id}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <Button variant="secondary" onClick={() => setLibrarySourceOpen(false)} className="text-xs">
               Cancel
             </Button>
           </div>
