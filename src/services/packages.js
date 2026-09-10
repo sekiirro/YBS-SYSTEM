@@ -47,5 +47,31 @@ export const PackagesService = {
       .eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  // Structured package features (Phase 5). Rows live in package_features
+  // with stable ids; packages.features is kept as a projection by the
+  // sync_package_features RPC. Reads go through RLS (SELECT only), writes
+  // are 100% via the SECURITY DEFINER RPC which enforces owner scope.
+  async listFeatures(packageId) {
+    const { data, error } = await supabase
+      .from('package_features')
+      .select('id, title, sort_order, is_active')
+      .eq('package_id', packageId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  // items: ordered array of { id?: string, title: string }
+  async saveFeatures(packageId, items) {
+    const { data, error } = await supabase
+      .rpc('sync_package_features', {
+        p_package_id: packageId,
+        p_items: (items || []).map((f) => ({ id: f.id || null, title: f.title })),
+      });
+    if (error) throw error;
+    return data;
   }
 };

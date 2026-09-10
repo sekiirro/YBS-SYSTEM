@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '@/lib/AuthContext';
 import { getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { NutritionService, calculatePlanTotals } from '@/services/nutrition';
@@ -7,6 +8,8 @@ import { ClientsService } from '@/services/clients';
 import { PageHeader, LoadingState, Button, Badge, Modal, Input, TextArea } from '@/components/ui';
 import PlanSummaryBar from '@/components/nutrition/PlanSummaryBar';
 import MealSection from '@/components/nutrition/MealSection';
+import SaveStatus from '@/components/SaveStatus';
+import useAutosave from '@/hooks/useAutosave';
 import { ArrowLeft, Save, Bookmark, Plus, Users, Search, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +30,7 @@ export default function NutritionPlanBuilder() {
   // Plan Meta State
   const [planId, setPlanId] = useState(id || null);
   const [isTemplate, setIsTemplate] = useState(false);
+  const [status, setStatus] = useState('draft');
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
@@ -44,6 +48,9 @@ export default function NutritionPlanBuilder() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Server baseline for autosave (serialized state as loaded from the DB).
+  const [serverSnapshot, setServerSnapshot] = useState(null);
 
   // ── 1. Load Initial Data ──
   useEffect(() => {
@@ -64,11 +71,13 @@ export default function NutritionPlanBuilder() {
             setName(plan.name || '');
             setNotes(plan.notes || '');
             setIsTemplate(!!plan.is_template);
+            setStatus(plan.status || (plan.is_template ? 'active' : 'draft'));
             if (plan.client_id) {
               const matched = clientList.find((c) => c.id === plan.client_id);
               setSelectedClient(matched || { id: plan.client_id, full_name: plan.client_name });
             }
             setMeals(plan.meals || []);
+            if (isMounted) setServerSnapshot(JSON.stringify([plan.name || '', plan.notes || '', plan.meals || []]));
           }
         } else if (templateId) {
           // Pre-filling builder from a template (deep copy without saving to DB)
@@ -78,6 +87,7 @@ export default function NutritionPlanBuilder() {
             setName(`${tpl.name} (Copy)`);
             setNotes(tpl.notes || '');
             setIsTemplate(false);
+            setStatus('draft');
 
             // Deep-copy meals and items so original template is never linked
             const copiedMeals = (tpl.meals || []).map((m, mIdx) => ({
@@ -85,7 +95,7 @@ export default function NutritionPlanBuilder() {
               meal_name: m.meal_name,
               notes: m.notes || null,
               sort_order: mIdx,
-              day_number: 1,
+              day_number: m.day_number || 1,
               items: (m.items || []).map((it, itIdx) => ({
                 id: `copied-item-${itIdx}-${Date.now()}`,
                 food_id: it.food_id,
@@ -111,6 +121,7 @@ export default function NutritionPlanBuilder() {
           // New Blank Plan
           setName('New Nutrition Plan');
           setIsTemplate(searchParams.get('type') === 'template');
+          setStatus(searchParams.get('type') === 'template' ? 'active' : 'draft');
           setMeals([
             { id: `meal-1-${Date.now()}`, meal_name: 'Breakfast', notes: '', sort_order: 0, day_number: 1, items: [] },
             { id: `meal-2-${Date.now()}`, meal_name: 'Lunch', notes: '', sort_order: 1, day_number: 1, items: [] },
@@ -135,6 +146,30 @@ export default function NutritionPlanBuilder() {
 
   // ── 2. Live Plan Totals ──
   const planTotals = useMemo(() => calculatePlanTotals(meals), [meals]);
+
+  // ── 2b. Autosave (server-persistent) ──────────────────────────────
+  // Drafts only: once a plan row exists the latest edits are persisted
+  // automatically. Active plans and templates keep their explicit save flows
+  // so activation/assignment is never triggered implicitly by autosave.
+  const autosaveEnabled = !!planId && !isTemplate && status === 'draft';
+  const autosaveSnapshot = JSON.stringify([name, notes, meals]);
+  const autosave = useAutosave({
+    id: planId,
+    enabled: autosaveEnabled,
+    snapshot: autosaveSnapshot,
+    lastSavedSnapshot: serverSnapshot,
+    save: async () => {
+      const planPayload = {
+        workspace_id: wsId,
+        client_id: selectedClient?.id,
+        assigned_ybs_coach_id: user?.id,
+        name: name.trim(),
+        is_template: false,
+        notes: notes.trim() || null,
+      };
+      await NutritionService.update(planId, planPayload, meals);
+    },
+  });
 
   // ── 3. Meal State Modifiers ──
   const handleAddMeal = (customName) => {
@@ -229,6 +264,31 @@ export default function NutritionPlanBuilder() {
     });
   };
 
+  // ── 3b. Drag-and-drop guard: block drag initiation from interactive elements ──
+  useEffect(() => {
+    const BLOCK = 'INPUT,SELECT,TEXTAREA,BUTTON,[data-no-drag]';
+    const handler = (e) => {
+      if (e.target.closest(BLOCK)) {
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener('mousedown', handler, true);
+    return () => window.removeEventListener('mousedown', handler, true);
+  }, []);
+
+  const handleMealDragEnd = (result) => {
+    if (!result.destination) return;
+    const srcIdx = result.source.index;
+    const destIdx = result.destination.index;
+    if (srcIdx === destIdx) return;
+    setMeals((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(srcIdx, 1);
+      next.splice(destIdx, 0, moved);
+      return next.map((m, idx) => ({ ...m, sort_order: idx }));
+    });
+  };
+
   // ── 4. Save Plan ──
   const handleSave = async () => {
     if (!wsId) {
@@ -243,15 +303,14 @@ export default function NutritionPlanBuilder() {
       return;
     }
 
-    if (!isTemplate && !selectedClient) {
-      setError('Please select a client for this plan.');
-      return;
-    }
-
     if (meals.length === 0) {
       setError('Please add at least one meal to the plan.');
       return;
     }
+
+    // Drain any pending autosave so the manual write always starts from the
+    // latest persisted state.
+    await autosave.flush();
 
     try {
       setSaving(true);
@@ -263,6 +322,7 @@ export default function NutritionPlanBuilder() {
         name: name.trim(),
         is_template: isTemplate,
         notes: notes.trim() || null,
+        status: planId ? undefined : (isTemplate ? 'active' : 'draft'),
       };
 
       if (planId) {
@@ -282,7 +342,55 @@ export default function NutritionPlanBuilder() {
     }
   };
 
-  // ── 5. Save as Independent Template ──
+  // ── 5. Activate & Assign (draft → active) ──
+  const handleActivate = async () => {
+    if (!planId) {
+      setError('Save the draft first, then activate and assign it.');
+      return;
+    }
+    if (!isTemplate && !selectedClient) {
+      setError('Please select a client to assign this plan to.');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Please provide a plan name before activating.');
+      return;
+    }
+    if (meals.length === 0) {
+      setError('Please add at least one meal before activating.');
+      return;
+    }
+
+    setError('');
+    // Persist any pending autosave edits first so the client receives the
+    // latest stable state, then let the server-side activate_plan RPC run.
+    await autosave.flush();
+    setSaving(true);
+    try {
+      // Re-persist the full latest state (autosave may have concurrently
+      // written the same payload — updating again is safe and idempotent)
+      // so the client receives the very latest state before activation.
+      const planPayload = {
+        workspace_id: wsId,
+        client_id: selectedClient?.id,
+        assigned_ybs_coach_id: user?.id,
+        name: name.trim(),
+        is_template: false,
+        notes: notes.trim() || null,
+      };
+      await NutritionService.update(planId, planPayload, meals);
+
+      await NutritionService.activatePlan(planId, selectedClient.id);
+      navigate(returnTo || '/nutrition');
+    } catch (err) {
+      console.error('Activation failed:', err);
+      setError(err.message || 'Failed to activate plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── 6. Save as Independent Template ──
   const handleSaveAsTemplate = async () => {
     if (!wsId) {
       setError('No active workspace found. Join or switch to a workspace before saving this plan.');
@@ -334,7 +442,7 @@ export default function NutritionPlanBuilder() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/nutrition')}
+            onClick={async () => { await autosave.flush(); navigate('/nutrition'); }}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4" /> Back
@@ -344,8 +452,12 @@ export default function NutritionPlanBuilder() {
               <h1 className="text-xl lg:text-2xl font-display font-semibold text-foreground">
                 {planId ? 'Edit Nutrition Plan' : isTemplate ? 'New Nutrition Template' : 'New Client Plan'}
               </h1>
-              <Badge className={cn(isTemplate ? 'text-purple-400 bg-purple-500/10 border-purple-500/20' : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20')}>
-                {isTemplate ? 'Template' : 'Client Plan'}
+              <Badge className={cn(
+                isTemplate ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+                : status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              )}>
+                {isTemplate ? 'Template' : status === 'draft' ? 'Draft' : 'Active'}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -356,6 +468,10 @@ export default function NutritionPlanBuilder() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {autosaveEnabled && (
+            <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+          )}
+
           {!isTemplate && meals.length > 0 && (
             <Button
               variant="outline"
@@ -369,9 +485,16 @@ export default function NutritionPlanBuilder() {
             </Button>
           )}
 
+          {!isTemplate && status === 'draft' && planId && (
+            <Button size="sm" onClick={handleActivate} disabled={saving} className="bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600">
+              <Check className="w-4 h-4" />
+              {saving ? 'Activating…' : 'Activate & Assign'}
+            </Button>
+          )}
+
           <Button onClick={handleSave} disabled={saving}>
             <Save className="w-4 h-4" />
-            {saving ? 'Saving…' : planId ? 'Save Changes' : 'Save Plan'}
+            {saving ? 'Saving…' : planId ? 'Save Changes' : 'Save Draft'}
           </Button>
         </div>
       </div>
@@ -399,34 +522,39 @@ export default function NutritionPlanBuilder() {
 
         {!isTemplate ? (
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Assigned Client</label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setClientPickerOpen(true)}
-                className={cn(
-                  'flex-1 h-10 px-3 rounded-lg border text-xs text-left flex items-center justify-between transition-colors',
-                  selectedClient
-                    ? 'bg-secondary/40 border-border text-foreground'
-                    : 'bg-secondary/20 border-dashed border-border/80 text-muted-foreground hover:border-primary/50'
+              <label className="text-xs font-semibold text-foreground block mb-1">Assigned Client</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setClientPickerOpen(true)}
+                  className={cn(
+                    'flex-1 h-10 px-3 rounded-lg border text-xs text-left flex items-center justify-between transition-colors',
+                    selectedClient
+                      ? 'bg-secondary/40 border-border text-foreground'
+                      : 'bg-secondary/20 border-dashed border-border/80 text-muted-foreground hover:border-primary/50'
+                  )}
+                >
+                  {selectedClient ? (
+                    <span className="font-medium">
+                      {selectedClient.full_name} <span className="font-mono text-muted-foreground">({selectedClient.client_code})</span>
+                    </span>
+                  ) : (
+                    <span>{status === 'draft' ? 'Select client when ready to assign…' : 'Select client…'}</span>
+                  )}
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                </button>
+                {selectedClient && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedClient(null)}>
+                    Clear
+                  </Button>
                 )}
-              >
-                {selectedClient ? (
-                  <span className="font-medium">
-                    {selectedClient.full_name} <span className="font-mono text-muted-foreground">({selectedClient.client_code})</span>
-                  </span>
-                ) : (
-                  <span>Select client…</span>
-                )}
-                <Users className="w-4 h-4 text-muted-foreground" />
-              </button>
-              {selectedClient && (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedClient(null)}>
-                  Clear
-                </Button>
+              </div>
+              {status === 'draft' && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Drafts are private. The client only sees the plan after you click Activate &amp; Assign.
+                </p>
               )}
             </div>
-          </div>
         ) : (
           <div className="flex flex-col justify-center">
             <span className="text-xs font-semibold text-foreground block mb-1">Scope</span>
@@ -473,24 +601,47 @@ export default function NutritionPlanBuilder() {
             </Button>
           </div>
         ) : (
-          meals.map((m, mIdx) => (
-            <MealSection
-              key={m.id || mIdx}
-              meal={m}
-              index={mIdx}
-              totalMeals={meals.length}
-              workspaceId={wsId}
-              onRename={(newName) => handleRenameMeal(mIdx, newName)}
-              onChangeNotes={(notes) => handleChangeMealNotes(mIdx, notes)}
-              onMoveUp={() => handleMoveMeal(mIdx, -1)}
-              onMoveDown={() => handleMoveMeal(mIdx, 1)}
-              onRemove={() => handleRemoveMeal(mIdx)}
-              onAddItem={(item) => handleAddItemToMeal(mIdx, item)}
-              onUpdateItemAmount={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
-              onRemoveItem={(itIdx) => handleRemoveItemFromMeal(mIdx, itIdx)}
-              onReplaceItem={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
-            />
-          ))
+          <DragDropContext onDragEnd={handleMealDragEnd}>
+            <Droppable droppableId="meals">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-4">
+                  {meals.map((m, mIdx) => (
+                    <Draggable key={m.id || `meal-${mIdx}`} draggableId={m.id || `meal-${mIdx}`} index={mIdx}>
+                      {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={cn(
+                            'transition-shadow',
+                            snapshot.isDragging ? 'shadow-lg shadow-black/10 ring-2 ring-primary/30 rounded-xl' : ''
+                          )}
+                        >
+                          <MealSection
+                            meal={m}
+                            index={mIdx}
+                            totalMeals={meals.length}
+                            workspaceId={wsId}
+                            onRename={(newName) => handleRenameMeal(mIdx, newName)}
+                            onChangeNotes={(notes) => handleChangeMealNotes(mIdx, notes)}
+                            onMoveUp={() => handleMoveMeal(mIdx, -1)}
+                            onMoveDown={() => handleMoveMeal(mIdx, 1)}
+                            onRemove={() => handleRemoveMeal(mIdx)}
+                            onAddItem={(item) => handleAddItemToMeal(mIdx, item)}
+                            onUpdateItemAmount={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
+                            onRemoveItem={(itIdx) => handleRemoveItemFromMeal(mIdx, itIdx)}
+                            onReplaceItem={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
+                            dragHandleProps={dragProvided.dragHandleProps}
+                            isDragging={snapshot.isDragging}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
       </div>
 

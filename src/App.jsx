@@ -30,6 +30,7 @@ import Subscriptions from '@/pages/Subscriptions';
 import Exercises from '@/pages/Exercises';
 import Foods from '@/pages/Foods';
 import Assessments from '@/pages/Assessments';
+import FormRules from '@/pages/FormRules';
 import Metrics from '@/pages/Metrics';
 import NutritionPlans from '@/pages/NutritionPlans';
 import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
@@ -99,6 +100,7 @@ const AuthenticatedApp = () => {
             <Route path="/settings" element={<Settings />} />
             <Route path="/packages" element={<Packages />} />
             <Route path="/team" element={<Team />} />
+            <Route path="/forms/rules" element={<FormRules />} />
           </Route>
 
           {/* Admin + workspace + coach */}

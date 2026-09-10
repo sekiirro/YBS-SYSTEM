@@ -124,6 +124,7 @@ export const NutritionService = {
     let query = supabase
       .from('nutrition_plans')
       .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*, foods(*)))')
+      .order('activated_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (filters.is_archived !== undefined) {
@@ -140,6 +141,9 @@ export const NutritionService = {
     }
     if (filters.is_template !== undefined) {
       query = query.eq('is_template', filters.is_template);
+    }
+    if (filters.status !== undefined) {
+      query = query.eq('status', filters.status);
     }
 
     const { data, error } = await query;
@@ -160,6 +164,8 @@ export const NutritionService = {
   /**
    * Creates a new nutrition plan with its meals and snapshotted nutrition items.
    * Plan-level daily totals are calculated live from meals/items.
+   * Client plans (is_template=false) are created as drafts so they stay
+   * invisible to the client until explicitly activated.
    */
   async create(planPayload, meals = []) {
     // 1. Calculate plan totals from items
@@ -167,6 +173,7 @@ export const NutritionService = {
 
     const payload = {
       ...planPayload,
+      status: planPayload.status || (planPayload.is_template ? 'active' : 'draft'),
       daily_calories: totals.calories,
       daily_protein: totals.protein,
       daily_carbs: totals.carbs,
@@ -298,6 +305,21 @@ export const NutritionService = {
       .eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Validates and activates a draft plan, assigning it to a client.
+   * Uses the server-side activate_plan RPC (single transaction with RLS-aware
+   * authorization checks). Records actor + timestamp in audit_logs and timeline_events.
+   */
+  async activatePlan(planId, clientId) {
+    const { data, error } = await supabase.rpc('activate_plan', {
+      p_plan_id: planId,
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    if (data && data.success === false) throw new Error(data.message || 'Failed to activate plan');
+    return data;
   },
 
   // ─── Daily Nutrition / Meal Completion ─────────────────────────────

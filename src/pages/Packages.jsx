@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
 import { PackagesService } from '@/services/packages';
@@ -6,7 +6,9 @@ import { WorkspacesService } from '@/services/workspaces';
 import { isPlatformAdmin, isWorkspaceOwner, getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
 import { formatCurrency } from '@/lib/ybs-utils';
-import { Package as PackageIcon, Plus, Edit, Search, Building2 } from 'lucide-react';
+import SaveStatus from '@/components/SaveStatus';
+import useAutosave from '@/hooks/useAutosave';
+import { Package as PackageIcon, Plus, Edit, Search, Building2, ChevronUp, ChevronDown, Trash2, Loader2 } from 'lucide-react';
 
 export default function Packages() {
   const { user } = useAuth();
@@ -265,27 +267,127 @@ function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
   );
 }
 
+function FeaturesEditor({ value = [], onChange }) {
+  const [adding, setAdding] = useState('');
+
+  const add = () => {
+    const title = adding.trim();
+    if (!title) return;
+    onChange([...value, { title }]);
+    setAdding('');
+  };
+
+  const setTitleAt = (i, title) => {
+    onChange(value.map((f, idx) => (idx === i ? { ...f, title } : f)));
+  };
+
+  const move = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= value.length) return;
+    const next = [...value];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  const removeAt = (i) => {
+    onChange(value.filter((_, idx) => idx !== i));
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <label className="text-[12px] font-medium text-muted-foreground">Features</label>
+        <span className="text-[11px] text-muted-foreground">{value.length} feature{value.length === 1 ? '' : 's'}</span>
+      </div>
+      {value.length === 0 ? (
+        <p className="text-[12px] text-muted-foreground border border-dashed border-border rounded-lg p-3 text-center mt-2">
+          No features yet — add the first one below.
+        </p>
+      ) : (
+        <div className="space-y-1.5 mt-2">
+          {value.map((f, i) => (
+            <div key={f.id || `new-${i}`} className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => move(i, -1)}
+                disabled={i === 0}
+                title="Move up"
+                className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => move(i, 1)}
+                disabled={i === value.length - 1}
+                title="Move down"
+                className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <input
+                type="text"
+                value={f.title}
+                onChange={(e) => setTitleAt(i, e.target.value)}
+                placeholder="Feature title"
+                className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                title="Remove feature"
+                className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2 mt-2">
+        <input
+          type="text"
+          value={adding}
+          onChange={(e) => setAdding(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+          placeholder="Add feature and press Enter"
+          className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={add}>
+          <Plus className="w-3.5 h-3.5" /> Add
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function CreatePackageModal({ title = 'Create Package', workspaceId, onClose, onCreated }) {
   const [form, setForm] = useState({
     name: '', tier: 'silver', duration: 1, duration_unit: 'months', price: '',
-    description: '', is_active: true, is_custom: false, features: [],
+    description: '', is_active: true, is_custom: false,
   });
+  const [features, setFeatures] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [featureInput, setFeatureInput] = useState('');
+  const [error, setError] = useState('');
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      setError('');
       const payload = {
         ...form,
         workspace_id: workspaceId || null,
         price: parseFloat(form.price) || 0,
         duration: parseInt(form.duration) || 1,
       };
-      await PackagesService.create(payload);
+      const created = await PackagesService.create(payload);
+      if (features.length > 0) {
+        await PackagesService.saveFeatures(created.id, features);
+      }
       onCreated();
     } catch (err) {
       console.error(err);
+      setError(err.message || 'Failed to create package.');
     } finally {
       setSaving(false);
     }
@@ -294,6 +396,9 @@ function CreatePackageModal({ title = 'Create Package', workspaceId, onClose, on
   return (
     <Modal open onClose={onClose} title={title} size="lg">
       <div className="space-y-4">
+        {error && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>
+        )}
         <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Gold — 3 Months" />
         <div className="grid grid-cols-3 gap-3">
           <Select label="Tier" value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })}>
@@ -311,27 +416,7 @@ function CreatePackageModal({ title = 'Create Package', workspaceId, onClose, on
         </div>
         <Input label="Price ($)" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
         <TextArea label="Description" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <div>
-          <label className="text-[12px] font-medium text-muted-foreground">Features</label>
-          <div className="flex gap-2 mt-1.5">
-            <input
-              type="text" value={featureInput} onChange={(e) => setFeatureInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (featureInput) { setForm({ ...form, features: [...form.features, featureInput] }); setFeatureInput(''); } } }}
-              placeholder="Add feature and press Enter"
-              className="flex-1 h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
-            />
-          </div>
-          {form.features.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {form.features.map((f, i) => (
-                <span key={i} className="px-2 py-1 rounded-md bg-secondary text-[12px] flex items-center gap-1.5">
-                  {f}
-                  <button onClick={() => setForm({ ...form, features: form.features.filter((_, idx) => idx !== i) })} className="text-muted-foreground hover:text-red-400">×</button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        <FeaturesEditor value={features} onChange={setFeatures} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? 'Creating…' : 'Create Package'}</Button>
@@ -350,29 +435,83 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
     price: pkg.price || '',
     description: pkg.description || '',
     is_active: !!pkg.is_active,
-    features: pkg.features || [],
   });
+  const [features, setFeatures] = useState([]);
+  const [featuresLoaded, setFeaturesLoaded] = useState(false);
+  const [featureBaseline, setFeatureBaseline] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [featureInput, setFeatureInput] = useState('');
+
+  // Structured features come from package_features (stable ids per row).
+  // They load once when the modal opens; the loaded state becomes the
+  // autosave baseline so merely opening the modal never triggers a save.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const rows = await PackagesService.listFeatures(pkg.id);
+        if (!active) return;
+        const mapped = rows.map((r) => ({ id: r.id, title: r.title }));
+        setFeatures(mapped);
+        setFeatureBaseline(JSON.stringify(mapped));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (active) setFeaturesLoaded(true);
+      }
+    })();
+    return () => { active = false; };
+  }, [pkg.id]);
+
+  // Autosave (server-persistent). The snapshot covers BOTH the scalar
+  // package fields and the structured features; the save applies each side
+  // only when it actually diverged from its own frozen baseline.
+  const scalarView = (f) => JSON.stringify([
+    f.name,
+    f.tier,
+    String(f.duration),
+    f.duration_unit,
+    String(f.price),
+    f.description,
+    !!f.is_active,
+  ]);
+  const scalarBaseline = useMemo(() => scalarView(form), []);
+  const featuresView = JSON.stringify(features);
+  const autosave = useAutosave({
+    id: pkg.id,
+    enabled: featuresLoaded,
+    snapshot: `${scalarView(form)}|${featuresView}`,
+    lastSavedSnapshot: `${scalarBaseline}|${featureBaseline}`,
+    save: async () => {
+      if (scalarView(form) !== scalarBaseline) {
+        const updates = isAdmin
+          ? {
+              ...form,
+              price: parseFloat(form.price) || 0,
+              duration: parseInt(form.duration) || 1,
+            }
+          : {
+              name: form.name.trim(),
+              price: parseFloat(form.price) || 0,
+              is_active: !!form.is_active,
+            };
+        await PackagesService.update(pkg.id, updates);
+      }
+      if (JSON.stringify(features) !== featureBaseline) {
+        await PackagesService.saveFeatures(pkg.id, features);
+      }
+    },
+  });
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError('');
-      const updates = isAdmin
-        ? {
-            ...form,
-            price: parseFloat(form.price) || 0,
-            duration: parseInt(form.duration) || 1,
-          }
-        : {
-            name: form.name.trim(),
-            price: parseFloat(form.price) || 0,
-            features: form.features || [],
-            is_active: !!form.is_active,
-          };
-      await PackagesService.update(pkg.id, updates);
+      await autosave.flush();
+      if (autosave.status === 'error') {
+        setError(autosave.error || 'Failed to save changes.');
+        return;
+      }
       onUpdated();
     } catch (err) {
       console.error(err);
@@ -441,48 +580,21 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
               />
               <span>Active package (visible to clients in this workspace)</span>
             </label>
-            <div>
-              <label className="text-[12px] font-medium text-muted-foreground">Features</label>
-              <div className="flex gap-2 mt-1.5">
-                <input
-                  type="text"
-                  value={featureInput}
-                  onChange={(e) => setFeatureInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (featureInput) {
-                        setForm({ ...form, features: [...(form.features || []), featureInput] });
-                        setFeatureInput('');
-                      }
-                    }
-                  }}
-                  placeholder="Add feature and press Enter"
-                  className="flex-1 h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
-                />
-              </div>
-              {form.features?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {form.features.map((f, i) => (
-                    <span key={i} className="px-2 py-1 rounded-md bg-secondary text-[12px] flex items-center gap-1.5">
-                      {f}
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, features: form.features.filter((_, idx) => idx !== i) })}
-                        className="text-muted-foreground hover:text-red-400"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
           </>
         )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+        {featuresLoaded ? (
+          <FeaturesEditor value={features} onChange={setFeatures} />
+        ) : (
+          <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading features…
+          </div>
+        )}
+        <div className="flex items-center justify-between pt-2">
+          <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+          </div>
         </div>
       </div>
     </Modal>

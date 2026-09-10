@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Modal, Button, Input, TextArea, Select, Badge } from '@/components/ui';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button, Input, TextArea } from '@/components/ui';
+import SaveStatus from '@/components/SaveStatus';
+import useAutosave from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
 import {
-  Plus, Trash2, GripVertical, ChevronUp, ChevronDown,
+  Plus, Trash2, ChevronUp, ChevronDown,
   Type, AlignLeft, CircleDot, CheckSquare, ToggleLeft,
   List, Hash, Calendar, Star, Upload, Image, Clock, Copy
 } from 'lucide-react';
@@ -36,7 +38,25 @@ function newQuestion(sortOrder) {
   };
 }
 
-export default function FormBuilder({ open, onClose, onSave, initialData }) {
+/**
+ * Deterministic serialization of questions for autosave change detection.
+ * Only persisted-relevant fields (plus positional sort_order) are included,
+ * so transient fields like the editor's `_key` never trigger a spurious save.
+ */
+function serializeQuestions(qs = []) {
+  return qs.map((q, idx) => [
+    q.id ?? null,
+    q.question_type,
+    q.label,
+    q.description ?? '',
+    !!q.required,
+    idx,
+    q.options ?? [],
+    q.conditional_rules ?? null,
+  ]);
+}
+
+export default function FormBuilder({ open, onClose, onSave, onAutosave, initialData }) {
   const isEdit = !!initialData?.id;
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -64,6 +84,44 @@ export default function FormBuilder({ open, onClose, onSave, initialData }) {
     );
     setErrors({});
   }, [open, initialData?.id]);
+
+  // Autosave (server-persistent) — existing templates only. Persists the
+  // template with its CURRENT status, so autosave can never publish a draft
+  // on its own; "Save & Publish" remains an explicit user action.
+  const editBaseline = useMemo(() => {
+    if (!open || !initialData?.id) return null;
+    return JSON.stringify([
+      initialData.name,
+      initialData.description ?? '',
+      serializeQuestions(initialData.assessment_questions || []),
+    ]);
+  }, [open, initialData]);
+
+  const autosaveSnapshot = JSON.stringify([name, description, serializeQuestions(questions)]);
+  const autosave = useAutosave({
+    id: isEdit ? initialData.id : null,
+    enabled: open && isEdit && !!onAutosave,
+    snapshot: autosaveSnapshot,
+    lastSavedSnapshot: editBaseline,
+    save: async () => {
+      if (!onAutosave) return;
+      await onAutosave({
+        id: initialData.id,
+        name: name.trim(),
+        description: description.trim() || null,
+        status,
+        questions: questions.map((q, idx) => ({
+          id: q.id,
+          question_type: q.question_type,
+          label: q.label.trim(),
+          description: q.description?.trim() || null,
+          required: q.required,
+          options: TYPES_WITH_OPTIONS.includes(q.question_type) ? (q.options || []).filter(o => o.trim()) : [],
+          sort_order: idx,
+        })),
+      });
+    },
+  });
 
   const addQuestion = () => {
     setQuestions((prev) => [...prev, newQuestion(prev.length)]);
@@ -130,6 +188,10 @@ export default function FormBuilder({ open, onClose, onSave, initialData }) {
 
   const handleSave = async (saveStatus) => {
     if (!validate()) return;
+    // Drain any pending autosave so the draft state persists first; the
+    // explicit publish/draft write below always runs against a clean slate
+    // and no queued autosave can later revert the status change.
+    await autosave.flush();
     setSaving(true);
     try {
       await onSave({
@@ -324,7 +386,12 @@ export default function FormBuilder({ open, onClose, onSave, initialData }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-4 border-t border-border shrink-0">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+            {isEdit && open && (
+              <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => handleSave('draft')} disabled={saving}>
               {saving ? 'Saving…' : 'Save as Draft'}

@@ -6,7 +6,7 @@ import FoodPickerModal from './FoodPickerModal';
 import ReplaceFoodModal from './ReplaceFoodModal';
 import { scaleFoodNutrients } from '@/services/nutrition';
 import { calculateFoodNutrients } from '@/lib/nutritionUnits';
-import { ChevronUp, ChevronDown, Trash2, Plus, Utensils, StickyNote } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Plus, Utensils, StickyNote, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SUGGESTED_NAMES = ['Breakfast', 'Lunch', 'Dinner', 'Pre-workout', 'Post-workout', 'Snack', 'Snack 1', 'Snack 2'];
@@ -30,6 +30,8 @@ export default function MealSection({
   onRemoveItem,
   onReplaceItem,
   workspaceId,
+  dragHandleProps,
+  isDragging,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [replacementIndex, setReplacementIndex] = useState(null);
@@ -123,6 +125,18 @@ export default function MealSection({
       {/* Meal Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2 flex-wrap flex-1">
+          <div
+            {...dragHandleProps}
+            className={cn(
+              'w-7 h-7 rounded-md flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing transition-colors',
+              isDragging
+                ? 'bg-primary/20 border border-primary/30 text-primary'
+                : 'bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
+            )}
+            title="Drag to reorder meal"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </div>
           <div className="w-7 h-7 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
             <Utensils className="w-3.5 h-3.5 text-primary" />
           </div>

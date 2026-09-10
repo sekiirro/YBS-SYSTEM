@@ -113,6 +113,18 @@ export default function Assessments() {
     await loadData();
   };
 
+  // ── Form Builder autosave (server-persistent, edit-mode only) ──
+  // Persists an existing template's metadata + questions WITHOUT changing
+  // its status and WITHOUT reloading the list or closing the modal.
+  const handleFormAutosave = async (formData) => {
+    await TemplatesService.update(formData.id, {
+      name: formData.name,
+      description: formData.description,
+      status: formData.status,
+    });
+    await QuestionsService.bulkUpsert(formData.id, formData.questions);
+  };
+
   // ── Assign flow ──
   const openAssign = async (template) => {
     setAssignTemplate(template);
@@ -463,6 +475,7 @@ export default function Assessments() {
         open={builderOpen}
         onClose={() => { setBuilderOpen(false); setEditingTemplate(null); }}
         onSave={handleFormSave}
+        onAutosave={handleFormAutosave}
         initialData={editingTemplate}
       />
 

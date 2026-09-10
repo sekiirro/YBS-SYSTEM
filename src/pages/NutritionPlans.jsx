@@ -187,8 +187,13 @@ export default function NutritionPlans() {
                   <h3 className="text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">
                     {p.name}
                   </h3>
-                  <Badge className="text-[10px] font-mono capitalize">
-                    {p.is_template ? 'Template' : 'Active'}
+                  <Badge className={cn(
+                    'text-[10px] font-mono capitalize',
+                    p.is_template ? ''
+                    : p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
+                    : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
+                  )}>
+                    {p.is_template ? 'Template' : p.status === 'draft' ? 'Draft' : 'Active'}
                   </Badge>
                 </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '@/lib/AuthContext';
 import { getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { WorkoutsService, calculateWorkoutVolume } from '@/services/workouts';
@@ -7,6 +8,8 @@ import { ClientsService } from '@/services/clients';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
 import ExerciseSearchModal from '@/components/workouts/ExerciseSearchModal';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
+import SaveStatus from '@/components/SaveStatus';
+import useAutosave from '@/hooks/useAutosave';
 import {
   Dumbbell,
   ArrowLeft,
@@ -21,7 +24,8 @@ import {
   Flame,
   Info,
   Search,
-  Check
+  Check,
+  GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -165,6 +169,9 @@ export default function WorkoutPlanBuilder() {
   const [templateName, setTemplateName] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
 
+  // Server baseline for autosave (serialized state as loaded from the DB).
+  const [serverSnapshot, setServerSnapshot] = useState(null);
+
   // ─── 1. Load Initial Plan / Template Data ───────────────────────────
   useEffect(() => {
     let isMounted = true;
@@ -213,6 +220,15 @@ export default function WorkoutPlanBuilder() {
               }),
             }));
             setDays(migratedDays);
+            if (isMounted) {
+              setServerSnapshot(JSON.stringify([
+                plan.name || '',
+                plan.split_type || 'upper_lower',
+                plan.custom_split_name || '',
+                plan.notes || '',
+                migratedDays,
+              ]));
+            }
           }
         } else if (templateId) {
           const tpl = await WorkoutsService.getById(templateId);
@@ -298,6 +314,53 @@ export default function WorkoutPlanBuilder() {
   }, [days]);
 
   const activeDay = days[activeDayIndex] || days[0];
+
+  // ─── 2b. Autosave (server-persistent) ──────────────────────────────
+  // Once a plan/template row exists, the latest edits are persisted
+  // automatically in place. Brand-new plans (no id) keep the explicit
+  // "Save & Assign" flow — autosave never creates rows on its own and never
+  // reassigns a plan to a client.
+  const autosaveEnabled = !!planId;
+  const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, days]);
+  const autosave = useAutosave({
+    id: planId,
+    enabled: autosaveEnabled,
+    snapshot: autosaveSnapshot,
+    lastSavedSnapshot: serverSnapshot,
+    save: async () => {
+      const payload = {
+        name: name.trim(),
+        split_type: splitType,
+        custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
+        notes: notes.trim() || null,
+      };
+      await WorkoutsService.update(planId, payload, days);
+    },
+  });
+
+  // Prevent drag initiation when starting on interactive elements
+  useEffect(() => {
+    const BLOCK = 'INPUT,SELECT,TEXTAREA,BUTTON,[data-no-drag]';
+    const handler = (e) => {
+      if (e.target.closest(BLOCK)) {
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener('mousedown', handler, true);
+    return () => window.removeEventListener('mousedown', handler, true);
+  }, []);
+
+  const handleExerciseDragEnd = (result) => {
+    if (!result.destination) return;
+    const srcIdx = result.source.index;
+    const destIdx = result.destination.index;
+    if (srcIdx === destIdx || !activeDay) return;
+    const exList = [...(activeDay.exercises || [])];
+    const [moved] = exList.splice(srcIdx, 1);
+    exList.splice(destIdx, 0, moved);
+    const reordered = exList.map((ex, i) => ({ ...ex, sort_order: i }));
+    handleUpdateDay(activeDayIndex, { exercises: reordered });
+  };
 
   // ─── 3. Days Management ─────────────────────────────────────────────
   const handleAddDay = () => {
@@ -470,6 +533,7 @@ export default function WorkoutPlanBuilder() {
 
   const handleAssignToClient = async (client) => {
     try {
+      await autosave.flush();
       setSaving(true);
       const planPayload = {
         workspace_id: wsId,
@@ -487,6 +551,7 @@ export default function WorkoutPlanBuilder() {
       setSelectedClient(client);
       setPlanId(assigned.id);
       setIsTemplate(false);
+      autosave.reset();
       setSuccessMessage(`Assigned to ${client.full_name} successfully!`);
       setTimeout(() => setSuccessMessage(''), 3500);
     } catch (err) {
@@ -504,6 +569,7 @@ export default function WorkoutPlanBuilder() {
     if (!validatePlan()) return;
     if (!planId) return;
     try {
+      await autosave.flush();
       setSaving(true);
       const payload = {
         name: name.trim(),
@@ -534,7 +600,7 @@ export default function WorkoutPlanBuilder() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/workouts')}
+            onClick={async () => { await autosave.flush(); navigate('/workouts'); }}
             className="p-2 rounded-xl bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
             title="Back to Workout Plans"
           >
@@ -581,6 +647,8 @@ export default function WorkoutPlanBuilder() {
           >
             <Users className="w-3.5 h-3.5 text-primary" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
           </Button>
+
+          <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
         </div>
       </div>
 
@@ -790,14 +858,36 @@ export default function WorkoutPlanBuilder() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <DragDropContext onDragEnd={handleExerciseDragEnd}>
+                    <Droppable droppableId="exercises">
+                      {(dropProvided) => (
+                        <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-3">
                     {(activeDay.exercises || []).map((ex, exIdx) => (
-                      <div
-                        key={ex.id || exIdx}
-                        className="p-3.5 sm:p-4 rounded-xl border border-border/70 bg-secondary/20 hover:border-border transition-all space-y-3"
-                      >
+                      <Draggable key={ex.id || `ex-${exIdx}`} draggableId={ex.id || `ex-${exIdx}`} index={exIdx}>
+                        {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={cn(
+                            'p-3.5 sm:p-4 rounded-xl border border-border/70 bg-secondary/20 hover:border-border transition-all space-y-3',
+                            snapshot.isDragging ? 'shadow-lg shadow-black/10 ring-2 ring-primary/30' : ''
+                          )}
+                        >
                         {/* Exercise Top Row */}
                         <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <div
+                              {...dragProvided.dragHandleProps}
+                              className={cn(
+                                'w-6 h-6 mt-0.5 rounded flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing transition-colors',
+                                snapshot.isDragging
+                                  ? 'bg-primary/20 border border-primary/30 text-primary'
+                                  : 'bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                              )}
+                              title="Drag to reorder exercise"
+                            >
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-mono text-muted-foreground font-semibold">
@@ -813,6 +903,7 @@ export default function WorkoutPlanBuilder() {
                                 </span>
                               )}
                             </div>
+                          </div>
                           </div>
 
                           {/* Exercise Card Actions */}
@@ -974,8 +1065,14 @@ export default function WorkoutPlanBuilder() {
                           />
                         </div>
                       </div>
+                      )}
+                      </Draggable>
                     ))}
-                  </div>
+                    {dropProvided.placeholder}
+                    </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
                 )}
 
                 {/* Add Exercise Trigger Button */}

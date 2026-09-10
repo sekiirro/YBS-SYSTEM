@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Package, ClipboardList, TrendingUp,
   Apple, Dumbbell, Bell, UsersRound, ScrollText, Settings,
-  Building2, ClipboardCheck, ChevronLeft, X
+  Building2, ClipboardCheck, ChevronLeft, X, Workflow
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
@@ -24,6 +24,7 @@ const SECTIONS = {
     { label: 'Clients', items: [
       { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
       { label: 'Forms', path: '/forms', icon: ClipboardList, perm: 'forms.view' },
+      { label: 'Form Rules', path: '/forms/rules', icon: Workflow, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [
@@ -47,6 +48,7 @@ const SECTIONS = {
     { label: 'Clients', items: [
       { label: 'Clients', path: '/clients', icon: Users, perm: 'clients.view' },
       { label: 'Forms', path: '/forms', icon: ClipboardList, perm: 'forms.view' },
+      { label: 'Form Rules', path: '/forms/rules', icon: Workflow, perm: 'forms.view' },
       { label: 'Metrics', path: '/metrics', icon: TrendingUp, perm: 'metrics.view' },
     ]},
     { label: 'Programs', items: [

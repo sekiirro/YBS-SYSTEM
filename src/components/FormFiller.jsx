@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button, Badge } from '@/components/ui';
+import SaveStatus from '@/components/SaveStatus';
+import useAutosave from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, AlertCircle, Save, Send, Smartphone } from 'lucide-react';
 
@@ -15,8 +17,10 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
 
   const isSubmitted = assessment?.submission_status === 'submitted' || assessment?.submission_status === 'reviewed';
 
-  // Initialize responses from existing assessment_responses
-  const [responses, setResponses] = useState(() => {
+  // Initial responses derived from existing assessment_responses plus default
+  // blanks. Memoized so it can also serve as the autosave baseline (server
+  // state) — the editor's `responses` map starts from it.
+  const initialResponses = useMemo(() => {
     const map = {};
     (assessment?.assessment_responses || []).forEach((r) => {
       map[r.question_id] = r.response_value;
@@ -28,12 +32,28 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
       }
     });
     return map;
-  });
+  }, [assessment, questions]);
+
+  // Initialize responses from existing assessment_responses
+  const [responses, setResponses] = useState(initialResponses);
 
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [saveMessage, setSaveMessage] = useState('');
+
+  // Autosave (server-persistent): client responses are upserted in the
+  // background as the client types. This never submits the form — "Submit
+  // Form" remains the only action that advances submission_status.
+  const autosave = useAutosave({
+    id: assessment?.id,
+    enabled: !isSubmitted && !!assessment?.id,
+    snapshot: JSON.stringify(responses),
+    lastSavedSnapshot: JSON.stringify(initialResponses),
+    save: async () => {
+      await onSave(assessment.id, buildResponseRecords());
+    },
+  });
 
   const updateResponse = (questionId, value) => {
     if (isSubmitted) return;
@@ -92,6 +112,9 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    // Persist any pending autosaved responses before submitting so the
+    // submission snapshot is complete and no late autosave races it.
+    await autosave.flush();
     setSubmitting(true);
     try {
       await onSubmit(assessment.id, buildResponseRecords());
@@ -188,6 +211,9 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
                 <Save className="w-3.5 h-3.5" />
                 {saving ? 'Saving…' : 'Save Progress'}
               </Button>
+              {!isSubmitted && (
+                <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+              )}
               {saveMessage && (
                 <span className="text-[11px] text-emerald-400">{saveMessage}</span>
               )}
