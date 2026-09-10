@@ -15,7 +15,8 @@ import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/c
 import { formatDate, getSubscriptionStatusColor, getFormStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
 import {
   ArrowLeft, Phone, Mail, Calendar, User, Package, CreditCard,
-  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive, Eye
+  ClipboardList, TrendingUp, Apple, Dumbbell, Bell, Activity, Edit, Send, Plus, Check, Trash2, Archive, Eye,
+  FilePlus, Copy, ArrowRight, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -471,35 +472,74 @@ function Metric({ label, value }) {
 function NutritionTab({ clientId }) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const returnTo = encodeURIComponent(`/clients/${clientId}?tab=nutrition`);
 
   useEffect(() => {
+    setLoading(true);
     NutritionService.list({ client_id: clientId })
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setLoading(false));
   }, [clientId]);
 
-  const handleNewPlan = () => {
-    navigate(`/nutrition/builder?clientId=${clientId}&returnTo=${encodeURIComponent(`/clients/${clientId}?tab=nutrition`)}`);
+  useEffect(() => {
+    NutritionService.list({ is_template: true })
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
+  }, []);
+
+  // Create a brand-new blank draft for this client.
+  const openNewPlan = () => {
+    setNewPlanOpen(false);
+    navigate(`/nutrition/builder?clientId=${clientId}&returnTo=${returnTo}`);
   };
+
+  // Deep-copy an existing template as an independent draft for this client.
+  const openFromTemplate = (templateId) => {
+    setNewPlanOpen(false);
+    navigate(`/nutrition/builder?clientId=${clientId}&templateId=${templateId}&returnTo=${returnTo}`);
+  };
+
+  const filteredTemplates = templates.filter((t) => {
+    const q = templateSearch.trim().toLowerCase();
+    return !q || t.name?.toLowerCase().includes(q);
+  });
 
   if (loading) return <LoadingState label="Loading nutrition plans…" />;
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-display font-semibold">Nutrition Plans</h3>
-        <Button size="sm" onClick={handleNewPlan}>
+        <Button size="sm" onClick={() => setNewPlanOpen(true)}>
           <Plus className="w-3.5 h-3.5" /> New Plan
         </Button>
       </div>
+
       {plans.length === 0 ? (
         <p className="text-[13px] text-muted-foreground py-8 text-center">No nutrition plans assigned</p>
       ) : (
         <div className="space-y-3">
           {plans.map((p) => (
-            <div key={p.id} className="p-4 rounded-lg bg-secondary/30 border border-border">
-              <p className="text-[13px] font-medium">{p.name}</p>
+            <div
+              key={p.id}
+              onClick={() => navigate(`/nutrition/builder/${p.id}?returnTo=${returnTo}`)}
+              className="p-4 rounded-lg bg-secondary/30 border border-border cursor-pointer hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-medium">{p.name}</p>
+                <Badge className={cn(
+                  'text-[10px] font-mono capitalize shrink-0',
+                  p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
+                  : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
+                )}>
+                  {p.status === 'draft' ? 'Draft' : 'Active'}
+                </Badge>
+              </div>
               <div className="flex gap-4 mt-2 text-[12px] text-muted-foreground">
                 {p.daily_calories != null && <span>Cal: {p.daily_calories}</span>}
                 {p.daily_protein != null && <span>Protein: {p.daily_protein}g</span>}
@@ -511,6 +551,109 @@ function NutritionTab({ clientId }) {
           ))}
         </div>
       )}
+
+      {/* New Plan Selection Modal */}
+      <Modal
+        open={newPlanOpen}
+        onClose={() => setNewPlanOpen(false)}
+        title="Create Nutrition Plan"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Choose how you would like to build this client's nutrition plan.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Create New Plan */}
+            <button
+              type="button"
+              onClick={openNewPlan}
+              className="surface-card p-4 rounded-xl border border-border text-left hover:border-primary/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group"
+            >
+              <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-3">
+                <FilePlus className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                  Create New Plan
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Start fresh with an empty layout and save it as a draft for this client.
+                </p>
+              </div>
+            </button>
+
+            {/* Load From Template */}
+            <button
+              type="button"
+              onClick={() => document.getElementById('client-nutrition-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="surface-card p-4 rounded-xl border border-border text-left hover:border-purple-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group"
+            >
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3">
+                <Copy className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground group-hover:text-purple-400 transition-colors">
+                  Load From Template
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Duplicate an existing template as an independent copy for this client.
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* From Template Section */}
+          <div id="client-nutrition-templates" className="pt-2 border-t border-border">
+            <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
+            </h4>
+
+            {templates.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                No templates available. You can create one from the Nutrition Plans page.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search templates…"
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
+                  />
+                </div>
+
+                <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
+                  {filteredTemplates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
+                  ) : (
+                    filteredTemplates.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => openFromTemplate(t.id)}
+                        className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors"
+                      >
+                        <div>
+                          <span className="font-medium text-foreground block">{t.name}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {Math.round(t.daily_calories || 0)} kcal · {(t.meals?.length || 0)} meals
+                          </span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
