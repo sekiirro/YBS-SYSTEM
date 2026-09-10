@@ -152,6 +152,11 @@ export default function WorkoutPlanBuilder() {
   const [notes, setNotes] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
 
+  // Workspace the current plan belongs to. For an existing plan this is
+  // loaded from the plan row; for new plans it is the current workspace.
+  // The exercise picker is scoped to THIS workspace, not the user's active one.
+  const [planWorkspaceId, setPlanWorkspaceId] = useState(wsId || null);
+
   // Training Days State
   const [days, setDays] = useState([]);
   const [activeDayIndex, setActiveDayIndex] = useState(0);
@@ -186,6 +191,7 @@ export default function WorkoutPlanBuilder() {
           const plan = await WorkoutsService.getById(id);
           if (isMounted && plan) {
             setPlanId(plan.id);
+            setPlanWorkspaceId(plan.workspace_id || wsId || null);
             setName(plan.name || '');
             setSplitType(plan.split_type || 'upper_lower');
             setCustomSplitName(plan.custom_split_name || '');
@@ -504,7 +510,7 @@ export default function WorkoutPlanBuilder() {
     try {
       setSavingTemplate(true);
       const templatePayload = {
-        workspace_id: wsId,
+        workspace_id: planWorkspaceId || wsId,
         client_id: null,
         name: templateName.trim(),
         split_type: splitType,
@@ -536,7 +542,7 @@ export default function WorkoutPlanBuilder() {
       await autosave.flush();
       setSaving(true);
       const planPayload = {
-        workspace_id: wsId,
+        workspace_id: planWorkspaceId || wsId,
         client_id: client.id,
         name: name.trim(),
         split_type: splitType,
@@ -1163,7 +1169,7 @@ export default function WorkoutPlanBuilder() {
         open={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
         onSelectExercise={handleAddExerciseToActiveDay}
-        workspaceId={wsId || undefined}
+        workspaceId={planWorkspaceId || undefined}
       />
 
       {/* 2. Exercise Video Modal */}

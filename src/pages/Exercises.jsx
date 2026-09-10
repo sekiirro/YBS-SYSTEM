@@ -46,10 +46,18 @@ export default function Exercises() {
       setLoading(true);
       const data = await WorkspacesService.list();
       setWorkspaces(data);
-      // Default tab: YBS when present, otherwise the first accessible workspace.
-      const ybs = data.find((w) => w.slug === 'ybs-default') || data.find((w) => w.id === DEFAULT_WS_ID) || data[0];
-      if (ybs) {
-        setActiveWs(ybs);
+      // Default tab: the user's active workspace when it is among the
+      // accessible workspaces; otherwise preserve the safe fallback
+      // (YBS Default, then the first accessible workspace).
+      const activeDefault = user?.active_workspace_id
+        ? data.find((w) => w.id === user.active_workspace_id)
+        : null;
+      const initialWs = activeDefault
+        || data.find((w) => w.slug === 'ybs-default')
+        || data.find((w) => w.id === DEFAULT_WS_ID)
+        || data[0];
+      if (initialWs) {
+        setActiveWs(initialWs);
       } else {
         setActiveWs(null);
       }
