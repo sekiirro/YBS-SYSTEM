@@ -7,6 +7,13 @@ import { WorkoutsService, calculateWorkoutVolume } from '@/services/workouts';
 import { ClientsService } from '@/services/clients';
 import { WorkspacesService } from '@/services/workspaces';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import ExerciseSearchModal from '@/components/workouts/ExerciseSearchModal';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
 import SaveStatus from '@/components/SaveStatus';
@@ -27,9 +34,18 @@ import {
   Search,
   Check,
   GripVertical,
-  Lock
+  Lock,
+  BedDouble,
+  Coffee,
+  Pencil,
+  MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/** @type {any} */
+const DropdownMenuContentCmp = DropdownMenuContent;
+/** @type {any} */
+const DropdownMenuItemCmp = DropdownMenuItem;
 
 export const SPLIT_TYPES = [
   { id: 'full_body', label: 'Full Body', labelAr: 'تدريب كامل للجسم' },
@@ -57,6 +73,70 @@ const SPLIT_SESSION_TEMPLATES = {
   push_pull: ['Push', 'Pull'],
   custom: [],
 };
+
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Deterministically generates the next duplicate session name.
+ * Examples:
+ *   "Upper 1" -> "Upper 2" (or "Upper 3" if "Upper 2" exists)
+ *   "Upper A" -> "Upper B" (or "Upper C" if "Upper B" exists)
+ *   "Rest Day" -> "Rest Day 2" (or "Rest Day 3" if "Rest Day 2" exists)
+ *   "Legs" -> "Legs 2"
+ */
+export function generateDuplicateSessionName(sourceName, existingDays = []) {
+  const trimmed = (sourceName || 'Session').trim();
+  const dayNames = existingDays.map((d) => (d.day_name || '').trim());
+
+  // 1. Number suffix, e.g. "Upper 1", "Session 2", "Rest Day 1"
+  const numberMatch = trimmed.match(/^(.*?)(?:\s+(\d+))$/);
+  if (numberMatch) {
+    const base = numberMatch[1].trim();
+    const currentNum = parseInt(numberMatch[2], 10);
+    const regex = new RegExp(`^${escapeRegex(base)}\\s+(\\d+)$`, 'i');
+    const used = [];
+    dayNames.forEach((name) => {
+      const m = name.match(regex);
+      if (m) used.push(parseInt(m[1], 10));
+    });
+    if (dayNames.some((n) => n.toLowerCase() === base.toLowerCase())) {
+      used.push(1);
+    }
+    const maxNum = used.length > 0 ? Math.max(...used, currentNum) : currentNum;
+    return `${base} ${maxNum + 1}`;
+  }
+
+  // 2. Letter suffix, e.g. "Upper A", "Push B"
+  const letterMatch = trimmed.match(/^(.*?)(?:\s+([A-Z]))$/i);
+  if (letterMatch) {
+    const base = letterMatch[1].trim();
+    const currentLetter = letterMatch[2].toUpperCase();
+    let maxCharCode = currentLetter.charCodeAt(0);
+    const regex = new RegExp(`^${escapeRegex(base)}\\s+([A-Z])$`, 'i');
+    dayNames.forEach((name) => {
+      const m = name.match(regex);
+      if (m) {
+        const code = m[1].toUpperCase().charCodeAt(0);
+        if (code > maxCharCode) maxCharCode = code;
+      }
+    });
+    return `${base} ${String.fromCharCode(maxCharCode + 1)}`;
+  }
+
+  // 3. No suffix, e.g. "Upper", "Leg Day", "Rest Day"
+  const regex = new RegExp(`^${escapeRegex(trimmed)}\\s+(\\d+)$`, 'i');
+  const used = [];
+  dayNames.forEach((name) => {
+    const m = name.match(regex);
+    if (m) used.push(parseInt(m[1], 10));
+  });
+  if (used.length > 0) {
+    return `${trimmed} ${Math.max(...used) + 1}`;
+  }
+  return `${trimmed} 2`;
+}
 
 /**
  * Generates the next intelligent session name for a given split type
@@ -113,6 +193,7 @@ function getDefaultDays(splitType, customSplitName) {
       {
         id: `day-1-${Date.now()}`,
         day_name: initialName,
+        day_type: 'session',
         sort_order: 0,
         rest_day: false,
         notes: '',
@@ -124,6 +205,7 @@ function getDefaultDays(splitType, customSplitName) {
   return names.map((name, idx) => ({
     id: `day-${idx + 1}-${Date.now()}`,
     day_name: name,
+    day_type: 'session',
     sort_order: idx,
     rest_day: false,
     notes: '',
@@ -189,6 +271,17 @@ export default function WorkoutPlanBuilder() {
   const [workspaces, setWorkspaces] = useState([]);
   const [librarySourceOpen, setLibrarySourceOpen] = useState(false);
 
+  // Rest Day Modal State
+  const [restDayModalOpen, setRestDayModalOpen] = useState(false);
+  const [restDayEditIndex, setRestDayEditIndex] = useState(null);
+  const [restDayFormTitle, setRestDayFormTitle] = useState('Rest Day');
+  const [restDayFormInstructions, setRestDayFormInstructions] = useState('');
+
+  // Rename Session Modal State
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [renameIndex, setRenameIndex] = useState(null);
+  const [renameTitle, setRenameTitle] = useState('');
+
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
 
@@ -231,24 +324,30 @@ export default function WorkoutPlanBuilder() {
             // count as max(0, sets - working_sets) — legacy rows were
             // backfilled by migration 12 into exactly that shape (warmup
             // only rows: working_sets = 0; normal rows: working_sets = sets).
-            const migratedDays = (plan.days || []).map((d) => ({
-              ...d,
-              exercises: (d.exercises || []).map((ex) => {
-                if (ex.warmup_sets !== undefined) return ex;
-                const totalSets = Number(ex.sets) || 0;
-                const workingSets = ex.working_sets !== undefined
-                  ? Number(ex.working_sets) || 0
-                  : (ex.warmup ? 0 : totalSets);
-                const warmupSets = Math.max(0, totalSets - workingSets);
-                return {
-                  ...ex,
-                  warmup_sets: warmupSets,
-                  working_sets: workingSets,
-                  sets: totalSets || 3,
-                  warmup: warmupSets > 0 && workingSets === 0,
-                };
-              }),
-            }));
+            const migratedDays = (plan.days || []).map((d, dIdx) => {
+              const isRest = d.day_type === 'rest_day' || !!d.rest_day;
+              return {
+                ...d,
+                sort_order: d.sort_order !== undefined ? d.sort_order : dIdx,
+                day_type: isRest ? 'rest_day' : 'session',
+                rest_day: isRest,
+                exercises: isRest ? [] : (d.exercises || []).map((ex) => {
+                  if (ex.warmup_sets !== undefined) return ex;
+                  const totalSets = Number(ex.sets) || 0;
+                  const workingSets = ex.working_sets !== undefined
+                    ? Number(ex.working_sets) || 0
+                    : (ex.warmup ? 0 : totalSets);
+                  const warmupSets = Math.max(0, totalSets - workingSets);
+                  return {
+                    ...ex,
+                    warmup_sets: warmupSets,
+                    working_sets: workingSets,
+                    sets: totalSets || 3,
+                    warmup: warmupSets > 0 && workingSets === 0,
+                  };
+                }),
+              };
+            });
             setDays(migratedDays);
             if (isMounted) {
               setServerSnapshot(JSON.stringify([
@@ -271,46 +370,50 @@ export default function WorkoutPlanBuilder() {
             setNotes(tpl.notes || '');
             setIsTemplate(false);
 
-            const clonedDays = (tpl.days || []).map((d, dIdx) => ({
-              id: `cloned-day-${dIdx}-${Date.now()}`,
-              day_name: d.day_name,
-              sort_order: dIdx,
-              rest_day: !!d.rest_day,
-              notes: d.notes || '',
-              exercises: (d.exercises || []).map((ex, exIdx) => {
-                const hasExplicitWarmup = ex.warmup_sets !== undefined;
-                // DB rows carry working_sets (post-backfill): reconstruct the
-                // warmup count from sets - working_sets. Pure legacy rows
-                // (no working_sets column) derive from the warmup flag.
-                const totalSets = Number(ex.sets) || 0;
-                const workingSets = hasExplicitWarmup
-                  ? Number(ex.working_sets) || 0
-                  : (ex.working_sets !== undefined
-                      ? Number(ex.working_sets) || 0
-                      : (ex.warmup ? 0 : totalSets));
-                const warmupSets = hasExplicitWarmup
-                  ? Number(ex.warmup_sets) || 0
-                  : Math.max(0, totalSets - workingSets);
-                return {
-                  id: `cloned-ex-${exIdx}-${Date.now()}`,
-                  exercise_id: ex.exercise_id,
-                  exercise_name: ex.exercise_name,
-                  category: ex.category || 'other',
-                  muscle_group: ex.muscle_group || null,
-                  equipment: ex.equipment || null,
-                  video_url: ex.video_url || null,
-                  sort_order: exIdx,
-                  warmup_sets: warmupSets,
-                  working_sets: workingSets,
-                  sets: warmupSets + workingSets || 3,
-                  rep_range: ex.rep_range || '8-12',
-                  rest_seconds: ex.rest_seconds || 90,
-                  rpe: ex.rpe || 8,
-                  warmup: warmupSets > 0 && workingSets === 0,
-                  notes: ex.notes || '',
-                };
-              }),
-            }));
+            const clonedDays = (tpl.days || []).map((d, dIdx) => {
+              const isRest = d.day_type === 'rest_day' || !!d.rest_day;
+              return {
+                id: `cloned-day-${dIdx}-${Date.now()}`,
+                day_name: d.day_name,
+                day_type: isRest ? 'rest_day' : 'session',
+                sort_order: dIdx,
+                rest_day: isRest,
+                notes: d.notes || '',
+                exercises: isRest ? [] : (d.exercises || []).map((ex, exIdx) => {
+                  const hasExplicitWarmup = ex.warmup_sets !== undefined;
+                  // DB rows carry working_sets (post-backfill): reconstruct the
+                  // warmup count from sets - working_sets. Pure legacy rows
+                  // (no working_sets column) derive from the warmup flag.
+                  const totalSets = Number(ex.sets) || 0;
+                  const workingSets = hasExplicitWarmup
+                    ? Number(ex.working_sets) || 0
+                    : (ex.working_sets !== undefined
+                        ? Number(ex.working_sets) || 0
+                        : (ex.warmup ? 0 : totalSets));
+                  const warmupSets = hasExplicitWarmup
+                    ? Number(ex.warmup_sets) || 0
+                    : Math.max(0, totalSets - workingSets);
+                  return {
+                    id: `cloned-ex-${exIdx}-${Date.now()}`,
+                    exercise_id: ex.exercise_id,
+                    exercise_name: ex.exercise_name,
+                    category: ex.category || 'other',
+                    muscle_group: ex.muscle_group || null,
+                    equipment: ex.equipment || null,
+                    video_url: ex.video_url || null,
+                    sort_order: exIdx,
+                    warmup_sets: warmupSets,
+                    working_sets: workingSets,
+                    sets: warmupSets + workingSets || 3,
+                    rep_range: ex.rep_range || '8-12',
+                    rest_seconds: ex.rest_seconds || 90,
+                    rpe: ex.rpe || 8,
+                    warmup: warmupSets > 0 && workingSets === 0,
+                    notes: ex.notes || '',
+                  };
+                }),
+              };
+            });
             setDays(clonedDays);
 
             if (queryClientId) {
@@ -394,13 +497,41 @@ export default function WorkoutPlanBuilder() {
     handleUpdateDay(activeDayIndex, { exercises: reordered });
   };
 
-  // ─── 3. Days Management ─────────────────────────────────────────────
+  // ─── 3. Days / Session Management ────────────────────────────────────
+  const handleDayDragEnd = (result) => {
+    if (!result.destination) return;
+    const srcIdx = result.source.index;
+    const destIdx = result.destination.index;
+    if (srcIdx === destIdx) return;
+
+    const currentActiveDayId = days[activeDayIndex]?.id;
+
+    const reordered = [...days];
+    const [moved] = reordered.splice(srcIdx, 1);
+    reordered.splice(destIdx, 0, moved);
+
+    // Persist sequential sort_order across all sessions & rest days
+    const finalized = reordered.map((d, idx) => ({
+      ...d,
+      sort_order: idx,
+    }));
+
+    setDays(finalized);
+
+    // Retain active selection on the same item at its new position
+    const newActiveIndex = finalized.findIndex((d) => d.id === currentActiveDayId);
+    if (newActiveIndex !== -1) {
+      setActiveDayIndex(newActiveIndex);
+    }
+  };
+
   const handleAddDay = () => {
     const newDayIndex = days.length;
     const sessionName = generateSessionName(splitType, days, customSplitName);
     const newDay = {
       id: `day-${newDayIndex + 1}-${Date.now()}`,
       day_name: sessionName,
+      day_type: 'session',
       sort_order: newDayIndex,
       rest_day: false,
       notes: '',
@@ -408,6 +539,144 @@ export default function WorkoutPlanBuilder() {
     };
     setDays([...days, newDay]);
     setActiveDayIndex(newDayIndex);
+  };
+
+  const handleOpenAddRestDay = () => {
+    setRestDayEditIndex(null);
+    setRestDayFormTitle('Rest Day');
+    setRestDayFormInstructions('');
+    setRestDayModalOpen(true);
+  };
+
+  const handleOpenEditRestDay = (index) => {
+    const target = days[index];
+    if (!target) return;
+    setRestDayEditIndex(index);
+    setRestDayFormTitle(target.day_name || 'Rest Day');
+    setRestDayFormInstructions(target.notes || '');
+    setRestDayModalOpen(true);
+  };
+
+  const handleSaveRestDay = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const title = (restDayFormTitle || 'Rest Day').trim();
+    const instructions = restDayFormInstructions.trim();
+
+    if (restDayEditIndex !== null && restDayEditIndex >= 0) {
+      handleUpdateDay(restDayEditIndex, {
+        day_name: title,
+        notes: instructions,
+        rest_day: true,
+        day_type: 'rest_day',
+      });
+      setRestDayModalOpen(false);
+    } else {
+      const insertAt = activeDayIndex >= 0 && activeDayIndex < days.length
+        ? activeDayIndex + 1
+        : days.length;
+
+      const newDay = {
+        id: `day-rest-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        day_name: title,
+        day_type: 'rest_day',
+        sort_order: insertAt,
+        rest_day: true,
+        notes: instructions,
+        exercises: [],
+      };
+
+      const updated = [...days];
+      updated.splice(insertAt, 0, newDay);
+      const reindexed = updated.map((d, idx) => ({
+        ...d,
+        sort_order: idx,
+      }));
+
+      setDays(reindexed);
+      setActiveDayIndex(insertAt);
+      setRestDayModalOpen(false);
+    }
+  };
+
+  const handleDuplicateDay = (sourceIndex) => {
+    const source = days[sourceIndex];
+    if (!source) return;
+
+    const isRest = source.day_type === 'rest_day' || !!source.rest_day;
+    const newName = generateDuplicateSessionName(source.day_name, days);
+    const newDayId = `day-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+    // Critical Deep Copy of exercises: fresh IDs, cloned prescribed sets detail
+    const copiedExercises = (source.exercises || []).map((ex, exIdx) => {
+      const newExId = `ex-dup-${Date.now()}-${exIdx}-${Math.random().toString(36).substr(2, 6)}`;
+      return {
+        ...ex,
+        id: newExId,
+        workout_day_id: newDayId,
+        sort_order: exIdx,
+        exercise_id: ex.exercise_id || null,
+        exercise_name: ex.exercise_name || ex.name || '',
+        category: ex.category || 'other',
+        muscle_group: ex.muscle_group || null,
+        equipment: ex.equipment || null,
+        video_url: ex.video_url || null,
+        warmup_sets: ex.warmup_sets !== undefined ? Number(ex.warmup_sets) : 0,
+        working_sets: ex.working_sets !== undefined ? Number(ex.working_sets) : Number(ex.sets || 3),
+        sets: Number(ex.sets || 3),
+        rep_range: ex.rep_range || '8-12',
+        rest_seconds: Number(ex.rest_seconds) || 60,
+        target_weight: ex.target_weight || null,
+        warmup: !!ex.warmup,
+        rpe: ex.rpe ? Number(ex.rpe) : null,
+        notes: ex.notes || '',
+        group_id: ex.group_id || null,
+        group_type: ex.group_type || null,
+        prescribed_sets_detail: Array.isArray(ex.prescribed_sets_detail)
+          ? JSON.parse(JSON.stringify(ex.prescribed_sets_detail))
+          : [],
+      };
+    });
+
+    const duplicatedDay = {
+      id: newDayId,
+      day_name: newName,
+      day_type: isRest ? 'rest_day' : 'session',
+      rest_day: isRest,
+      notes: source.notes || '',
+      exercises: copiedExercises,
+      sort_order: sourceIndex + 1,
+    };
+
+    // Insert immediately after source session
+    const updated = [...days];
+    updated.splice(sourceIndex + 1, 0, duplicatedDay);
+
+    const reindexed = updated.map((d, idx) => ({
+      ...d,
+      sort_order: idx,
+    }));
+
+    setDays(reindexed);
+    setActiveDayIndex(sourceIndex + 1);
+  };
+
+  const handleOpenRename = (index) => {
+    const target = days[index];
+    if (!target) return;
+    setRenameIndex(index);
+    setRenameTitle(target.day_name || '');
+    setRenameModalOpen(true);
+  };
+
+  const handleSaveRename = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (renameIndex !== null && renameIndex >= 0) {
+      const trimmed = renameTitle.trim();
+      if (trimmed) {
+        handleUpdateDay(renameIndex, { day_name: trimmed });
+      }
+    }
+    setRenameModalOpen(false);
   };
 
   const handleUpdateDay = (index, updates) => {
@@ -420,11 +689,21 @@ export default function WorkoutPlanBuilder() {
 
   const handleDeleteDay = (index) => {
     if (days.length <= 1) {
-      alert('A workout plan must have at least one session day.');
+      alert('A workout plan must have at least one session or program item.');
       return;
     }
-    if (!window.confirm(`Delete ${days[index].day_name}?`)) return;
-    setDays((prev) => prev.filter((_, idx) => idx !== index));
+    const target = days[index];
+    const isRest = target?.day_type === 'rest_day' || !!target?.rest_day;
+    const label = isRest ? (target.day_name || 'Rest Day') : (target.day_name || `Session ${index + 1}`);
+    if (!window.confirm(`Delete ${label}?`)) return;
+
+    const remaining = days.filter((_, idx) => idx !== index);
+    const reindexed = remaining.map((d, idx) => ({
+      ...d,
+      sort_order: idx,
+    }));
+
+    setDays(reindexed);
     setActiveDayIndex((prev) => Math.max(0, prev >= index ? prev - 1 : prev));
   };
 
@@ -822,39 +1101,252 @@ export default function WorkoutPlanBuilder() {
         <div className="lg:col-span-8 space-y-4">
           {/* Day Tabs Bar */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <div className="flex items-center gap-1.5 flex-nowrap">
-              {days.map((d, dIdx) => (
-                <button
-                  key={d.id || dIdx}
-                  type="button"
-                  onClick={() => setActiveDayIndex(dIdx)}
-                  className={cn(
-                    'px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 border',
-                    activeDayIndex === dIdx
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : 'bg-secondary/40 text-muted-foreground hover:text-foreground border-border/60 hover:bg-secondary/70'
-                  )}
-                >
-                  <span>{d.day_name || `Day ${dIdx + 1}`}</span>
-                  <span
-                    className={cn(
-                      'text-[10px] px-1.5 py-0.2 rounded font-mono',
-                      activeDayIndex === dIdx ? 'bg-black/20 text-white' : 'bg-secondary text-muted-foreground'
-                    )}
+            <DragDropContext onDragEnd={handleDayDragEnd}>
+              <Droppable droppableId="day-tabs" direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex items-center gap-1.5 flex-nowrap"
                   >
-                    {d.exercises?.length || 0}
-                  </span>
-                </button>
-              ))}
-            </div>
+                    {days.map((d, dIdx) => {
+                      const isRest = d.day_type === 'rest_day' || !!d.rest_day;
+                      const isActive = activeDayIndex === dIdx;
 
-            <Button variant="secondary" onClick={handleAddDay} className="text-xs whitespace-nowrap shrink-0">
-              <Plus className="w-3.5 h-3.5" /> Add Day
+                      return (
+                        <Draggable key={d.id || `day-${dIdx}`} draggableId={d.id || `day-${dIdx}`} index={dIdx}>
+                          {(dragProvided, dragSnapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              className={cn(
+                                'group relative flex items-center rounded-xl transition-all border shrink-0 select-none',
+                                isActive
+                                  ? isRest
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
+                                    : 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                  : isRest
+                                    ? 'bg-amber-500/5 text-amber-400/90 hover:text-amber-300 border-amber-500/30 hover:bg-amber-500/10'
+                                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground border-border/60 hover:bg-secondary/70',
+                                dragSnapshot.isDragging && 'shadow-xl ring-2 ring-primary/60 opacity-95 z-50'
+                              )}
+                            >
+                              {/* Drag Handle */}
+                              <div
+                                {...dragProvided.dragHandleProps}
+                                className={cn(
+                                  'pl-2 pr-1 py-2 cursor-grab active:cursor-grabbing transition-opacity',
+                                  isActive ? 'text-current opacity-70 hover:opacity-100' : 'text-muted-foreground opacity-40 group-hover:opacity-100 hover:opacity-100'
+                                )}
+                                title="Drag to reorder session"
+                              >
+                                <GripVertical className="w-3.5 h-3.5" />
+                              </div>
+
+                              {/* Tab Click Target */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveDayIndex(dIdx)}
+                                className="py-2 pr-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 focus:outline-none"
+                              >
+                                {isRest ? (
+                                  <>
+                                    <BedDouble className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                                    <span>{d.day_name || 'Rest Day'}</span>
+                                    <span
+                                      className={cn(
+                                        'text-[9px] px-1.5 py-0.2 rounded font-mono font-medium',
+                                        isActive ? 'bg-amber-500/30 text-amber-200' : 'bg-amber-500/15 text-amber-400/90'
+                                      )}
+                                    >
+                                      Rest
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{d.day_name || `Day ${dIdx + 1}`}</span>
+                                    <span
+                                      className={cn(
+                                        'text-[10px] px-1.5 py-0.2 rounded font-mono',
+                                        isActive ? 'bg-black/20 text-white' : 'bg-secondary text-muted-foreground'
+                                      )}
+                                    >
+                                      {d.exercises?.length || 0}
+                                    </span>
+                                  </>
+                                )}
+                              </button>
+
+                              {/* Tab Actions Dropdown Menu */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={cn(
+                                      'p-1.5 mr-1 rounded-md transition-all',
+                                      isActive
+                                        ? 'hover:bg-black/20 text-current opacity-80 hover:opacity-100'
+                                        : 'hover:bg-secondary text-muted-foreground hover:text-foreground opacity-40 group-hover:opacity-100'
+                                    )}
+                                    title="Session options"
+                                  >
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContentCmp align="end" className="w-44">
+                                  {isRest ? (
+                                    <>
+                                      <DropdownMenuItemCmp onClick={() => handleOpenEditRestDay(dIdx)}>
+                                        <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Edit Instructions
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
+                                        <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItemCmp
+                                        onClick={() => handleDeleteDay(dIdx)}
+                                        className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                      </DropdownMenuItemCmp>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <DropdownMenuItemCmp onClick={() => handleOpenRename(dIdx)}>
+                                        <Pencil className="w-3.5 h-3.5 mr-2" /> Rename
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
+                                        <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItemCmp
+                                        onClick={() => handleDeleteDay(dIdx)}
+                                        className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                      </DropdownMenuItemCmp>
+                                    </>
+                                  )}
+                                </DropdownMenuContentCmp>
+                              </DropdownMenu>
+                            </div>
+                          )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+
+          {/* Add Session & Add Rest Day Controls */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button variant="secondary" onClick={handleAddDay} className="text-xs whitespace-nowrap">
+              <Plus className="w-3.5 h-3.5" /> Add Session
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleOpenAddRestDay}
+              className="text-xs whitespace-nowrap text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+            >
+              <BedDouble className="w-3.5 h-3.5" /> + Rest Day
             </Button>
           </div>
+        </div>
 
-          {/* Active Day Detail Card */}
-          {activeDay && (
+        {/* Active Day Detail Card */}
+        {activeDay && (
+          (activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? (
+            /* Dedicated Rest Day Card */
+            <div className="surface-card p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent space-y-4">
+              {/* Rest Day Header Info */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <div className="flex items-center gap-2.5 flex-1">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <BedDouble className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={activeDay.day_name || 'Rest Day'}
+                      onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
+                      className="text-base font-bold text-foreground bg-transparent border-b border-dashed border-border/80 focus:border-amber-500 focus:outline-none px-1 py-0.5"
+                      placeholder="Rest Day Title"
+                    />
+                    <Badge className="text-[10px] font-mono bg-amber-500/15 text-amber-300 border-amber-500/30">
+                      Recovery Day
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Rest Day Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleOpenEditRestDay(activeDayIndex)}
+                    className="text-xs h-8 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit Instructions
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleDuplicateDay(activeDayIndex)}
+                    className="text-xs h-8"
+                    title="Duplicate Rest Day"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-primary" /> Duplicate
+                  </Button>
+
+                  {days.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDay(activeDayIndex)}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Delete Rest Day"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Rest Day Instructions Box */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Coffee className="w-3.5 h-3.5 text-amber-400" /> Rest Day Coaching Instructions
+                  </label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Autosaves with plan
+                  </span>
+                </div>
+
+                <textarea
+                  rows={5}
+                  value={activeDay.notes || ''}
+                  onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
+                  placeholder="Keep activity light today.&#10;8–10k steps.&#10;Stay hydrated.&#10;No resistance training."
+                  className="w-full p-3.5 rounded-xl bg-secondary/30 border border-border text-xs focus:outline-none focus:border-amber-500/50 text-foreground leading-relaxed resize-none"
+                />
+              </div>
+
+              {/* Helpful Recovery Guidance Card */}
+              <div className="p-3.5 rounded-xl bg-secondary/20 border border-border/50 text-xs space-y-1 text-muted-foreground">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-amber-400" /> Scheduled Recovery Item
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Rest days do not contain exercises. This item is positioned in your training split sequence and displays your custom recovery instructions directly to the client.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Training Session Card */
             <div className="surface-card p-4 sm:p-5 rounded-2xl border border-border/80 space-y-4">
               {/* Day Header Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
@@ -866,20 +1358,9 @@ export default function WorkoutPlanBuilder() {
                     className="text-base font-bold text-foreground bg-transparent border-b border-dashed border-border/80 focus:border-primary focus:outline-none px-1 py-0.5"
                     placeholder="Session Name (e.g. Upper A)"
                   />
-
-                  {/* Rest Day Toggle */}
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={!!activeDay.rest_day}
-                      onChange={(e) => handleUpdateDay(activeDayIndex, { rest_day: e.target.checked })}
-                      className="rounded border-border text-primary focus:ring-0"
-                    />
-                    <span>Rest Day</span>
-                  </label>
                 </div>
 
-                {/* Session Volume Badge & Delete Day */}
+                {/* Session Volume Badge, Duplicate & Delete Day */}
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground">
                     <Flame className="w-3.5 h-3.5 text-orange-400" />
@@ -887,6 +1368,16 @@ export default function WorkoutPlanBuilder() {
                       {volumeData.sessionVolumes[activeDayIndex]?.workingSets || 0} Working Sets
                     </span>
                   </span>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleDuplicateDay(activeDayIndex)}
+                    className="text-xs h-8"
+                    title="Duplicate this session"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-primary" /> Duplicate
+                  </Button>
 
                   {days.length > 1 && (
                     <button
@@ -1157,6 +1648,7 @@ export default function WorkoutPlanBuilder() {
                 </div>
               </div>
             </div>
+            )
           )}
         </div>
 
@@ -1394,6 +1886,96 @@ export default function WorkoutPlanBuilder() {
             </Button>
           </div>
         </div>
+      </Modal>
+      {/* 6. Rest Day Modal */}
+      <Modal
+        open={restDayModalOpen}
+        onClose={() => setRestDayModalOpen(false)}
+        title={restDayEditIndex !== null ? 'Edit Rest Day Instructions' : 'Add Rest Day'}
+        size="md"
+      >
+        <form onSubmit={handleSaveRestDay} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Rest Day Title</label>
+            <input
+              type="text"
+              value={restDayFormTitle}
+              onChange={(e) => setRestDayFormTitle(e.target.value)}
+              className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-amber-500 text-foreground"
+              placeholder="e.g. Rest Day, Active Recovery, Deload Day"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Rest Day Instructions</label>
+            <textarea
+              rows={6}
+              value={restDayFormInstructions}
+              onChange={(e) => setRestDayFormInstructions(e.target.value)}
+              className="w-full p-3.5 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-amber-500 text-foreground resize-none leading-relaxed"
+              placeholder="Keep activity light today.\n8–10k steps.\nStay hydrated.\nNo resistance training."
+            />
+            <p className="text-[11px] text-muted-foreground">
+              These instructions are presented directly to the client as an ordered recovery milestone in their program.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRestDayModalOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+            >
+              <Check className="w-3.5 h-3.5" /> {restDayEditIndex !== null ? 'Save Instructions' : 'Save Rest Day'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 7. Rename Session Modal */}
+      <Modal
+        open={renameModalOpen}
+        onClose={() => setRenameModalOpen(false)}
+        title="Rename Session"
+        size="sm"
+      >
+        <form onSubmit={handleSaveRename} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Session Name</label>
+            <input
+              type="text"
+              autoFocus
+              value={renameTitle}
+              onChange={(e) => setRenameTitle(e.target.value)}
+              className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary text-foreground"
+              placeholder="e.g. Upper 1, Push A"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRenameModalOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="text-xs"
+            >
+              <Check className="w-3.5 h-3.5" /> Save
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

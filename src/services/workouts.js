@@ -60,7 +60,7 @@ export function calculateWorkoutVolume(days = []) {
       dayName: day.day_name || `Day ${dayIdx + 1}`,
       workingSets: sessionSets,
       totalExercises: exercises.length,
-      restDay: !!day.rest_day,
+      restDay: !!day.rest_day || day.day_type === 'rest_day',
     });
   });
 
@@ -88,9 +88,14 @@ function formatPlan(p) {
   const days = (p.workout_days || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
   const formattedDays = days.map((d) => {
-    const exercises = (d.workout_exercises || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const isRest = d.day_type === 'rest_day' || !!d.rest_day;
+    const exercises = isRest
+      ? []
+      : (d.workout_exercises || []).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     return {
       ...d,
+      day_type: isRest ? 'rest_day' : 'session',
+      rest_day: isRest,
       exercises: exercises.map((ex) => ({
         ...ex,
         category: ex.exercises?.category || ex.category || null,
@@ -232,20 +237,44 @@ export const WorkoutsService = {
   async _insertDaysAndExercises(planId, days) {
     for (let i = 0; i < days.length; i++) {
       const d = days[i];
-      const { data: day, error: dayError } = await supabase
+      const isRestDay = d.day_type === 'rest_day' || !!d.rest_day;
+      const dayPayload = {
+        workout_plan_id: planId,
+        day_name: d.day_name || (isRestDay ? 'Rest Day' : `Day ${i + 1}`),
+        sort_order: i,
+        rest_day: isRestDay,
+        notes: d.notes || null,
+      };
+
+      let day = null;
+      // Try inserting with day_type, resiliently fall back if remote schema does not yet have day_type column
+      const { data: withTypeData, error: withTypeError } = await supabase
         .from('workout_days')
         .insert({
-          workout_plan_id: planId,
-          day_name: d.day_name || `Day ${i + 1}`,
-          sort_order: i,
-          rest_day: !!d.rest_day,
-          notes: d.notes || null,
+          ...dayPayload,
+          day_type: isRestDay ? 'rest_day' : 'session',
         })
         .select()
         .single();
-      if (dayError) throw dayError;
 
-      const exercises = d.exercises || d.workout_exercises || [];
+      if (!withTypeError) {
+        day = withTypeData;
+      } else {
+        const isMissingCol = withTypeError?.message && (withTypeError.message.includes('day_type') || withTypeError.code === 'PGRST204');
+        if (isMissingCol) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('workout_days')
+            .insert(dayPayload)
+            .select()
+            .single();
+          if (fallbackError) throw fallbackError;
+          day = fallbackData;
+        } else {
+          throw withTypeError;
+        }
+      }
+
+      const exercises = isRestDay ? [] : (d.exercises || d.workout_exercises || []);
       if (Array.isArray(exercises) && exercises.length > 0) {
         const exRecords = exercises.map((ex, exIdx) => {
           const warmupSets = Number(ex.warmup_sets) || 0;
@@ -386,6 +415,10 @@ export const WorkoutsService = {
     return data;
   },
 
+  /**
+   * @param {string} logId
+   * @param {{ duration_seconds?: number | null, notes?: string | null, status?: string }} [details]
+   */
   async completeWorkoutLog(logId, { duration_seconds, notes, status = 'completed' } = {}) {
     const { data, error } = await supabase
       .from('workout_logs')
