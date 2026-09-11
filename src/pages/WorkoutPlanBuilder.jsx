@@ -21,6 +21,7 @@ import useAutosave from '@/hooks/useAutosave';
 import {
   Dumbbell,
   ArrowLeft,
+  ArrowLeftRight,
   Bookmark,
   Users,
   Plus,
@@ -256,6 +257,9 @@ export default function WorkoutPlanBuilder() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [activeVideoExercise, setActiveVideoExercise] = useState(null);
+
+  // Target exercise index for "Replace Exercise" (null = plain add mode)
+  const [replaceIndex, setReplaceIndex] = useState(null);
 
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
@@ -720,6 +724,36 @@ export default function WorkoutPlanBuilder() {
     handleUpdateDay(activeDayIndex, {
       exercises: [...exList, newExercise],
     });
+  };
+
+  const handleReplaceExercise = (exerciseIndex) => {
+    setReplaceIndex(exerciseIndex);
+    setSearchModalOpen(true);
+  };
+
+  const handleReplaceExerciseSelect = (exercisePayload) => {
+    if (!activeDay) return;
+    const exList = [...(activeDay.exercises || [])];
+    if (replaceIndex === null || replaceIndex < 0 || replaceIndex >= exList.length) return;
+    const prev = exList[replaceIndex];
+
+    // Swap only the exercise identity/reference. The existing slot, sort
+    // order, and every prescription field (sets, reps, rest, RPE, warm-up,
+    // working sets, notes, group/superset metadata, prescribed sets, …)
+    // are preserved via the spread of `prev`.
+    const replaced = {
+      ...prev,
+      exercise_id: exercisePayload.exercise_id,
+      exercise_name: exercisePayload.exercise_name,
+      category: exercisePayload.category,
+      muscle_group: exercisePayload.muscle_group,
+      equipment: exercisePayload.equipment,
+      video_url: exercisePayload.video_url ?? null,
+    };
+
+    exList[replaceIndex] = replaced;
+    setReplaceIndex(null);
+    handleUpdateDay(activeDayIndex, { exercises: exList });
   };
 
   const handleUpdateExercise = (exerciseIndex, updates) => {
@@ -1504,6 +1538,16 @@ export default function WorkoutPlanBuilder() {
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
 
+                            {/* Replace Exercise */}
+                            <button
+                              type="button"
+                              onClick={() => handleReplaceExercise(exIdx)}
+                              className="p-1 rounded text-muted-foreground hover:text-foreground"
+                              title="Replace Exercise"
+                            >
+                              <ArrowLeftRight className="w-3.5 h-3.5" />
+                            </button>
+
                             {/* Duplicate */}
                             <button
                               type="button"
@@ -1640,7 +1684,10 @@ export default function WorkoutPlanBuilder() {
                 <div className="pt-2">
                   <Button
                     variant="secondary"
-                    onClick={() => setSearchModalOpen(true)}
+                    onClick={() => {
+                      setReplaceIndex(null);
+                      setSearchModalOpen(true);
+                    }}
                     className="w-full text-xs py-2 border border-dashed border-border hover:border-primary/50"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Exercise to {activeDay.day_name}
@@ -1723,9 +1770,20 @@ export default function WorkoutPlanBuilder() {
       {/* 1. Exercise Search Modal */}
       <ExerciseSearchModal
         open={searchModalOpen}
-        onClose={() => setSearchModalOpen(false)}
-        onSelectExercise={handleAddExerciseToActiveDay}
+        onClose={() => {
+          setReplaceIndex(null);
+          setSearchModalOpen(false);
+        }}
+        onSelectExercise={(exercisePayload) => {
+          if (replaceIndex !== null) {
+            handleReplaceExerciseSelect(exercisePayload);
+          } else {
+            handleAddExerciseToActiveDay(exercisePayload);
+          }
+        }}
         workspaceId={exerciseLibraryWorkspaceId || planWorkspaceId || undefined}
+        title={replaceIndex !== null ? 'Replace Exercise' : 'Select Exercise from Library'}
+        confirmLabel={replaceIndex !== null ? 'Replace' : 'Add'}
       />
 
       {/* 2. Exercise Video Modal */}

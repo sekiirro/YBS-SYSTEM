@@ -16,7 +16,7 @@ const CATEGORIES = [
   { id: 'full_body', label: 'Full Body', labelAr: 'جسم كامل' },
 ];
 
-export default function ExerciseSearchModal({ open, onClose, onSelectExercise, workspaceId }) {
+export default function ExerciseSearchModal({ open, onClose, onSelectExercise, workspaceId, title, confirmLabel }) {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -106,7 +106,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Select Exercise from Library" size="lg">
+    <Modal open={open} onClose={onClose} title={title || 'Select Exercise from Library'} size="lg">
       <div className="space-y-4">
         {/* Search Bar */}
         <div className="relative">
@@ -190,7 +190,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
                 </div>
 
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-primary font-medium">
-                  <span>Add</span>
+                  <span>{confirmLabel || 'Add'}</span>
                   <Plus className="w-4 h-4" />
                 </div>
               </button>
