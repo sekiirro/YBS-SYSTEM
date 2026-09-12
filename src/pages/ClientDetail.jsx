@@ -476,6 +476,10 @@ function NutritionTab({ clientId }) {
   const [loading, setLoading] = useState(true);
   const [newPlanOpen, setNewPlanOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
 
   const returnTo = encodeURIComponent(`/clients/${clientId}?tab=nutrition`);
 
@@ -487,11 +491,23 @@ function NutritionTab({ clientId }) {
       .finally(() => setLoading(false));
   }, [clientId]);
 
-  useEffect(() => {
-    NutritionService.list({ is_template: true })
-      .then(setTemplates)
-      .catch(() => setTemplates([]));
-  }, []);
+  // Load templates lazily only when the picker is revealed, so the "Load From
+  // Template" click opens the section with an explicit loading/error state.
+  const loadTemplates = async () => {
+    if (templatesLoaded) return;
+    setTemplatesLoading(true);
+    setTemplatesError('');
+    try {
+      const data = await NutritionService.list({ is_template: true });
+      setTemplates(data || []);
+      setTemplatesLoaded(true);
+    } catch (err) {
+      console.error('Failed to load nutrition templates:', err);
+      setTemplatesError('Failed to load templates. Please try again.');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
 
   // Create a brand-new blank draft for this client.
   const openNewPlan = () => {
@@ -587,7 +603,7 @@ function NutritionTab({ clientId }) {
             {/* Load From Template */}
             <button
               type="button"
-              onClick={() => document.getElementById('client-nutrition-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              onClick={() => { setShowTemplates(true); loadTemplates(); }}
               className="surface-card p-4 rounded-xl border border-border text-left hover:border-purple-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group"
             >
               <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3">
@@ -605,53 +621,70 @@ function NutritionTab({ clientId }) {
           </div>
 
           {/* From Template Section */}
-          <div id="client-nutrition-templates" className="pt-2 border-t border-border">
-            <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-              <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
-            </h4>
+          {showTemplates && (
+            <div id="client-nutrition-templates" className="pt-2 border-t border-border">
+              <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
+              </h4>
 
-            {templates.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
-                No templates available. You can create one from the Nutrition Plans page.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search templates…"
-                    value={templateSearch}
-                    onChange={(e) => setTemplateSearch(e.target.value)}
-                    className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
-                  />
+              {templatesLoading ? (
+                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                  Loading nutrition templates…
+                </p>
+              ) : templatesError ? (
+                <div className="py-3 text-center border border-dashed border-red-500/40 rounded-lg">
+                  <p className="text-xs text-red-400">{templatesError}</p>
+                  <button
+                    type="button"
+                    onClick={loadTemplates}
+                    className="text-xs text-primary hover:underline mt-1"
+                  >
+                    Retry
+                  </button>
                 </div>
+              ) : templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                  No templates available. You can create one from the Nutrition Plans page.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search templates…"
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
+                    />
+                  </div>
 
-                <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
-                  {filteredTemplates.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
-                  ) : (
-                    filteredTemplates.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => openFromTemplate(t.id)}
-                        className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors"
-                      >
-                        <div>
-                          <span className="font-medium text-foreground block">{t.name}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono">
-                            {Math.round(t.daily_calories || 0)} kcal · {(t.meals?.length || 0)} meals
-                          </span>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
-                    ))
-                  )}
+                  <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
+                    {filteredTemplates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
+                    ) : (
+                      filteredTemplates.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => openFromTemplate(t.id)}
+                          className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors"
+                        >
+                          <div>
+                            <span className="font-medium text-foreground block">{t.name}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              {Math.round(t.daily_calories || 0)} kcal · {(t.meals?.length || 0)} meals
+                            </span>
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>
@@ -666,6 +699,10 @@ function WorkoutTab({ clientId }) {
   const [newPlanOpen, setNewPlanOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [starting, setStarting] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
 
   const returnTo = encodeURIComponent(`/clients/${clientId}?tab=workout`);
 
@@ -676,11 +713,23 @@ function WorkoutTab({ clientId }) {
       .finally(() => setLoading(false));
   }, [clientId]);
 
-  useEffect(() => {
-    WorkoutsService.list({ is_template: true })
-      .then(setTemplates)
-      .catch(() => setTemplates([]));
-  }, []);
+  // Load templates lazily only when the picker is revealed, so the "Load From
+  // Template" click opens the section with an explicit loading/error state.
+  const loadTemplates = async () => {
+    if (templatesLoaded) return;
+    setTemplatesLoading(true);
+    setTemplatesError('');
+    try {
+      const data = await WorkoutsService.list({ is_template: true });
+      setTemplates(data || []);
+      setTemplatesLoaded(true);
+    } catch (err) {
+      console.error('Failed to load workout templates:', err);
+      setTemplatesError('Failed to load templates. Please try again.');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
 
   // Create a brand-new blank program for this client.
   const openNewProgram = () => {
@@ -779,7 +828,7 @@ function WorkoutTab({ clientId }) {
             {/* Load From Template */}
             <button
               type="button"
-              onClick={() => document.getElementById('client-workout-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              onClick={() => { setShowTemplates(true); loadTemplates(); }}
               disabled={starting}
               className="surface-card p-4 rounded-xl border border-border text-left hover:border-purple-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group disabled:opacity-50 disabled:pointer-events-none"
             >
@@ -798,59 +847,76 @@ function WorkoutTab({ clientId }) {
           </div>
 
           {/* From Template Section */}
-          <div id="client-workout-templates" className="pt-2 border-t border-border">
-            <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-              <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
-            </h4>
+          {showTemplates && (
+            <div id="client-workout-templates" className="pt-2 border-t border-border">
+              <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
+              </h4>
 
-            {templates.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
-                No templates available. You can create one from the Workout Plans page.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search templates…"
-                    value={templateSearch}
-                    onChange={(e) => setTemplateSearch(e.target.value)}
-                    className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
-                  />
+              {templatesLoading ? (
+                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                  Loading workout templates…
+                </p>
+              ) : templatesError ? (
+                <div className="py-3 text-center border border-dashed border-red-500/40 rounded-lg">
+                  <p className="text-xs text-red-400">{templatesError}</p>
+                  <button
+                    type="button"
+                    onClick={loadTemplates}
+                    className="text-xs text-primary hover:underline mt-1"
+                  >
+                    Retry
+                  </button>
                 </div>
+              ) : templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                  No templates available. You can create one from the Workout Plans page.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search templates…"
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
+                    />
+                  </div>
 
-                <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
-                  {filteredTemplates.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
-                  ) : (
-                    filteredTemplates.map((t) => {
-                      const tplDays = t.days || [];
-                      const sessionCount = tplDays.filter((d) => !(d.day_type === 'rest_day' || !!d.rest_day)).length;
-                      const restCount = tplDays.filter((d) => d.day_type === 'rest_day' || !!d.rest_day).length;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => openFromTemplate(t.id)}
-                          disabled={starting}
-                          className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          <div>
-                            <span className="font-medium text-foreground block">{t.name}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono">
-                              {(t.split_type || 'custom').replace(/_/g, ' ')} · {sessionCount} sessions · {restCount} rest days
-                            </span>
-                          </div>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                        </button>
-                      );
-                    })
-                  )}
+                  <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
+                    {filteredTemplates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
+                    ) : (
+                      filteredTemplates.map((t) => {
+                        const tplDays = t.days || [];
+                        const sessionCount = tplDays.filter((d) => !(d.day_type === 'rest_day' || !!d.rest_day)).length;
+                        const restCount = tplDays.filter((d) => d.day_type === 'rest_day' || !!d.rest_day).length;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => openFromTemplate(t.id)}
+                            disabled={starting}
+                            className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                          >
+                            <div>
+                              <span className="font-medium text-foreground block">{t.name}</span>
+                              <span className="text-[11px] text-muted-foreground font-mono">
+                                {(t.split_type || 'custom').replace(/_/g, ' ')} · {sessionCount} sessions · {restCount} rest days
+                              </span>
+                            </div>
+                            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
     </div>
