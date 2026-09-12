@@ -661,7 +661,13 @@ function NutritionTab({ clientId }) {
 function WorkoutTab({ clientId }) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [starting, setStarting] = useState(false);
+
+  const returnTo = encodeURIComponent(`/clients/${clientId}?tab=workout`);
 
   useEffect(() => {
     WorkoutsService.list({ client_id: clientId })
@@ -670,12 +676,39 @@ function WorkoutTab({ clientId }) {
       .finally(() => setLoading(false));
   }, [clientId]);
 
+  useEffect(() => {
+    WorkoutsService.list({ is_template: true })
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
+  }, []);
+
+  // Create a brand-new blank program for this client.
+  const openNewProgram = () => {
+    if (starting) return;
+    setStarting(true);
+    setNewPlanOpen(false);
+    navigate(`/workouts/builder?clientId=${clientId}&returnTo=${returnTo}`);
+  };
+
+  // Deep-copy an existing template as an independent program for this client.
+  const openFromTemplate = (templateId) => {
+    if (starting) return;
+    setStarting(true);
+    setNewPlanOpen(false);
+    navigate(`/workouts/builder?clientId=${clientId}&templateId=${templateId}&returnTo=${returnTo}`);
+  };
+
+  const filteredTemplates = templates.filter((t) => {
+    const q = templateSearch.trim().toLowerCase();
+    return !q || t.name?.toLowerCase().includes(q);
+  });
+
   if (loading) return <LoadingState label="Loading workout programs…" />;
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-display font-semibold">Workout Programs</h3>
-        <Button size="sm" onClick={() => navigate(`/workouts/builder?clientId=${clientId}`)}>
+        <Button size="sm" onClick={() => setNewPlanOpen(true)}>
           <Plus className="w-3.5 h-3.5" /> New Program
         </Button>
       </div>
@@ -687,7 +720,7 @@ function WorkoutTab({ clientId }) {
           {plans.map((p) => (
             <div
               key={p.id}
-              onClick={() => navigate(`/workouts/builder/${p.id}`)}
+              onClick={() => navigate(`/workouts/builder/${p.id}?returnTo=${returnTo}`)}
               className="p-4 rounded-xl bg-secondary/30 border border-border hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group"
             >
               <div>
@@ -709,6 +742,117 @@ function WorkoutTab({ clientId }) {
           ))}
         </div>
       )}
+
+      {/* New Program Selection Modal */}
+      <Modal
+        open={newPlanOpen}
+        onClose={() => setNewPlanOpen(false)}
+        title="Create Workout Program"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Choose how you would like to build this client's workout program.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Create New Program */}
+            <button
+              type="button"
+              onClick={openNewProgram}
+              disabled={starting}
+              className="surface-card p-4 rounded-xl border border-border text-left hover:border-primary/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-3">
+                <FilePlus className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                  Create New Program
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Start fresh with an empty layout and save it as a draft for this client.
+                </p>
+              </div>
+            </button>
+
+            {/* Load From Template */}
+            <button
+              type="button"
+              onClick={() => document.getElementById('client-workout-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              disabled={starting}
+              className="surface-card p-4 rounded-xl border border-border text-left hover:border-purple-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3">
+                <Copy className="w-4 h-4 text-purple-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-foreground group-hover:text-purple-400 transition-colors">
+                  Load From Template
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Duplicate an existing template as an independent program for this client.
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* From Template Section */}
+          <div id="client-workout-templates" className="pt-2 border-t border-border">
+            <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
+            </h4>
+
+            {templates.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                No templates available. You can create one from the Workout Plans page.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search templates…"
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
+                  />
+                </div>
+
+                <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
+                  {filteredTemplates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
+                  ) : (
+                    filteredTemplates.map((t) => {
+                      const tplDays = t.days || [];
+                      const sessionCount = tplDays.filter((d) => !(d.day_type === 'rest_day' || !!d.rest_day)).length;
+                      const restCount = tplDays.filter((d) => d.day_type === 'rest_day' || !!d.rest_day).length;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => openFromTemplate(t.id)}
+                          disabled={starting}
+                          className="w-full text-left p-2 rounded-md hover:bg-secondary/50 flex items-center justify-between text-xs transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                          <div>
+                            <span className="font-medium text-foreground block">{t.name}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              {(t.split_type || 'custom').replace(/_/g, ' ')} · {sessionCount} sessions · {restCount} rest days
+                            </span>
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

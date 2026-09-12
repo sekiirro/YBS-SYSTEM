@@ -219,6 +219,7 @@ export default function WorkoutPlanBuilder() {
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('templateId');
   const queryClientId = searchParams.get('clientId');
+  const returnTo = searchParams.get('returnTo');
   const navigate = useNavigate();
   const { user } = useAuth();
   const wsId = getActiveWorkspaceId(user);
@@ -411,9 +412,15 @@ export default function WorkoutPlanBuilder() {
                     sets: warmupSets + workingSets || 3,
                     rep_range: ex.rep_range || '8-12',
                     rest_seconds: ex.rest_seconds || 90,
+                    target_weight: ex.target_weight || null,
                     rpe: ex.rpe || 8,
                     warmup: warmupSets > 0 && workingSets === 0,
                     notes: ex.notes || '',
+                    group_id: ex.group_id || null,
+                    group_type: ex.group_type || null,
+                    prescribed_sets_detail: Array.isArray(ex.prescribed_sets_detail)
+                      ? JSON.parse(JSON.stringify(ex.prescribed_sets_detail))
+                      : [],
                   };
                 }),
               };
@@ -884,6 +891,7 @@ export default function WorkoutPlanBuilder() {
       const planPayload = {
         workspace_id: planWorkspaceId || wsId,
         client_id: client.id,
+        assigned_ybs_coach_id: user?.id || null,
         name: name.trim(),
         split_type: splitType,
         custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
@@ -951,7 +959,7 @@ export default function WorkoutPlanBuilder() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={async () => { await autosave.flush(); navigate('/workouts'); }}
+            onClick={async () => { await autosave.flush(); navigate(returnTo || '/workouts'); }}
             className="p-2 rounded-xl bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
             title="Back to Workout Plans"
           >
