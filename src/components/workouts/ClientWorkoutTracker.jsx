@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { WorkoutsService } from '@/services/workouts';
 import { Button, Modal } from '@/components/ui';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
+import { getWarmupCount, getWarmupNote } from '@/lib/workoutWarmup';
 import {
   Dumbbell,
   Play,
@@ -12,7 +13,9 @@ import {
   Flame,
   Coffee,
   History,
-  Check
+  Check,
+  Thermometer,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -144,7 +147,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         exercise_id: ex.exercise_id || null,
         exercise_name: ex.exercise_name || ex.name || 'Exercise',
         set_number: setNumber,
-        is_warmup: !!ex.warmup,
+        is_warmup: setNumber <= getWarmupCount(ex),
         weight_kg: current.weight ? Number(current.weight) : null,
         reps_completed: current.reps ? Number(current.reps) : null,
         rpe: current.rpe ? Number(current.rpe) : null,
@@ -459,6 +462,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                     {(currentDay.exercises || []).map((ex, exIdx) => {
                       const setsCount = Number(ex.sets) || 3;
                       const setsList = Array.from({ length: setsCount }, (_, i) => i + 1);
+                      const warmupCount = getWarmupCount(ex);
 
                       return (
                         <div
@@ -535,97 +539,126 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                     const key = `${exIdx}_${setNum}`;
                                     const state = setInputs[key] || {};
                                     const isCompleted = !!state.completed;
+                                    const isWarmup = setNum <= warmupCount;
+                                    const warmupNote = isWarmup ? getWarmupNote(ex, setNum) : null;
 
                                     return (
-                                      <tr
-                                        key={setNum}
-                                        className={cn(
-                                          'transition-colors',
-                                          isCompleted ? 'bg-emerald-500/5' : 'hover:bg-secondary/20'
+                                      <Fragment key={setNum}>
+                                        {isWarmup && setNum === 1 && warmupCount > 0 && (
+                                          <tr>
+                                            <td colSpan={6} className="pt-3 pb-1.5 px-1">
+                                              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                                                <Thermometer className="w-3 h-3" /> Warm-up Sets
+                                              </div>
+                                            </td>
+                                          </tr>
                                         )}
-                                      >
-                                        <td className="py-2">
-                                          <span
-                                            className={cn(
-                                              'inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-mono font-semibold',
-                                              isCompleted
-                                                ? 'bg-emerald-500/20 text-emerald-400'
-                                                : 'bg-secondary text-muted-foreground'
+                                        {!isWarmup && setNum === warmupCount + 1 && warmupCount > 0 && (
+                                          <tr>
+                                            <td colSpan={6} className="pt-3 pb-1.5 px-1">
+                                              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                                                <Target className="w-3 h-3" /> Working Sets
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        )}
+                                        <tr
+                                          className={cn(
+                                            'transition-colors',
+                                            isCompleted ? 'bg-emerald-500/5' : 'hover:bg-secondary/20'
+                                          )}
+                                        >
+                                          <td className="py-2">
+                                            <span
+                                              aria-label={isWarmup ? 'Warm-up set' : 'Working set'}
+                                              className={cn(
+                                                'inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-mono font-semibold',
+                                                isCompleted
+                                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                                  : isWarmup
+                                                  ? 'bg-amber-500/15 text-amber-400'
+                                                  : 'bg-secondary text-muted-foreground'
+                                              )}
+                                            >
+                                              {isWarmup ? `W${setNum}` : setNum - warmupCount}
+                                            </span>
+                                          </td>
+                                          <td className="py-2 font-mono text-muted-foreground text-[11px]">
+                                            {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RPE ${ex.rpe}` : ''}
+                                            {warmupNote && (
+                                              <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
+                                                {warmupNote}
+                                              </span>
                                             )}
-                                          >
-                                            {ex.warmup ? 'W' : setNum}
-                                          </span>
-                                        </td>
-                                        <td className="py-2 font-mono text-muted-foreground text-[11px]">
-                                          {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RPE ${ex.rpe}` : ''}
-                                        </td>
-                                        <td className="py-2 px-1 text-center">
-                                          <input
-                                            type="number"
-                                            placeholder="—"
-                                            value={state.weight ?? ''}
-                                            onChange={(e) => handleInputChange(exIdx, setNum, 'weight', e.target.value)}
-                                            disabled={!activeLog}
-                                            className={cn(
-                                              'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
-                                              isCompleted
-                                                ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
-                                                : 'bg-secondary/50 border-border'
-                                            )}
-                                          />
-                                        </td>
-                                        <td className="py-2 px-1 text-center">
-                                          <input
-                                            type="number"
-                                            placeholder="—"
-                                            value={state.reps ?? ''}
-                                            onChange={(e) => handleInputChange(exIdx, setNum, 'reps', e.target.value)}
-                                            disabled={!activeLog}
-                                            className={cn(
-                                              'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
-                                              isCompleted
-                                                ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
-                                                : 'bg-secondary/50 border-border'
-                                            )}
-                                          />
-                                        </td>
-                                        <td className="py-2 px-1 text-center">
-                                          <input
-                                            type="number"
-                                            step="0.5"
-                                            min="5"
-                                            max="10"
-                                            placeholder="—"
-                                            value={state.rpe ?? ''}
-                                            onChange={(e) => handleInputChange(exIdx, setNum, 'rpe', e.target.value)}
-                                            disabled={!activeLog}
-                                            className={cn(
-                                              'w-16 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
-                                              isCompleted
-                                                ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
-                                                : 'bg-secondary/50 border-border'
-                                            )}
-                                          />
-                                        </td>
-                                        <td className="py-2 text-center">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleToggleSet(ex, exIdx, setNum)}
-                                            disabled={!activeLog || savingSet[key]}
-                                            className={cn(
-                                              'w-7 h-7 rounded-md flex items-center justify-center transition-all mx-auto',
-                                              isCompleted
-                                                ? 'bg-emerald-500 text-white shadow-sm'
-                                                : activeLog
-                                                ? 'bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border'
-                                                : 'bg-secondary/30 text-muted-foreground/40 cursor-not-allowed'
-                                            )}
-                                            title={isCompleted ? 'Mark uncompleted' : 'Mark set completed'}
-                                          >
-                                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                          </button>
-                                        </td>
-                                      </tr>
+                                          </td>
+                                          <td className="py-2 px-1 text-center">
+                                            <input
+                                              type="number"
+                                              placeholder="—"
+                                              value={state.weight ?? ''}
+                                              onChange={(e) => handleInputChange(exIdx, setNum, 'weight', e.target.value)}
+                                              disabled={!activeLog}
+                                              className={cn(
+                                                'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
+                                                isCompleted
+                                                  ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
+                                                  : 'bg-secondary/50 border-border'
+                                              )}
+                                            />
+                                          </td>
+                                          <td className="py-2 px-1 text-center">
+                                            <input
+                                              type="number"
+                                              placeholder="—"
+                                              value={state.reps ?? ''}
+                                              onChange={(e) => handleInputChange(exIdx, setNum, 'reps', e.target.value)}
+                                              disabled={!activeLog}
+                                              className={cn(
+                                                'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
+                                                isCompleted
+                                                  ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
+                                                  : 'bg-secondary/50 border-border'
+                                              )}
+                                            />
+                                          </td>
+                                          <td className="py-2 px-1 text-center">
+                                            <input
+                                              type="number"
+                                              step="0.5"
+                                              min="5"
+                                              max="10"
+                                              placeholder="—"
+                                              value={state.rpe ?? ''}
+                                              onChange={(e) => handleInputChange(exIdx, setNum, 'rpe', e.target.value)}
+                                              disabled={!activeLog}
+                                              className={cn(
+                                                'w-16 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
+                                                isCompleted
+                                                  ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
+                                                  : 'bg-secondary/50 border-border'
+                                              )}
+                                            />
+                                          </td>
+                                          <td className="py-2 text-center">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleSet(ex, exIdx, setNum)}
+                                              disabled={!activeLog || savingSet[key]}
+                                              className={cn(
+                                                'w-7 h-7 rounded-md flex items-center justify-center transition-all mx-auto',
+                                                isCompleted
+                                                  ? 'bg-emerald-500 text-white shadow-sm'
+                                                  : activeLog
+                                                  ? 'bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border'
+                                                  : 'bg-secondary/30 text-muted-foreground/40 cursor-not-allowed'
+                                              )}
+                                              title={isCompleted ? 'Mark uncompleted' : 'Mark set completed'}
+                                            >
+                                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      </Fragment>
                                     );
                                   })}
                                 </tbody>
