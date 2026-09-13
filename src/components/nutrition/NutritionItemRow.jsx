@@ -39,16 +39,10 @@ export default function NutritionItemRow({
           )}
         </div>
 
-        {isInvalid ? (
+        {isInvalid && (
           <div className="flex items-center gap-1 text-[11px] text-amber-400 mt-1">
             <AlertCircle className="w-3.5 h-3.5" />
             <span>Enter an amount greater than 0</span>
-          </div>
-        ) : (
-          <div className="text-[10px] text-muted-foreground/75 mt-0.5 font-mono">
-            {baseFood.calories != null && (
-              <span>100g base: {Math.round(baseFood.calories)} kcal</span>
-            )}
           </div>
         )}
       </div>
