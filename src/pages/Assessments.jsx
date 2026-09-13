@@ -7,7 +7,7 @@ import { hasPermission } from '@/lib/permissions';
 import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
-import { formatDate, getFormStatusColor } from '@/lib/ybs-utils';
+import { formatDate, getFormStatusColor, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
 import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FormBuilder from '@/components/FormBuilder';
@@ -57,7 +57,7 @@ export default function Assessments() {
     try {
       setLoading(true);
       const [formData, templateData] = await Promise.all([
-        AssessmentsService.list({}),
+        AssessmentsService.listWithDelivery(),
         isTrainer ? TemplatesService.list({}) : Promise.resolve([]),
       ]);
       setForms(formData);
@@ -393,14 +393,16 @@ export default function Assessments() {
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Due Date</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Plan Delivery</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
                       <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredForms.map((f) => (
+                    {filteredForms.map((f) => {
+                      const delivery = planDeliveryState(f.submitted_at);
+                      return (
                       <tr key={f.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                         <td className="px-4 py-3">
                           <p className="text-[13px] font-medium">{f.name}</p>
@@ -408,7 +410,21 @@ export default function Assessments() {
                         </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.assigned_client_name || '—'}</td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.workspace_name || '—'}</td>
-                        <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(f.due_date)}</td>
+                        <td className="px-4 py-3">
+                          {f.submitted_at ? (
+                            <div className="flex flex-col gap-1.5">
+                              <Badge className={cn(getPlanDeliveryColor(delivery), 'w-fit')}>
+                                {getPlanDeliveryLabel(delivery)}
+                              </Badge>
+                              <div className="flex items-center gap-1">
+                                <PlanPill label="N" delivered={f.nutrition_delivered} />
+                                <PlanPill label="W" delivered={f.workout_delivered} />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[12px] text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(f.submitted_at)}</td>
                         <td className="px-4 py-3">
                           <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{f.submission_status}</Badge>
@@ -421,7 +437,8 @@ export default function Assessments() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -703,5 +720,20 @@ export default function Assessments() {
         )}
       </Modal>
     </div>
+  );
+}
+
+function PlanPill({ label, delivered }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-medium',
+        delivered
+          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+          : 'text-muted-foreground bg-secondary/40 border-border/60'
+      )}
+    >
+      {label} {delivered ? '✓' : '—'}
+    </span>
   );
 }

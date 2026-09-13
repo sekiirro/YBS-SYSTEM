@@ -1,5 +1,10 @@
 // Shared utility helpers for YBS
-import { format, formatDistanceToNow, differenceInDays, parseISO } from 'date-fns';
+import { format, formatDistanceToNow, differenceInDays, differenceInCalendarDays, parseISO, isValid } from 'date-fns';
+
+// SLA window: plans must be delivered within 3–7 calendar days after the
+// client submits their intake form. The countdown is always derived from
+// the form's submitted_at and never stored.
+export const PLAN_DELIVERY_SLA_DAYS = 7;
 
 export function formatDate(dateStr, fmt = 'MMM d, yyyy') {
   if (!dateStr) return '—';
@@ -44,6 +49,54 @@ export function daysUntil(dateStr) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Plan Delivery SLA countdown for a submitted form.
+ * Days remaining are computed as calendar days between the submission day
+ * and today in the viewer's local timezone (the user's perception of "days"),
+ * so every browser renders the same number for the same submission day.
+ *
+ * Returns null when the form has no submission timestamp (SLA has not
+ * started), otherwise:
+ *   { kind: 'countdown', daysLeft }  — daysLeft 7..0
+ *   { kind: 'overdue',   days }      — the form age beyond the SLA window
+ */
+export function planDeliveryState(submittedAt) {
+  if (!submittedAt) return null;
+  const submitted = parseISO(submittedAt);
+  if (!isValid(submitted)) return null;
+  let elapsed = differenceInCalendarDays(new Date(), submitted);
+  // Guard against clock skew / future timestamps.
+  if (elapsed < 0) elapsed = 0;
+  const daysLeft = PLAN_DELIVERY_SLA_DAYS - elapsed;
+  if (daysLeft < 0) {
+    return { kind: 'overdue', days: Math.abs(daysLeft) };
+  }
+  return { kind: 'countdown', daysLeft };
+}
+
+/**
+ * Urgency palette for the Plan Delivery countdown (spec-mandated mapping):
+ *   0–2 days left -> success/green     3–4 -> blue/info
+ *   5–6 -> yellow/warning              7+  -> red/critical
+ *   overdue -> red/critical
+ * Text is always shown too, so meaning is not color-only.
+ */
+export function getPlanDeliveryColor(state) {
+  if (!state) return null;
+  if (state.kind === 'overdue') return 'text-red-400 bg-red-500/10 border-red-500/20';
+  if (state.daysLeft <= 2) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (state.daysLeft <= 4) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+  if (state.daysLeft <= 6) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  return 'text-red-400 bg-red-500/10 border-red-500/20';
+}
+
+export function getPlanDeliveryLabel(state) {
+  if (!state) return '—';
+  if (state.kind === 'overdue') return `Overdue by ${state.days} day${state.days === 1 ? '' : 's'}`;
+  if (state.daysLeft === 0) return 'Due today';
+  return `${state.daysLeft} day${state.daysLeft === 1 ? '' : 's'} left`;
 }
 
 export function getSubscriptionStatusColor(status) {

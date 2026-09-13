@@ -280,6 +280,19 @@ export const AssessmentsService = {
     }));
   },
 
+  /**
+   * Forms list enriched with per-form plan-delivery state (nutrition /
+   * workout booleans) for the Plan Delivery SLA column. Backed by the
+   * get_forms_with_delivery SECURITY DEFINER RPC so delivery flags are
+   * computed in a single server query (no N+1) and visibility mirrors
+   * the assessments RLS policy.
+   */
+  async listWithDelivery() {
+    const { data, error } = await supabase.rpc('get_forms_with_delivery');
+    if (error) throw error;
+    return data || [];
+  },
+
   async getById(id) {
     const { data, error } = await supabase
       .from('assessments')

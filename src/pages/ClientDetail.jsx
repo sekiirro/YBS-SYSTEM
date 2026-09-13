@@ -1043,8 +1043,9 @@ function ActivateClientButton({ clientId, onUpdated }) {
       <Modal open={open} onClose={() => setOpen(false)} title="Activate Client Package" size="md">
         <div className="space-y-4">
           <p className="text-[13px] text-muted-foreground">
-            Confirm the client's package subscription to start coaching. The client is activated and their
-            intake form is auto-assigned.
+            Activation requires both a delivered Nutrition plan and a delivered Workout plan.
+            Clients are activated automatically the moment the second plan is delivered — this
+            button re-checks the same rule server-side.
           </p>
           {err && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{err}</div>
