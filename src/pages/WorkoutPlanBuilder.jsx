@@ -885,6 +885,15 @@ export default function WorkoutPlanBuilder() {
 
   const handleSaveAndAssign = () => {
     if (!validatePlan()) return;
+    // When the builder was opened from a client's page (`clientId` query
+    // param), the client is already pre-selected from the RLS-authorized
+    // client list. Assign directly without re-opening the picker — the
+    // assigningRef in-flight guard keeps repeated clicks from ever firing a
+    // second INSERT. Generic mode (no clientId) keeps the existing picker.
+    if (queryClientId && selectedClient) {
+      handleAssignToClient(selectedClient);
+      return;
+    }
     setClientPickerOpen(true);
   };
 

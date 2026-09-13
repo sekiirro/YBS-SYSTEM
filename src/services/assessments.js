@@ -262,7 +262,7 @@ export const AssessmentsService = {
   async list(filters = {}) {
     let query = supabase
       .from('assessments')
-      .select('*, assessment_responses(count), clients(full_name)')
+      .select('*, assessment_responses(count), clients(full_name), workspaces(id, name)')
       .order('created_at', { ascending: false });
 
     if (filters.client_id) query = query.eq('client_id', filters.client_id);
@@ -276,6 +276,7 @@ export const AssessmentsService = {
       ...a,
       response_count: a.assessment_responses?.[0]?.count || 0,
       assigned_client_name: a.clients?.full_name || null,
+      workspace_name: a.workspaces?.name || null,
     }));
   },
 

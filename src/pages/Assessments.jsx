@@ -21,6 +21,7 @@ export default function Assessments() {
   const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
 
   // Builder state
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -78,9 +79,24 @@ export default function Assessments() {
         if (!f.name?.toLowerCase().includes(q) && !f.assigned_client_name?.toLowerCase().includes(q)) return false;
       }
       if (statusFilter !== 'all' && f.submission_status !== statusFilter) return false;
+      if (workspaceFilter !== 'all' && f.workspace_id !== workspaceFilter) return false;
       return true;
     });
-  }, [forms, search, statusFilter]);
+  }, [forms, search, statusFilter, workspaceFilter]);
+
+  // Workspace dropdown options derive from the RLS-visible forms themselves,
+  // so every option by construction respects what the caller can see. No
+  // workspace rows with zero visible forms are listed, and workspaces whose
+  // name the caller cannot resolve fall back to the short id.
+  const workspaceOptions = useMemo(() => {
+    const map = new Map();
+    forms.forEach((f) => {
+      if (f.workspace_id && !map.has(f.workspace_id)) map.set(f.workspace_id, f.workspace_name);
+    });
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [forms]);
 
   const filteredTemplates = useMemo(() => {
     if (!search) return templates;
@@ -307,7 +323,7 @@ export default function Assessments() {
             return (
               <button
                 key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setSearch(''); setStatusFilter('all'); }}
+                onClick={() => { setActiveTab(tab.key); setSearch(''); setStatusFilter('all'); setWorkspaceFilter('all'); }}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all',
                   activeTab === tab.key
@@ -335,17 +351,31 @@ export default function Assessments() {
           />
         </div>
         {activeTab === 'forms' && (
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
-          >
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="submitted">Submitted</option>
-            <option value="reviewed">Reviewed</option>
-            <option value="overdue">Overdue</option>
-          </select>
+          <>
+            <select
+              value={workspaceFilter}
+              onChange={(e) => setWorkspaceFilter(e.target.value)}
+              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+            >
+              <option value="all">All Workspaces</option>
+              {workspaceOptions.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name || w.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="submitted">Submitted</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </>
         )}
       </div>
 
@@ -362,6 +392,7 @@ export default function Assessments() {
                     <tr className="border-b border-border">
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Due Date</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
@@ -376,6 +407,7 @@ export default function Assessments() {
                           <p className="text-[11px] text-muted-foreground">{f.response_count || 0} responses</p>
                         </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.assigned_client_name || '—'}</td>
+                        <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.workspace_name || '—'}</td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(f.due_date)}</td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(f.submitted_at)}</td>
                         <td className="px-4 py-3">

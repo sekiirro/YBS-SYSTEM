@@ -521,6 +521,21 @@ function NutritionTab({ clientId }) {
     navigate(`/nutrition/builder?clientId=${clientId}&templateId=${templateId}&returnTo=${returnTo}`);
   };
 
+  // Remove a nutrition plan from this client. Soft-deletes the plan row
+  // (is_archived = true); list queries already filter archived plans out, so
+  // it disappears from the staff view here and from the client portal.
+  const handleRemovePlan = async (plan, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Remove "${plan.name}" from this client? The plan will be archived and stop being shown to the client.`)) return;
+    try {
+      await NutritionService.delete(plan.id);
+      const data = await NutritionService.list({ client_id: clientId });
+      setPlans(data || []);
+    } catch (err) {
+      console.error('Failed to remove nutrition plan:', err);
+    }
+  };
+
   const filteredTemplates = templates.filter((t) => {
     const q = templateSearch.trim().toLowerCase();
     return !q || t.name?.toLowerCase().includes(q);
@@ -548,13 +563,23 @@ function NutritionTab({ clientId }) {
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[13px] font-medium">{p.name}</p>
-                <Badge className={cn(
-                  'text-[10px] font-mono capitalize shrink-0',
-                  p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
-                  : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
-                )}>
-                  {p.status === 'draft' ? 'Draft' : 'Active'}
-                </Badge>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge className={cn(
+                    'text-[10px] font-mono capitalize shrink-0',
+                    p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
+                    : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
+                  )}>
+                    {p.status === 'draft' ? 'Draft' : 'Active'}
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemovePlan(p, e)}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Remove program from this client"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <div className="flex gap-4 mt-2 text-[12px] text-muted-foreground">
                 {p.daily_calories != null && <span>Cal: {p.daily_calories}</span>}
@@ -747,6 +772,21 @@ function WorkoutTab({ clientId }) {
     navigate(`/workouts/builder?clientId=${clientId}&templateId=${templateId}&returnTo=${returnTo}`);
   };
 
+  // Remove a workout program from this client. Soft-deletes the plan row
+  // (is_archived = true); list queries already filter archived plans out, so
+  // it disappears from the staff view here and from the client portal.
+  const handleRemovePlan = async (plan, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Remove "${plan.name}" from this client? The program will be archived and stop being shown to the client.`)) return;
+    try {
+      await WorkoutsService.delete(plan.id);
+      const data = await WorkoutsService.list({ client_id: clientId });
+      setPlans(data || []);
+    } catch (err) {
+      console.error('Failed to remove workout program:', err);
+    }
+  };
+
   const filteredTemplates = templates.filter((t) => {
     const q = templateSearch.trim().toLowerCase();
     return !q || t.name?.toLowerCase().includes(q);
@@ -784,9 +824,19 @@ function WorkoutTab({ clientId }) {
                   </span>
                 </div>
               </div>
-              <Button size="sm" variant="ghost" className="text-xs">
-                Open Builder
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => handleRemovePlan(p, e)}
+                  className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title="Remove program from this client"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <Button size="sm" variant="ghost" className="text-xs">
+                  Open Builder
+                </Button>
+              </div>
             </div>
           ))}
         </div>
