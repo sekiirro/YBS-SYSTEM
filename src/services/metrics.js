@@ -32,6 +32,50 @@ export const MetricsService = {
     return data;
   },
 
+  /**
+   * Single server-enforced source of truth for the Body Progress baseline
+   * gate + prefill (access-checked for platform owner / workspace owner /
+   * assigned coach / the client themself).
+   */
+  async getClientMetricsState(clientId) {
+    const { data, error } = await supabase.rpc('get_client_metrics_state', {
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * PERSIST the completed baseline: mirrors sex / date_of_birth / height /
+   * weight onto the client profile and upserts the single is_baseline metric
+   * row. Bounded, validated fields only (see migration 20260913000004).
+   */
+  async saveBaseline(clientId, payload) {
+    const { data, error } = await supabase.rpc('save_metrics_baseline', {
+      p_client_id: clientId,
+      p_payload: payload,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Portal quick check-in: a normal metrics INSERT (is_baseline = false)
+   * through the client-self RLS path. Only non-empty fields are sent so no
+   * historical value is ever overwritten with NULL.
+   */
+  async createCheckIn(clientId, workspaceId, payload) {
+    const row = { ...payload, client_id: clientId, is_baseline: false };
+    if (workspaceId) row.workspace_id = workspaceId;
+    const { data, error } = await supabase
+      .from('metrics')
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
   async update(id, updates) {
     const { data, error } = await supabase
       .from('metrics')

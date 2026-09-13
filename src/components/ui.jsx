@@ -108,7 +108,7 @@ export function LoadingState({ label }) {
   );
 }
 
-export function Input({ label = '', error = '', className = '', ...props }) {
+export function Input({ label = '', error = '', hint = '', className = '', ...props }) {
   return (
     <div className="space-y-1.5">
       {label && <label className="text-[12px] font-medium text-muted-foreground">{label}</label>}
@@ -131,6 +131,7 @@ export function Input({ label = '', error = '', className = '', ...props }) {
           {error}
         </motion.p>
       )}
+      {!error && hint && <p className="text-[11px] text-muted-foreground/80">{hint}</p>}
     </div>
   );
 }

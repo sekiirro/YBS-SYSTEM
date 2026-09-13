@@ -455,7 +455,7 @@ function MetricsTab({ metrics, clientId, client, onUpdated }) {
           ))}
         </div>
       )}
-      {showAdd && <AddMetricModal clientId={clientId} clientName={client.full_name} trainerId={client.assigned_trainer_id} onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); onUpdated(); }} />}
+      {showAdd && <AddMetricModal clientId={clientId} workspaceId={client.workspace_id} assignedCoachId={user?.id || client.assigned_ybs_coach_id} onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); onUpdated(); }} />}
     </div>
   );
 }
@@ -1124,7 +1124,7 @@ function EditClientModal({ client, onClose, onSaved }) {
   );
 }
 
-function AddMetricModal({ clientId, clientName, trainerId, onClose, onSaved }) {
+function AddMetricModal({ clientId, workspaceId, assignedCoachId, onClose, onSaved }) {
   const [form, setForm] = useState({
     entry_date: new Date().toISOString().split('T')[0],
     weight: '',
@@ -1143,9 +1143,14 @@ function AddMetricModal({ clientId, clientName, trainerId, onClose, onSaved }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = { ...form, client_id: clientId };
+      const data = {
+        ...form,
+        client_id: clientId,
+        workspace_id: workspaceId || undefined,
+        assigned_ybs_coach_id: assignedCoachId || undefined,
+      };
       Object.keys(data).forEach((k) => {
-        if (data[k] === '' || data[k] === null) delete data[k];
+        if (data[k] === '' || data[k] == null) delete data[k];
         if (typeof data[k] === 'string' && k !== 'entry_date' && k !== 'notes' && data[k] !== '') data[k] = parseFloat(data[k]);
       });
       await MetricsService.create(data);
