@@ -77,18 +77,19 @@ export function planDeliveryState(submittedAt) {
 }
 
 /**
- * Urgency palette for the Plan Delivery countdown (spec-mandated mapping):
- *   0–2 days left -> success/green     3–4 -> blue/info
- *   5–6 -> yellow/warning              7+  -> red/critical
- *   overdue -> red/critical
- * Text is always shown too, so meaning is not color-only.
+ * Urgency palette for the Plan Delivery countdown:
+ *   7+ days left -> green/success     5–6 -> amber/warning
+ *   3–4 -> blue/info                   0–2 -> red/danger
+ *   overdue -> destructive (strongest danger)
+ * More time remaining = less urgent. Text is always shown too, so meaning
+ * is not color-only.
  */
 export function getPlanDeliveryColor(state) {
   if (!state) return null;
-  if (state.kind === 'overdue') return 'text-red-400 bg-red-500/10 border-red-500/20';
-  if (state.daysLeft <= 2) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-  if (state.daysLeft <= 4) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
-  if (state.daysLeft <= 6) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  if (state.kind === 'overdue') return 'text-destructive bg-destructive/10 border-destructive/20';
+  if (state.daysLeft >= 7) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (state.daysLeft >= 5) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  if (state.daysLeft >= 3) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
   return 'text-red-400 bg-red-500/10 border-red-500/20';
 }
 
