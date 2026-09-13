@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '@/lib/AuthContext';
@@ -226,6 +226,10 @@ export default function WorkoutPlanBuilder() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Synchronous in-flight lock so repetitive clicks on an assignment target
+  // (or a double-click before React re-renders disabled state) can never fire
+  // a second full INSERT. Each lock is released in `finally`.
+  const assigningRef = useRef(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -885,9 +889,11 @@ export default function WorkoutPlanBuilder() {
   };
 
   const handleAssignToClient = async (client) => {
+    if (assigningRef.current) return;
+    assigningRef.current = true;
+    setSaving(true);
     try {
       await autosave.flush();
-      setSaving(true);
       const planPayload = {
         workspace_id: planWorkspaceId || wsId,
         client_id: client.id,
@@ -913,6 +919,7 @@ export default function WorkoutPlanBuilder() {
       console.error('Error assigning plan to client:', err);
       setError('Failed to assign workout plan to client.');
     } finally {
+      assigningRef.current = false;
       setSaving(false);
     }
   };
@@ -1876,7 +1883,8 @@ export default function WorkoutPlanBuilder() {
                   key={c.id}
                   type="button"
                   onClick={() => handleAssignToClient(c)}
-                  className="w-full text-left p-2.5 rounded-lg hover:bg-secondary/60 flex items-center justify-between text-xs transition-colors group"
+                  disabled={saving}
+                  className="w-full text-left p-2.5 rounded-lg hover:bg-secondary/60 flex items-center justify-between text-xs transition-colors group disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <div>
                     <span className="font-semibold text-foreground block group-hover:text-primary transition-colors">
