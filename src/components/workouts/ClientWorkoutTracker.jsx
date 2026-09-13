@@ -586,11 +586,19 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                             </span>
                                           </td>
                                           <td className="py-2 font-mono text-muted-foreground text-[11px]">
-                                            {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RPE ${ex.rpe}` : ''}
-                                            {warmupNote && (
-                                              <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
+                                            {isWarmup ? (
+                                              <span className="block font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
                                                 {warmupNote}
                                               </span>
+                                            ) : (
+                                              <>
+                                                {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RPE ${ex.rpe}` : ''}
+                                                {warmupNote && (
+                                                  <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
+                                                    {warmupNote}
+                                                  </span>
+                                                )}
+                                              </>
                                             )}
                                           </td>
                                           <td className="py-2 px-1 text-center">
