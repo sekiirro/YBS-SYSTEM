@@ -137,7 +137,9 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
             <LoadingState label="Loading submission…" />
           </div>
         ) : (
-          <SubmissionAnswers assessment={assessment} />
+          <div className="surface-card rounded-xl border border-border/80 p-4 sm:p-5 max-h-[520px] overflow-y-auto overflow-x-hidden rounded-lg">
+            <SubmissionAnswers assessment={assessment} />
+          </div>
         )}
       </div>
     </div>
