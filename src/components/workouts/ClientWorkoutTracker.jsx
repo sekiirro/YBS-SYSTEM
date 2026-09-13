@@ -103,12 +103,14 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
       const initialInputs = {};
       (currentDay?.exercises || []).forEach((ex, exIdx) => {
         const numSets = Number(ex.sets) || 3;
+        const warmupCount = getWarmupCount(ex);
         for (let s = 1; s <= numSets; s++) {
           const key = `${exIdx}_${s}`;
           // parse default reps if simple integer
           const defaultReps = parseInt(ex.rep_range, 10) || null;
+          const isWarmup = s <= warmupCount;
           initialInputs[key] = {
-            weight: ex.target_weight || '',
+            weight: isWarmup ? '' : ex.target_weight || '',
             reps: defaultReps || '',
             rpe: ex.rpe || '',
             completed: false,
