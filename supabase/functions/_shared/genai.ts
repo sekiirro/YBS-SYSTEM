@@ -199,7 +199,7 @@ export interface RunAnalysisOptions {
 /**
  * Full analysis request flow shared by both summarizing functions:
  * auth -> RLS-scoped assessment load -> submission check -> fingerprint ->
- * cache lookup -> Gemini (structured output + grounding, retry w/o tools) ->
+ * cache lookup -> Gemini (structured JSON output) ->
  * cache upsert -> response.
  */
 export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
@@ -276,15 +276,19 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     });
   }
 
-  // 5. Run Gemini (structured output + Google Search grounding; retry without
-  //    tools if the first call fails, e.g. API plan lacking Grounding access).
+  // 5. Run Gemini with structured JSON output.
+  //    NOTE: Google Search grounding (tools: [{ googleSearch: {} }]) is
+  //    mutually exclusive with responseSchema / responseMimeType:'application/json'
+  //    in the Gemini API — combining them returns a 400 error every time.
+  //    We use structured output for reliable coaching data; grounding citations
+  //    are not available when responseSchema is in use.
   const gen = getGeminiConfig();
   if (!gen) {
     return errorResponse('server_not_configured', 'AI service is not configured.', 503);
   }
 
   const prompt = buildPrompt(assessment).slice(0, 30000);
-  const baseConfig: Record<string, unknown> = {
+  const generateConfig: Record<string, unknown> = {
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     responseMimeType: 'application/json',
     responseSchema,
@@ -296,21 +300,14 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
       gen.ai.models.generateContent({
         model: gen.model,
         contents: prompt,
-        config: { ...baseConfig, tools: [{ googleSearch: {} }] },
+        config: generateConfig,
       }),
       GEMINI_TIMEOUT_MS,
     );
-  } catch {
-    try {
-      response = await withTimeout(
-        gen.ai.models.generateContent({ model: gen.model, contents: prompt, config: baseConfig }),
-        GEMINI_TIMEOUT_MS,
-      );
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      console.error(`${kind} analysis: generation failed:`, detail);
-      return errorResponse('ai_unavailable', 'AI service is currently unavailable.', 502);
-    }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`${kind} analysis: generation failed:`, detail);
+    return errorResponse('ai_unavailable', 'AI service is currently unavailable.', 502);
   }
 
   const text = typeof response?.text === 'string' ? response.text.trim() : '';
@@ -324,10 +321,9 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     }
   }
   if (!parsed) {
+    console.error(`${kind} analysis: empty or non-JSON response. text=${JSON.stringify(text?.slice(0, 200))}`);
     return errorResponse('generation_failed', 'The AI summary could not be generated. Please try again.', 502);
   }
-
-  const sources = extractSources(response);
 
   // 6. Cache for identical future requests. A failed cache write never fails
   //    the user-facing result.
@@ -339,7 +335,7 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
       input_fingerprint: fingerprint,
       model: gen.model,
       result: parsed,
-      sources,
+      sources: [],
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'assessment_id,analysis_type' },
@@ -353,6 +349,6 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     cached: false,
     model: gen.model,
     analysis: parsed,
-    sources,
+    sources: [],
   });
 }

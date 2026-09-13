@@ -23,7 +23,27 @@ async function invokeAnalysis(functionName, assessmentId) {
   });
 
   if (error) {
-    const body = error?.context;
+    // error.context is a raw fetch Response object — not parsed JSON.
+    // We must await .json() to read the actual edge-function error body.
+    let body = null;
+    try {
+      if (error?.context && typeof error.context.json === 'function') {
+        body = await error.context.json();
+      }
+    } catch {
+      // Body unreadable (e.g. network error, relay error). body stays null.
+    }
+
+    // Developer diagnostics — safe fields only, no secrets.
+    if (import.meta.env.DEV) {
+      console.error('[aiAnalysis]', functionName, {
+        errorName: error?.name,
+        httpStatus: error?.context?.status,
+        code: body?.code,
+        message: body?.error,
+      });
+    }
+
     throw new AIAnalysisError(
       body?.error || 'AI analysis is currently unavailable.',
       body?.code || 'ai_unavailable',
