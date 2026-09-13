@@ -401,7 +401,7 @@ export default function Assessments() {
                   </thead>
                   <tbody>
                     {filteredForms.map((f) => {
-                      const delivery = planDeliveryState(f.submitted_at);
+                      const delivery = planDeliveryState(f.submitted_at, f.nutrition_delivered, f.workout_delivered);
                       return (
                       <tr key={f.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                         <td className="px-4 py-3">
@@ -411,7 +411,7 @@ export default function Assessments() {
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.assigned_client_name || '—'}</td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.workspace_name || '—'}</td>
                         <td className="px-4 py-3">
-                          {f.submitted_at ? (
+                          {delivery ? (
                             <div className="flex flex-col gap-1.5">
                               <Badge className={cn(getPlanDeliveryColor(delivery), 'w-fit')}>
                                 {getPlanDeliveryLabel(delivery)}

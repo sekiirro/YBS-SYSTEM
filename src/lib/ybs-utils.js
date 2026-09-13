@@ -52,17 +52,21 @@ export function daysUntil(dateStr) {
 }
 
 /**
- * Plan Delivery SLA countdown for a submitted form.
+ * Plan Delivery SLA status for a submitted form.
  * Days remaining are computed as calendar days between the submission day
  * and today in the viewer's local timezone (the user's perception of "days"),
  * so every browser renders the same number for the same submission day.
  *
- * Returns null when the form has no submission timestamp (SLA has not
- * started), otherwise:
- *   { kind: 'countdown', daysLeft }  — daysLeft 7..0
- *   { kind: 'overdue',   days }      — the form age beyond the SLA window
+ * Precedence:
+ *   1. Both plans delivered   -> { kind: 'done' }        (completion overrides SLA)
+ *   2. SLA window elapsed      -> { kind: 'overdue', days }
+ *   3. Within SLA window       -> { kind: 'countdown', daysLeft }  (daysLeft 7..0)
+ *
+ * Returns null when the form has no submission timestamp and the plans are
+ * not both delivered (SLA has not started).
  */
-export function planDeliveryState(submittedAt) {
+export function planDeliveryState(submittedAt, nutritionDelivered = false, workoutDelivered = false) {
+  if (nutritionDelivered && workoutDelivered) return { kind: 'done' };
   if (!submittedAt) return null;
   const submitted = parseISO(submittedAt);
   if (!isValid(submitted)) return null;
@@ -86,6 +90,7 @@ export function planDeliveryState(submittedAt) {
  */
 export function getPlanDeliveryColor(state) {
   if (!state) return null;
+  if (state.kind === 'done') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
   if (state.kind === 'overdue') return 'text-destructive bg-destructive/10 border-destructive/20';
   if (state.daysLeft >= 7) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
   if (state.daysLeft >= 5) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
@@ -95,6 +100,7 @@ export function getPlanDeliveryColor(state) {
 
 export function getPlanDeliveryLabel(state) {
   if (!state) return '—';
+  if (state.kind === 'done') return 'Done';
   if (state.kind === 'overdue') return `Overdue by ${state.days} day${state.days === 1 ? '' : 's'}`;
   if (state.daysLeft === 0) return 'Due today';
   return `${state.daysLeft} day${state.daysLeft === 1 ? '' : 's'} left`;
