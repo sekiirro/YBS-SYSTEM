@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { WorkoutsService } from '@/services/workouts';
 import { PlansService } from '@/services/plans';
+import { WorkspacesService } from '@/services/workspaces';
 import { hasPermission } from '@/lib/permissions';
 import { getRoleCategory, getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal } from '@/components/ui';
@@ -18,6 +19,8 @@ export default function WorkoutPlans() {
   const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
   const [view, setView] = useState('client'); // 'client' | 'template'
+  const [workspaces, setWorkspaces] = useState([]);
+  const [workspaceFilter, setWorkspaceFilter] = useState('all'); // 'all' | workspace id
 
   // New Plan Selection Modal State
   const [newPlanModalOpen, setNewPlanModalOpen] = useState(false);
@@ -50,16 +53,40 @@ export default function WorkoutPlans() {
   const wsId = getActiveWorkspaceId(user);
   const scopeFilter = getRoleCategory(user) === 'workspace' && wsId ? { workspace_id: wsId } : {};
 
+  // A specific workspace tab uses the same canonical workout_plans.workspace_id
+  // filter and takes precedence over the owner-scope shorthand. The tab list
+  // only contains workspaces the caller has access to (get_workspaces_overview),
+  // and workout_plans RLS enforces the same gates server-side regardless.
+  const queryScope =
+    workspaceFilter !== 'all' ? { workspace_id: workspaceFilter } : scopeFilter;
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, []);
+
   useEffect(() => {
     loadPlans();
-  }, [view]);
+  }, [view, workspaceFilter]);
+
+  const loadWorkspaces = () => {
+    WorkspacesService.list()
+      .then((rows) =>
+        setWorkspaces(
+          (rows || [])
+            .filter((w) => w.status === 'active')
+            .map((w) => ({ id: w.id, name: w.name }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        )
+      )
+      .catch(() => setWorkspaces([]));
+  };
 
   const loadPlans = async () => {
     try {
       setLoading(true);
       const [clientData, templateData] = await Promise.all([
-        WorkoutsService.list({ is_template: false, ...scopeFilter }),
-        WorkoutsService.list({ is_template: true, ...scopeFilter }),
+        WorkoutsService.list({ is_template: false, ...queryScope }),
+        WorkoutsService.list({ is_template: true, ...queryScope }),
       ]);
       setPlans(clientData || []);
       setTemplates(templateData || []);
@@ -117,6 +144,37 @@ export default function WorkoutPlans() {
           )
         }
       />
+
+      {/* Workspace Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setWorkspaceFilter('all')}
+          className={cn(
+            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            workspaceFilter === 'all'
+              ? 'bg-secondary text-foreground border border-border'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          All Workspaces
+        </button>
+        {workspaces.map((w) => (
+          <button
+            key={w.id}
+            type="button"
+            onClick={() => setWorkspaceFilter(w.id)}
+            className={cn(
+              'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+              workspaceFilter === w.id
+                ? 'bg-secondary text-foreground border border-border'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {w.name}
+          </button>
+        ))}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2">
