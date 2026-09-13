@@ -3,8 +3,8 @@ import { Button, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/use-toast';
 import NutritionItemRow from './NutritionItemRow';
 import FoodPickerModal from './FoodPickerModal';
+import BulkFoodPickerModal from './BulkFoodPickerModal';
 import ReplaceFoodModal from './ReplaceFoodModal';
-import { scaleFoodNutrients } from '@/services/nutrition';
 import { calculateFoodNutrients } from '@/lib/nutritionUnits';
 import { ChevronUp, ChevronDown, Trash2, Plus, Utensils, StickyNote, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ export default function MealSection({
   onMoveDown,
   onRemove,
   onAddItem,
+  onAddItems,
   onUpdateItemAmount,
   onRemoveItem,
   onReplaceItem,
@@ -34,6 +35,7 @@ export default function MealSection({
   isDragging,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [replacementIndex, setReplacementIndex] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -277,7 +279,10 @@ export default function MealSection({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          if (onAddItems) setBulkPickerOpen(true);
+          else setPickerOpen(true);
+        }}
         className="w-full text-xs border-dashed"
       >
         <Plus className="w-3.5 h-3.5" /> Add Food to {meal.meal_name || `Meal ${index + 1}`}
@@ -291,6 +296,17 @@ export default function MealSection({
           setPickerOpen(false);
         }}
       />
+
+      {onAddItems && (
+        <BulkFoodPickerModal
+          open={bulkPickerOpen}
+          onClose={() => setBulkPickerOpen(false)}
+          onAddItems={(foodItems) => {
+            onAddItems(foodItems);
+            setBulkPickerOpen(false);
+          }}
+        />
+      )}
 
       <ReplaceFoodModal
         open={replacementIndex !== null}

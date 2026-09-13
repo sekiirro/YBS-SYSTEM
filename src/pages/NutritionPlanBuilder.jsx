@@ -13,22 +13,34 @@ import useAutosave from '@/hooks/useAutosave';
 import { ArrowLeft, Save, Bookmark, Plus, Users, Search, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function NutritionPlanBuilder() {
-  const { id } = useParams();
+export default function NutritionPlanBuilder(props = {}) {
+  const {
+    initialPlanId: propPlanId,
+    templateId: propTemplateId,
+    clientId: propClientId,
+    clientName: propClientName,
+    workspaceId: propWorkspaceId,
+    embedded = false,
+    onExit,
+  } = props;
+  const { id: routeId } = useParams();
   const [searchParams] = useSearchParams();
-  const templateId = searchParams.get('templateId');
-  const queryClientId = searchParams.get('clientId');
+  const templateId = propTemplateId || searchParams.get('templateId');
+  const queryClientId = propClientId || searchParams.get('clientId');
+  const queryClientName = propClientName || null;
   const returnTo = searchParams.get('returnTo');
   const navigate = useNavigate();
   const { user } = useAuth();
-  const wsId = getActiveWorkspaceId(user);
+  const activeWsId = getActiveWorkspaceId(user);
+  const wsId = propWorkspaceId || activeWsId;
+  const id = propPlanId || routeId;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   // Plan Meta State
-  const [planId, setPlanId] = useState(id || null);
+  const [planId, setPlanId] = useState(propPlanId || id || null);
   const [isTemplate, setIsTemplate] = useState(false);
   const [status, setStatus] = useState('draft');
   const [name, setName] = useState('');
@@ -114,7 +126,7 @@ export default function NutritionPlanBuilder() {
 
             if (queryClientId) {
               const matched = clientList.find((c) => c.id === queryClientId);
-              if (matched) setSelectedClient(matched);
+              setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
           }
         } else {
@@ -130,7 +142,7 @@ export default function NutritionPlanBuilder() {
 
           if (queryClientId) {
             const matched = clientList.find((c) => c.id === queryClientId);
-            if (matched) setSelectedClient(matched);
+            setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
         }
       } catch (err) {
@@ -142,7 +154,7 @@ export default function NutritionPlanBuilder() {
     })();
 
     return () => { isMounted = false; };
-  }, [id, templateId, queryClientId, searchParams]);
+  }, [id, templateId, queryClientId, queryClientName, searchParams]);
 
   // ── 2. Live Plan Totals ──
   const planTotals = useMemo(() => calculatePlanTotals(meals), [meals]);
@@ -241,6 +253,28 @@ export default function NutritionPlanBuilder() {
     });
   };
 
+  // Batch append (multi-select bulk add): a single draft-state update for the
+  // whole group, so one autosave write persists every new item at once.
+  const handleAddItemsToMeal = (mealIndex, foodItems = []) => {
+    if (foodItems.length === 0) return;
+    setMeals((prev) => {
+      const next = [...prev];
+      const targetMeal = next[mealIndex];
+      const currentItems = targetMeal.items || [];
+      next[mealIndex] = {
+        ...targetMeal,
+        items: [
+          ...currentItems,
+          ...foodItems.map((foodItem) => ({
+            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            ...foodItem,
+          })),
+        ],
+      };
+      return next;
+    });
+  };
+
   const handleUpdateItemAmount = (mealIndex, itemIndex, updatedItem) => {
     setMeals((prev) => {
       const next = [...prev];
@@ -333,7 +367,11 @@ export default function NutritionPlanBuilder() {
         await NutritionService.create(planPayload, meals);
       }
 
-      navigate(returnTo || '/nutrition');
+      if (embedded) {
+        onExit?.();
+      } else {
+        navigate(returnTo || '/nutrition');
+      }
     } catch (err) {
       console.error('Save failed:', err);
       setError(err.message || 'Failed to save nutrition plan');
@@ -381,7 +419,11 @@ export default function NutritionPlanBuilder() {
       await NutritionService.update(planId, planPayload, meals);
 
       await NutritionService.activatePlan(planId, selectedClient.id);
-      navigate(returnTo || '/nutrition');
+      if (embedded) {
+        onExit?.();
+      } else {
+        navigate(returnTo || '/nutrition');
+      }
     } catch (err) {
       console.error('Activation failed:', err);
       setError(err.message || 'Failed to activate plan');
@@ -442,7 +484,11 @@ export default function NutritionPlanBuilder() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={async () => { await autosave.flush(); navigate('/nutrition'); }}
+            onClick={async () => {
+              await autosave.flush();
+              if (embedded) onExit?.();
+              else navigate('/nutrition');
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4" /> Back
@@ -627,6 +673,7 @@ export default function NutritionPlanBuilder() {
                             onMoveDown={() => handleMoveMeal(mIdx, 1)}
                             onRemove={() => handleRemoveMeal(mIdx)}
                             onAddItem={(item) => handleAddItemToMeal(mIdx, item)}
+                            onAddItems={(items) => handleAddItemsToMeal(mIdx, items)}
                             onUpdateItemAmount={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}
                             onRemoveItem={(itIdx) => handleRemoveItemFromMeal(mIdx, itIdx)}
                             onReplaceItem={(itIdx, updated) => handleUpdateItemAmount(mIdx, itIdx, updated)}

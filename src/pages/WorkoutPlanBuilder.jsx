@@ -214,15 +214,27 @@ function getDefaultDays(splitType, customSplitName) {
   }));
 }
 
-export default function WorkoutPlanBuilder() {
-  const { id } = useParams();
+export default function WorkoutPlanBuilder(props = {}) {
+  const {
+    initialPlanId: propPlanId,
+    templateId: propTemplateId,
+    clientId: propClientId,
+    clientName: propClientName,
+    workspaceId: propWorkspaceId,
+    embedded = false,
+    onExit,
+  } = props;
+  const { id: routeId } = useParams();
   const [searchParams] = useSearchParams();
-  const templateId = searchParams.get('templateId');
-  const queryClientId = searchParams.get('clientId');
+  const templateId = propTemplateId || searchParams.get('templateId');
+  const queryClientId = propClientId || searchParams.get('clientId');
+  const queryClientName = propClientName || null;
   const returnTo = searchParams.get('returnTo');
   const navigate = useNavigate();
   const { user } = useAuth();
-  const wsId = getActiveWorkspaceId(user);
+  const activeWsId = getActiveWorkspaceId(user);
+  const wsId = propWorkspaceId || activeWsId;
+  const id = propPlanId || routeId;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -234,7 +246,7 @@ export default function WorkoutPlanBuilder() {
   const [successMessage, setSuccessMessage] = useState('');
 
   // Plan Meta State
-  const [planId, setPlanId] = useState(id || null);
+  const [planId, setPlanId] = useState(propPlanId || id || null);
   const [isTemplate, setIsTemplate] = useState(false);
   const [name, setName] = useState('');
   const [splitType, setSplitType] = useState('upper_lower');
@@ -433,7 +445,7 @@ export default function WorkoutPlanBuilder() {
 
             if (queryClientId) {
               const matched = clientList.find((c) => c.id === queryClientId);
-              if (matched) setSelectedClient(matched);
+              setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
           }
         } else {
@@ -444,7 +456,7 @@ export default function WorkoutPlanBuilder() {
 
           if (queryClientId) {
             const matched = clientList.find((c) => c.id === queryClientId);
-            if (matched) setSelectedClient(matched);
+            setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
         }
       } catch (err) {
@@ -455,7 +467,7 @@ export default function WorkoutPlanBuilder() {
       }
     })();
     return () => { isMounted = false; };
-  }, [id, templateId, queryClientId]);
+  }, [id, templateId, queryClientId, queryClientName]);
 
   // ─── 2. Live Volume Calculations ────────────────────────────────────
   const volumeData = useMemo(() => {
@@ -975,7 +987,7 @@ export default function WorkoutPlanBuilder() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={async () => { await autosave.flush(); navigate(returnTo || '/workouts'); }}
+            onClick={async () => { await autosave.flush(); if (embedded) onExit?.(); else navigate(returnTo || '/workouts'); }}
             className="p-2 rounded-xl bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
             title="Back to Workout Plans"
           >
