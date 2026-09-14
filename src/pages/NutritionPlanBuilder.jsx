@@ -33,7 +33,10 @@ export default function NutritionPlanBuilder(props = {}) {
   const { user } = useAuth();
   const activeWsId = getActiveWorkspaceId(user);
   const wsId = propWorkspaceId || activeWsId;
-  const id = propPlanId || routeId;
+  // Embedded builders mount under /clients/:id, where useParams().id is the
+  // CLIENT id — it must never be mistaken for a nutrition plan id. Only the
+  // standalone /nutrition/builder/:id route carries a plan id in the URL.
+  const id = propPlanId || (!embedded ? routeId : undefined);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,6 +66,10 @@ export default function NutritionPlanBuilder(props = {}) {
 
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
+  // Becomes true only after the load effect finishes hydrating state for the
+  // requested mode. Autosave stays disabled until then so no PATCH can fire
+  // with default/blank state or before a failed load is reported.
+  const [initialized, setInitialized] = useState(false);
 
   // ── 1. Load Initial Data ──
   useEffect(() => {
@@ -71,12 +78,17 @@ export default function NutritionPlanBuilder(props = {}) {
       try {
         setLoading(true);
 
-        // Load all available clients for selector
-        const clientList = await ClientsService.list({});
-        if (isMounted) setClients(clientList || []);
+        let clientList = [];
 
         if (id) {
           // Editing existing plan
+          try {
+            clientList = await ClientsService.list({}) || [];
+          } catch {
+            clientList = [];
+          }
+          if (isMounted) setClients(clientList);
+
           const plan = await NutritionService.getById(id);
           if (isMounted && plan) {
             setPlanId(plan.id);
@@ -90,6 +102,11 @@ export default function NutritionPlanBuilder(props = {}) {
             }
             setMeals(plan.meals || []);
             if (isMounted) setServerSnapshot(JSON.stringify([plan.name || '', plan.notes || '', plan.meals || []]));
+            if (isMounted) setInitialized(true);
+          } else if (isMounted) {
+            setError('Failed to load plan details');
+            setLoading(false);
+            return;
           }
         } else if (templateId) {
           // Pre-filling builder from a template (deep copy without saving to DB)
@@ -128,9 +145,16 @@ export default function NutritionPlanBuilder(props = {}) {
               const matched = clientList.find((c) => c.id === queryClientId);
               setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
+            if (isMounted) setInitialized(true);
           }
         } else {
           // New Blank Plan
+          try {
+            clientList = await ClientsService.list({}) || [];
+          } catch {
+            clientList = [];
+          }
+          if (isMounted) setClients(clientList);
           setName('New Nutrition Plan');
           setIsTemplate(searchParams.get('type') === 'template');
           setStatus(searchParams.get('type') === 'template' ? 'active' : 'draft');
@@ -144,6 +168,7 @@ export default function NutritionPlanBuilder(props = {}) {
             const matched = clientList.find((c) => c.id === queryClientId);
             setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
+          if (isMounted) setInitialized(true);
         }
       } catch (err) {
         console.error('Error loading builder state:', err);
@@ -160,10 +185,11 @@ export default function NutritionPlanBuilder(props = {}) {
   const planTotals = useMemo(() => calculatePlanTotals(meals), [meals]);
 
   // ── 2b. Autosave (server-persistent) ──────────────────────────────
-  // Drafts only: once a plan row exists the latest edits are persisted
-  // automatically. Active plans and templates keep their explicit save flows
+  // Drafts only, and only after the load effect has finished hydrating state:
+  // once a plan row exists the latest edits are persisted automatically.
+  // Active plans and templates keep their explicit save flows
   // so activation/assignment is never triggered implicitly by autosave.
-  const autosaveEnabled = !!planId && !isTemplate && status === 'draft';
+  const autosaveEnabled = !!planId && !isTemplate && status === 'draft' && initialized;
   const autosaveSnapshot = JSON.stringify([name, notes, meals]);
   const autosave = useAutosave({
     id: planId,

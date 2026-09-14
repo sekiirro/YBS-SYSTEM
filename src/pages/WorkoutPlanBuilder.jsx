@@ -234,7 +234,10 @@ export default function WorkoutPlanBuilder(props = {}) {
   const { user } = useAuth();
   const activeWsId = getActiveWorkspaceId(user);
   const wsId = propWorkspaceId || activeWsId;
-  const id = propPlanId || routeId;
+  // Embedded builders mount under /clients/:id, where useParams().id is the
+  // CLIENT id — it must never be mistaken for a workout plan id. Only the
+  // standalone /workouts/builder/:id route carries a plan id in the URL.
+  const id = propPlanId || (!embedded ? routeId : undefined);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -305,6 +308,10 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
+  // Becomes true only after the load effect finishes hydrating state for the
+  // requested mode. Autosave stays disabled until then so no PATCH can fire
+  // with default/blank state or before a failed load is reported.
+  const [initialized, setInitialized] = useState(false);
 
   // ─── 1. Load Initial Plan / Template Data ───────────────────────────
   useEffect(() => {
@@ -313,8 +320,16 @@ export default function WorkoutPlanBuilder(props = {}) {
       try {
         setLoading(true);
 
-        const clientList = await ClientsService.list({});
-        if (isMounted) setClients(clientList || []);
+        // Client selector must never block plan loading: a client-list
+        // failure degrades to an empty selector, the plan still loads.
+        let clientList = [];
+        try {
+          clientList = await ClientsService.list({}) || [];
+        } catch (listErr) {
+          console.error('Error loading clients for builder:', listErr);
+          clientList = [];
+        }
+        if (isMounted) setClients(clientList);
 
         WorkspacesService.list()
           .then((wsList) => {
@@ -380,6 +395,13 @@ export default function WorkoutPlanBuilder(props = {}) {
                 migratedDays,
               ]));
             }
+            if (isMounted) setInitialized(true);
+          } else if (isMounted) {
+            // Never silently fall through to a blank plan when an explicit
+            // plan id was requested but no row came back.
+            setError('Failed to load workout program data.');
+            setLoading(false);
+            return;
           }
         } else if (templateId) {
           const tpl = await WorkoutsService.getById(templateId);
@@ -447,6 +469,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               const matched = clientList.find((c) => c.id === queryClientId);
               setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
+            if (isMounted) setInitialized(true);
           }
         } else {
           setName('New Workout Program');
@@ -458,6 +481,7 @@ export default function WorkoutPlanBuilder(props = {}) {
             const matched = clientList.find((c) => c.id === queryClientId);
             setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
+          if (isMounted) setInitialized(true);
         }
       } catch (err) {
         console.error('Error loading workout builder data:', err);
@@ -477,11 +501,13 @@ export default function WorkoutPlanBuilder(props = {}) {
   const activeDay = days[activeDayIndex] || days[0];
 
   // ─── 2b. Autosave (server-persistent) ──────────────────────────────
-  // Once a plan/template row exists, the latest edits are persisted
-  // automatically in place. Brand-new plans (no id) keep the explicit
-  // "Save & Assign" flow — autosave never creates rows on its own and never
-  // reassigns a plan to a client.
-  const autosaveEnabled = !!planId;
+  // Once a plan/template row exists AND the load effect has finished
+  // hydrating state, the latest edits are persisted automatically in place.
+  // Brand-new plans (no id) keep the explicit "Save & Assign" flow —
+  // autosave never creates rows on its own and never reassigns a plan
+  // to a client. The initialized gate additionally guarantees no PATCH
+  // can fire with default/blank state or after a failed load.
+  const autosaveEnabled = !!planId && initialized;
   const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, exerciseLibraryWorkspaceId, days]);
   const autosave = useAutosave({
     id: planId,

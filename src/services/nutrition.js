@@ -156,9 +156,10 @@ export const NutritionService = {
       .from('nutrition_plans')
       .select('*, clients(id, full_name, client_code), nutrition_meals(*, nutrition_items(*, foods(*)))')
       .eq('id', id)
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (error) throw error;
-    return formatPlan(data);
+    return data ? formatPlan(data) : null;
   },
 
   /**

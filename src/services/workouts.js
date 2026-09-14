@@ -175,9 +175,10 @@ export const WorkoutsService = {
         )
       `)
       .eq('id', id)
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (error) throw error;
-    return formatPlan(data);
+    return data ? formatPlan(data) : null;
   },
 
   /**
