@@ -29,4 +29,5 @@ dist-ssr
 
 .env
 .vite
+deno.lock
 base44/.app.jsonc

@@ -5,7 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // YBS Gemini gateway.
 //
 // Single, centralized, server-side Gemini configuration point:
-//  - the model is fixed server-side (default gemini-3.5-flash; only the
+//  - the model is fixed server-side (default gemini-3.8-flash; only the
 //    GEMINI_MODEL env var may override it). The client can never pick a model.
 //  - the API key lives exclusively in the GEMINI_API_KEY Supabase secret and
 //    is never exposed to the browser, stored in code, or echoed in logs.
@@ -16,7 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 //   failure -> 4xx/5xx { success: false, code: "<machine code>", error: "<generic message>" }
 //
 
-const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 const MAX_PROMPT_CHARS = 8000;
 const MAX_OUTPUT_TOKENS = 1024;
 const GEMINI_TIMEOUT_MS = 25000;

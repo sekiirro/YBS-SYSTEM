@@ -16,7 +16,7 @@
 import { GoogleGenAI } from 'npm:@google/genai@2.22.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 export const MAX_OUTPUT_TOKENS = 2048;
 export const GEMINI_TIMEOUT_MS = 60000;
 
@@ -123,12 +123,41 @@ export interface Source {
 export function extractSources(response: unknown, limit = 4): Source[] {
   try {
     const candidates = (response as any)?.candidates;
-    const grounding = Array.isArray(candidates) ? candidates[0]?.groundingMetadata : undefined;
+    if (!Array.isArray(candidates)) return [];
+    const firstCandidate = candidates[0];
+
+    // Path 1: groundingChunks from groundingMetadata (Google Search grounding)
+    const grounding = firstCandidate?.groundingMetadata;
     const chunks = grounding?.groundingChunks || [];
-    return chunks
+    const fromChunks = chunks
       .filter((c: any) => c?.web && typeof c.web.url === 'string')
       .slice(0, limit)
       .map((c: any) => ({ title: String(c.web.title || 'Source'), url: c.web.url }));
+
+    // Path 2: url_citation annotations on text content parts (newer Gemini API format)
+    const content = firstCandidate?.content;
+    const parts = Array.isArray(content?.parts) ? content.parts : [];
+    const fromAnnotations: Source[] = [];
+    for (const part of parts) {
+      const annotations = Array.isArray(part?.annotations) ? part.annotations : [];
+      for (const ann of annotations) {
+        if (ann?.type === 'url_citation' && typeof ann?.url === 'string') {
+          fromAnnotations.push({ title: String(ann.title || 'Source'), url: ann.url });
+        }
+      }
+      if (fromAnnotations.length >= limit) break;
+    }
+
+    // Combine both paths, deduplicate by URL, and return up to limit.
+    const seen = new Set<string>();
+    const combined: Source[] = [];
+    for (const s of [...fromChunks, ...fromAnnotations]) {
+      if (!seen.has(s.url) && s.url) {
+        seen.add(s.url);
+        combined.push(s);
+      }
+    }
+    return combined.slice(0, limit);
   } catch {
     return [];
   }
@@ -276,12 +305,9 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     });
   }
 
-  // 5. Run Gemini with structured JSON output.
-  //    NOTE: Google Search grounding (tools: [{ googleSearch: {} }]) is
-  //    mutually exclusive with responseSchema / responseMimeType:'application/json'
-  //    in the Gemini API — combining them returns a 400 error every time.
-  //    We use structured output for reliable coaching data; grounding citations
-  //    are not available when responseSchema is in use.
+  // 5. Run Gemini with structured JSON output and Google Search grounding.
+  //    Gemini 3 series supports combining structured outputs (responseSchema)
+  //    with built-in tools including googleSearch grounding.
   const gen = getGeminiConfig();
   if (!gen) {
     return errorResponse('server_not_configured', 'AI service is not configured.', 503);
@@ -292,20 +318,36 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     responseMimeType: 'application/json',
     responseSchema,
+    tools: [{ googleSearch: {} }],
   };
 
   let response: Record<string, any> | null = null;
-  try {
-    response = await withTimeout(
-      gen.ai.models.generateContent({
-        model: gen.model,
-        contents: prompt,
-        config: generateConfig,
-      }),
-      GEMINI_TIMEOUT_MS,
-    );
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await withTimeout(
+        gen.ai.models.generateContent({
+          model: gen.model,
+          contents: prompt,
+          config: generateConfig,
+        }),
+        GEMINI_TIMEOUT_MS,
+      );
+      break;
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      const status = (err as any)?.status || (err as any)?.code;
+      if (status === 503 || status === 429) {
+        const retryAfter = (err as any)?.retryAfter ?? 2000;
+        await new Promise((r) => setTimeout(r, retryAfter));
+        continue;
+      }
+      break;
+    }
+  }
+
+  if (!response) {
+    const detail = lastErr?.message || 'Unknown Gemini error';
     console.error(`${kind} analysis: generation failed:`, detail);
     return errorResponse('ai_unavailable', 'AI service is currently unavailable.', 502);
   }
@@ -325,6 +367,9 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     return errorResponse('generation_failed', 'The AI summary could not be generated. Please try again.', 502);
   }
 
+  // Extract sources from grounding metadata when Google Search was used.
+  const sources = extractSources(response, 4);
+
   // 6. Cache for identical future requests. A failed cache write never fails
   //    the user-facing result.
   const { error: cacheErr } = await auth.userClient.from('ai_analysis_cache').upsert(
@@ -335,7 +380,7 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
       input_fingerprint: fingerprint,
       model: gen.model,
       result: parsed,
-      sources: [],
+      sources,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'assessment_id,analysis_type' },
@@ -349,6 +394,6 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
     cached: false,
     model: gen.model,
     analysis: parsed,
-    sources: [],
+    sources,
   });
 }
