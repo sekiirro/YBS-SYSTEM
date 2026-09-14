@@ -11,8 +11,9 @@ import { WorkspacesService } from '@/services/workspaces';
 import { hasPermission, getClientFilterForUser } from '@/lib/permissions';
 import { getActiveWorkspaceId, getRoleCategory, isPlatformTrainer, isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Input, Select, Modal } from '@/components/ui';
+import { toast } from '@/components/ui/use-toast';
 import { formatDate, getSubscriptionStatusColor, generateClientCode, getInitials } from '@/lib/ybs-utils';
-import { Users, Search, Plus, X, Building2 } from 'lucide-react';
+import { Users, Search, Plus, X, Building2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Clients() {
@@ -29,6 +30,7 @@ export default function Clients() {
   const [trainerFilter, setTrainerFilter] = useState('all');
   const [packageFilter, setPackageFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [assigningId, setAssigningId] = useState(null);
   const aliveRef = useRef(true);
 
   const isTrainer = isPlatformTrainer(user) || user?.role === 'trainer';
@@ -106,7 +108,7 @@ export default function Clients() {
       }
       if (statusFilter === 'pending') return c.status === 'pending';
       if (statusFilter !== 'all' && c.subscription_status !== statusFilter) return false;
-      if (trainerFilter !== 'all' && c.assigned_trainer_id !== trainerFilter) return false;
+      if (trainerFilter !== 'all' && c.assigned_ybs_coach_id !== trainerFilter) return false;
       if (packageFilter !== 'all' && c.package_id !== packageFilter) return false;
       return true;
     });
@@ -116,6 +118,38 @@ export default function Clients() {
   const showWsColumn = isAdmin && activeWsTab === 'all';
 
   const hasActiveFilters = search || statusFilter !== 'all' || trainerFilter !== 'all' || packageFilter !== 'all';
+
+  const canAssignTrainer = !isTrainer && hasPermission(user, 'clients.update');
+
+  const trainerName = (trainerId) => {
+    if (!trainerId) return null;
+    const t = trainers.find((x) => x.id === trainerId);
+    return t ? (t.full_name || t.email) : null;
+  };
+
+  const handleAssignTrainer = async (client, trainerId) => {
+    if (assigningId || trainerId === (client.assigned_ybs_coach_id || '')) return;
+    setAssigningId(client.id);
+    try {
+      await ClientsService.update(client.id, { assigned_ybs_coach_id: trainerId || null });
+      setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, assigned_ybs_coach_id: trainerId || null } : c)));
+      toast({
+        title: trainerId ? 'Trainer assigned' : 'Trainer removed',
+        description: trainerId
+          ? `${client.full_name} is now assigned to ${trainerName(trainerId)}.`
+          : `${client.full_name}'s trainer assignment was removed.`,
+      });
+    } catch (err) {
+      console.error('Failed to assign trainer:', err);
+      toast({
+        title: 'Failed to update trainer',
+        description: err?.message || 'The trainer could not be assigned. Try again or contact an administrator.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAssigningId(null);
+    }
+  };
 
   if (loading) return <LoadingState label="Loading clients…" />;
 
@@ -295,7 +329,33 @@ export default function Clients() {
                     )}
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.phone || '—'}</span></td>
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.package_name || '—'}</span></td>
-                    {!isTrainer && <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.assigned_trainer_name || '—'}</span></td>}
+                    {!isTrainer && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        {canAssignTrainer ? (
+                          <div className="space-y-1">
+                            <select
+                              value={c.assigned_ybs_coach_id || ''}
+                              disabled={assigningId === c.id}
+                              onChange={(e) => handleAssignTrainer(c, e.target.value)}
+                              title={trainerName(c.assigned_ybs_coach_id) || 'Assign trainer'}
+                              className="h-8 w-full max-w-[180px] px-2 rounded-lg bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40 disabled:opacity-60 transition-colors"
+                            >
+                              <option value="">No trainer</option>
+                              {trainers.map((t) => (
+                                <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
+                              ))}
+                            </select>
+                            {assigningId === c.id && (
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[12px] text-muted-foreground">{trainerName(c.assigned_ybs_coach_id) || '—'}</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{formatDate(c.subscription_end_date)}</span></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
