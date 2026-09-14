@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ExercisesService } from '@/services/exercises';
+import { ExercisesService, isGlobalExercise } from '@/services/exercises';
 import { Modal, Badge } from '@/components/ui';
 import { Search, Dumbbell, Video, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -174,6 +174,14 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
                     <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
                       {ex.name}
                     </span>
+                    {isGlobalExercise(ex) && (
+                      <span
+                        className="inline-flex items-center text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                        title="YBS Global Library — available in every workspace"
+                      >
+                        YBS
+                      </span>
+                    )}
                     {ex.video_url && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                         <Video className="w-2.5 h-2.5" /> Video

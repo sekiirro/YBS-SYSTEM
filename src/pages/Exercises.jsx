@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
-import { ExercisesService } from '@/services/exercises';
+import { ExercisesService, isGlobalExercise } from '@/services/exercises';
 import { WorkspacesService } from '@/services/workspaces';
 import { isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Button, Modal, Input, Select, TextArea } from '@/components/ui';
@@ -30,8 +30,12 @@ export default function Exercises() {
 
   // Write access for the ACTIVE tab: platform owner, or the workspace
   // owner of the currently selected workspace. RLS enforces this server-side.
+  // YBS Global rows (workspace_id NULL) are read-only for everyone
+  // except the platform owner — enforced per row below and by RLS.
   const managedIds = (user?.managed_workspace_ids || []);
   const canManageActive = isPlatformAdmin(user) || (!!activeWs && managedIds.includes(activeWs.id));
+  const canManageExercise = (exercise) =>
+    isPlatformAdmin(user) || (!isGlobalExercise(exercise) && canManageActive);
 
   useEffect(() => {
     loadWorkspaces();
@@ -163,11 +167,24 @@ export default function Exercises() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filtered.map((e) => (
+              {filtered.map((e) => {
+                const isGlobal = isGlobalExercise(e);
+                const canManageRow = canManageExercise(e);
+                return (
                 <div key={e.id} className="surface-card p-4 hover:glow-subtle transition-all">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="text-[14px] font-medium truncate">{e.name}</h3>
+                      <h3 className="text-[14px] font-medium truncate flex items-center gap-1.5">
+                        <span className="truncate">{e.name}</span>
+                        {isGlobal && (
+                          <span
+                            className="inline-flex items-center shrink-0 text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                            title="YBS Global Library — available in every workspace"
+                          >
+                            YBS
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{e.category?.replace('_', ' ')}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -177,7 +194,7 @@ export default function Exercises() {
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       )}
-                      {canManageActive && (
+                      {canManageRow && (
                         <>
                           <button
                             type="button"
@@ -202,8 +219,10 @@ export default function Exercises() {
                   </div>
                   {e.muscle_group && <p className="text-[12px] text-muted-foreground mt-2">{e.muscle_group}</p>}
                   {e.equipment && <p className="text-[11px] text-muted-foreground mt-1">Equipment: {e.equipment}</p>}
+                  {isGlobal && <p className="text-[10px] text-amber-300/80 mt-1">YBS Global • available in every workspace</p>}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
@@ -228,15 +247,21 @@ export default function Exercises() {
 }
 
 function CreateExerciseModal({ workspaceId, onClose, onCreated }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({ name: '', video_url: '', category: 'chest', muscle_group: '', equipment: '', instructions: '' });
+  const [makeGlobal, setMakeGlobal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const canCreateGlobal = isPlatformAdmin(user);
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError('');
-      await ExercisesService.create({ ...form, workspace_id: workspaceId });
+      // Global exercises (workspace_id NULL) are platform-owner only —
+      // RLS rejects them for anyone else. Normal users always create
+      // workspace-owned rows.
+      await ExercisesService.create({ ...form, workspace_id: canCreateGlobal && makeGlobal ? null : workspaceId });
       onCreated();
     } catch (err) {
       console.error(err);
@@ -249,6 +274,20 @@ function CreateExerciseModal({ workspaceId, onClose, onCreated }) {
   return (
     <Modal open onClose={onClose} title="Add Exercise" size="lg">
       <div className="space-y-4">
+        {canCreateGlobal && (
+          <label className="flex items-start gap-2 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-[12px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={makeGlobal}
+              onChange={(e) => setMakeGlobal(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-semibold text-amber-300">YBS Global exercise</span>
+              <span className="block text-muted-foreground mt-0.5">Available in every workspace. Only platform owners can create global exercises.</span>
+            </span>
+          </label>
+        )}
         <Input label="Exercise Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Barbell Bench Press" />
         <Input label="Video / Resource URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://youtube.com/…" />
         <div className="grid grid-cols-2 gap-3">
@@ -302,6 +341,11 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
   return (
     <Modal open onClose={onClose} title={`Edit Exercise — ${exercise.name}`} size="lg">
       <div className="space-y-4">
+        {isGlobalExercise(exercise) && (
+          <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 text-[12px] text-amber-300">
+            YBS Global exercise — edits apply platform-wide. Only platform owners can edit.
+          </div>
+        )}
         <Input label="Exercise Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Input label="Video / Resource URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://youtube.com/…" />
         <div className="grid grid-cols-2 gap-3">

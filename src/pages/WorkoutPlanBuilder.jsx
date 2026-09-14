@@ -1152,7 +1152,7 @@ export default function WorkoutPlanBuilder(props = {}) {
             <label className="text-xs font-semibold text-foreground">Exercise Library Source</label>
             <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
               <Info className="w-3 h-3 shrink-0" />
-              The exercise picker browses exercises owned by this workspace.
+              The exercise picker browses this workspace plus the YBS Global Library.
               {libraryWorkspace && (
                 <span>
                   Currently:{' '}
