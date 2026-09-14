@@ -200,7 +200,7 @@ export default function Exercises() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {e.video_url && (
-                        <a href={e.video_url} target="_blank" rel="noopener noreferrer"
+                        <a href={/^https?:\/\//i.test(e.video_url) ? e.video_url : `https://${e.video_url}`} target="_blank" rel="noopener noreferrer"
                           className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                           <ExternalLink className="w-4 h-4" />
                         </a>

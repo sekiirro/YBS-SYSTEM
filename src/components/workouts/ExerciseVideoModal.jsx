@@ -2,24 +2,30 @@ import React from 'react';
 import { Modal, Button } from '@/components/ui';
 import { ExternalLink, Video } from 'lucide-react';
 
-function getEmbedUrl(url) {
+function normalizeExternalUrl(url) {
   if (!url) return null;
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+function getEmbedUrl(url) {
+  const normalized = normalizeExternalUrl(url);
+  if (!normalized) return null;
 
   // YouTube
-  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  const ytMatch = normalized.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
   if (ytMatch && ytMatch[1]) {
     return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
   }
 
   // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)/);
+  const vimeoMatch = normalized.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)/);
   if (vimeoMatch && vimeoMatch[1]) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
   }
 
   // Direct video file
-  if (url.match(/\.(mp4|webm|ogg)($|\?)/i)) {
-    return url;
+  if (normalized.match(/\.(mp4|webm|ogg)($|\?)/i)) {
+    return normalized;
   }
 
   return null;
@@ -29,6 +35,7 @@ export default function ExerciseVideoModal({ open, onClose, exerciseName, videoU
   if (!open) return null;
 
   const embedUrl = getEmbedUrl(videoUrl);
+  const externalUrl = normalizeExternalUrl(videoUrl);
   const isDirectVideo = embedUrl && embedUrl.match(/\.(mp4|webm|ogg)($|\?)/i);
 
   return (
@@ -63,7 +70,7 @@ export default function ExerciseVideoModal({ open, onClose, exerciseName, videoU
               </p>
             </div>
             <a
-              href={videoUrl}
+              href={externalUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
