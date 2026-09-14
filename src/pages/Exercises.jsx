@@ -5,7 +5,8 @@ import { ExercisesService, isGlobalExercise } from '@/services/exercises';
 import { WorkspacesService } from '@/services/workspaces';
 import { isPlatformAdmin } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Button, Modal, Input, Select, TextArea } from '@/components/ui';
-import { Dumbbell, Plus, Search, ExternalLink, Edit, Archive, Building2 } from 'lucide-react';
+import ExerciseVersionLinkModal from '@/components/workouts/ExerciseVersionLinkModal';
+import { Dumbbell, Plus, Search, ExternalLink, Edit, Archive, Building2, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_WS_ID = '00000000-0000-0000-0000-000000000001';
@@ -25,6 +26,7 @@ export default function Exercises() {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [showCreate, setShowCreate] = useState(false);
+  const [showVersionLinks, setShowVersionLinks] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [archivingId, setArchivingId] = useState(null);
 
@@ -113,7 +115,16 @@ export default function Exercises() {
         title="Exercise Library"
         description={activeWs ? `Workspace: ${activeWs.name}` : 'Select a workspace to view its exercise library'}
         icon={Dumbbell}
-        actions={canManageActive && <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> Add Exercise</Button>}
+        actions={isPlatformAdmin(user) ? (
+          <>
+            <Button variant="secondary" onClick={() => setShowVersionLinks(true)}>
+              <Link2 className="w-4 h-4" /> Link Versions
+            </Button>
+            {canManageActive && <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> Add Exercise</Button>}
+          </>
+        ) : (
+          canManageActive && <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> Add Exercise</Button>
+        )}
       />
 
       {workspaces.length === 0 ? (
@@ -240,6 +251,12 @@ export default function Exercises() {
           exercise={editingExercise}
           onClose={() => setEditingExercise(null)}
           onUpdated={() => { setEditingExercise(null); loadExercises(activeWs.id); }}
+        />
+      )}
+      {showVersionLinks && (
+        <ExerciseVersionLinkModal
+          open={showVersionLinks}
+          onClose={() => setShowVersionLinks(false)}
         />
       )}
     </div>

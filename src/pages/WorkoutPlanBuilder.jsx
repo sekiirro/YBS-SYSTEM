@@ -16,8 +16,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import ExerciseSearchModal from '@/components/workouts/ExerciseSearchModal';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
+import ExerciseVersionLinkModal from '@/components/workouts/ExerciseVersionLinkModal';
 import SaveStatus from '@/components/SaveStatus';
 import useAutosave from '@/hooks/useAutosave';
+import { ExerciseVersioningService } from '@/services/exerciseVersioning';
 import {
   Dumbbell,
   ArrowLeft,
@@ -40,6 +42,7 @@ import {
   Coffee,
   Pencil,
   MoreVertical,
+  Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -278,6 +281,9 @@ export default function WorkoutPlanBuilder(props = {}) {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [activeVideoExercise, setActiveVideoExercise] = useState(null);
 
+  // Platform-owner "Link exercise versions" modal (targets one exercise).
+  const [versionLinkExercise, setVersionLinkExercise] = useState(null); // { id, name } | null
+
   // Target exercise index for "Replace Exercise" (null = plain add mode)
   const [replaceIndex, setReplaceIndex] = useState(null);
 
@@ -413,7 +419,22 @@ export default function WorkoutPlanBuilder(props = {}) {
             setNotes(tpl.notes || '');
             setIsTemplate(false);
 
-            const clonedDays = (tpl.days || []).map((d, dIdx) => {
+            // Version resolution runs ONCE at template LOAD time. Each item
+            // resolves canonical -> target-workspace version -> YBS Global
+            // version -> original. Only identity fields (exercise_id, name,
+            // video, category…) are replaced; every programming column is
+            // preserved. Never retroactive on already-assigned plans.
+            let baseDays = tpl.days || [];
+            if (wsId && tpl.workspace_id !== wsId) {
+              try {
+                const resolved = await ExerciseVersioningService.resolvePlanForWorkspace(tpl.id, wsId);
+                baseDays = ExerciseVersioningService.applyResolution(baseDays, resolved.exercisesById, resolved.resolutions);
+              } catch (resolveErr) {
+                console.error('Failed to resolve template exercise versions:', resolveErr);
+              }
+            }
+
+            const clonedDays = (baseDays || []).map((d, dIdx) => {
               const isRest = d.day_type === 'rest_day' || !!d.rest_day;
               return {
                 id: `cloned-day-${dIdx}-${Date.now()}`,
@@ -459,6 +480,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                     prescribed_sets_detail: Array.isArray(ex.prescribed_sets_detail)
                       ? JSON.parse(JSON.stringify(ex.prescribed_sets_detail))
                       : [],
+                    _versionInfo: ex._versionInfo || null,
                   };
                 }),
               };
@@ -1551,6 +1573,14 @@ export default function WorkoutPlanBuilder(props = {}) {
                                 #{exIdx + 1}
                               </span>
                               <h4 className="text-sm font-semibold text-foreground">{ex.exercise_name}</h4>
+                              {ex._versionInfo && ex._versionInfo.linked === false && (
+                                <span
+                                  className="inline-flex items-center text-[9px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                                  title="No linked version of this exercise exists for this workspace yet. The YBS Global version (or the original) is shown until the platform owner links one."
+                                >
+                                  Not Linked
+                                </span>
+                              )}
                               <Badge className="text-[9px] uppercase font-mono py-0 px-1.5">
                                 {ex.category || 'general'}
                               </Badge>
@@ -1619,6 +1649,18 @@ export default function WorkoutPlanBuilder(props = {}) {
                             >
                               <Copy className="w-3.5 h-3.5" />
                             </button>
+
+                            {/* Link Exercise Versions (platform owner) */}
+                            {isPlatformAdmin(user) && (
+                              <button
+                                type="button"
+                                onClick={() => setVersionLinkExercise({ id: ex.exercise_id, name: ex.exercise_name })}
+                                className="p-1 rounded text-muted-foreground hover:text-foreground"
+                                title="Link exercise versions across workspaces"
+                              >
+                                <Link2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
 
                             {/* Delete */}
                             <button
@@ -1859,6 +1901,15 @@ export default function WorkoutPlanBuilder(props = {}) {
           exerciseName={activeVideoExercise.exercise_name}
           videoUrl={activeVideoExercise.video_url}
           instructions={activeVideoExercise.notes}
+        />
+      )}
+
+      {/* 2b. Exercise Version Linking (platform owner) */}
+      {isPlatformAdmin(user) && (
+        <ExerciseVersionLinkModal
+          open={!!versionLinkExercise}
+          onClose={() => setVersionLinkExercise(null)}
+          initialSourceExerciseId={versionLinkExercise?.id}
         />
       )}
 

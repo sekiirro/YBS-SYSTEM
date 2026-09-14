@@ -16,7 +16,7 @@ const CATEGORIES = [
   { id: 'full_body', label: 'Full Body', labelAr: 'جسم كامل' },
 ];
 
-export default function ExerciseSearchModal({ open, onClose, onSelectExercise, workspaceId, title, confirmLabel }) {
+export default function ExerciseSearchModal({ open, onClose, onSelectExercise, workspaceId, title, confirmLabel, globalOnly = false }) {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -41,7 +41,9 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
     try {
       setLoading(true);
       const data = await ExercisesService.list(workspaceId || undefined);
-      setExercises(data || []);
+      setExercises(
+        (data || []).filter((ex) => !globalOnly || isGlobalExercise(ex))
+      );
     } catch (err) {
       console.error('Failed to load exercises:', err);
     } finally {
