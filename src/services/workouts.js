@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabase';
+import { ExerciseVersioningService } from '@/services/exerciseVersioning';
 
 /**
  * Pure calculation helper for YBS Workout Volume.
@@ -149,7 +150,14 @@ export const WorkoutsService = {
       query = query.eq('client_id', filters.client_id);
     }
     if (filters.workspace_id) {
-      query = query.eq('workspace_id', filters.workspace_id);
+      // TEMPLATE lists also surface global templates (workspace_id IS NULL)
+      // — the same scoping search_plan_templates and workout_plans RLS use.
+      // Client programs stay strictly workspace-scoped.
+      if (filters.is_template === true) {
+        query = query.or(`workspace_id.eq.${filters.workspace_id},workspace_id.is.null`);
+      } else {
+        query = query.eq('workspace_id', filters.workspace_id);
+      }
     }
     if (filters.is_template !== undefined) {
       query = query.eq('is_template', filters.is_template);
@@ -325,6 +333,21 @@ export const WorkoutsService = {
 
     if (!sourcePlan) throw new Error('Source workout plan not found');
 
+    const targetWorkspaceId = overrides.workspace_id || sourcePlan.workspace_id;
+    let days = sourcePlan.days || [];
+
+    // Template copies resolve exercises to the TARGET workspace at
+    // assignment time (canonical -> target version -> YBS global -> original).
+    // Resolution never touches already-assigned plans.
+    if (sourcePlan.is_template && targetWorkspaceId && sourcePlan.id) {
+      try {
+        const resolved = await ExerciseVersioningService.resolvePlanForWorkspace(sourcePlan.id, targetWorkspaceId);
+        days = ExerciseVersioningService.applyResolution(days, resolved.exercisesById, resolved.resolutions);
+      } catch (resolveErr) {
+        console.error('Failed to resolve template exercises during assignment:', resolveErr);
+      }
+    }
+
     const newPlanPayload = {
       workspace_id: overrides.workspace_id || sourcePlan.workspace_id,
       client_id: clientId,
@@ -337,7 +360,7 @@ export const WorkoutsService = {
       notes: overrides.notes !== undefined ? overrides.notes : sourcePlan.notes,
     };
 
-    return this.create(newPlanPayload, sourcePlan.days || []);
+    return this.create(newPlanPayload, days);
   },
 
   /**
@@ -350,6 +373,20 @@ export const WorkoutsService = {
 
     if (!sourcePlan) throw new Error('Source workout plan not found');
 
+    let days = sourcePlan.days || [];
+
+    // Re-saved global templates resolve against the chosen destination
+    // workspace so the new template never pins foreign exercise ids.
+    const targetWorkspaceId = overrides.workspace_id || sourcePlan.workspace_id;
+    if (sourcePlan.is_template && targetWorkspaceId && sourcePlan.id) {
+      try {
+        const resolved = await ExerciseVersioningService.resolvePlanForWorkspace(sourcePlan.id, targetWorkspaceId);
+        days = ExerciseVersioningService.applyResolution(days, resolved.exercisesById, resolved.resolutions);
+      } catch (resolveErr) {
+        console.error('Failed to resolve template exercises while re-saving template:', resolveErr);
+      }
+    }
+
     const templatePayload = {
       workspace_id: overrides.workspace_id || sourcePlan.workspace_id,
       client_id: null,
@@ -360,7 +397,7 @@ export const WorkoutsService = {
       notes: sourcePlan.notes || null,
     };
 
-    return this.create(templatePayload, sourcePlan.days || []);
+    return this.create(templatePayload, days);
   },
 
   async delete(id) {

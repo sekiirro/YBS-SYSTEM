@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,40 +74,52 @@ export default function Activate() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session) {
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) throw error;
-      } else {
-        // With a valid invitation token the email is locked to the one
-        // returned by the server-side lookup; otherwise fall back to the
-        // entered email for legacy activation paths.
-        const signupEmail = invite?.email || email.trim().toLowerCase();
-        const { error } = await supabase.auth.signUp({
-          email: signupEmail,
-          password,
+      if (invite) {
+        // The invitation token is the authorization credential. The email,
+        // role and workspace are resolved server-side from the invitation
+        // ledger — the form email is never used as the identity authority.
+        // This create-or-activate call handles both a new email and an
+        // existing account (rotate password), so `User already registered`
+        // can no longer be surfaced for a valid invitation.
+        const { data, error } = await supabase.functions.invoke("activate-invite", {
+          body: { token, password },
         });
-        if (error) throw error;
+        if (error || !data || data.status !== "ok") {
+          let body = null;
+          try {
+            if (error?.context && typeof error.context.json === "function") {
+              body = await error.context.json();
+            }
+          } catch {
+            body = null;
+          }
+          throw new Error(body?.error || error?.message || "Account activation failed. Please try again.");
+        }
+      } else {
+        // Legacy paths (no invitation token): a logged-in user sets their own
+        // password; otherwise the typed email is used for a plain signup.
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+        } else {
+          const signupEmail = email.trim().toLowerCase();
+          const { error } = await supabase.auth.signUp({
+            email: signupEmail,
+            password,
+          });
+          if (error) throw error;
+        }
+        await markActivationComplete();
       }
-      await markActivationComplete();
 
       setSuccess(true);
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      const msg = err.message || "Account activation failed";
-      if (
-        invite &&
-        (msg.toLowerCase().includes("already registered") ||
-          msg.toLowerCase().includes("already been registered") ||
-          msg.toLowerCase().includes("user already"))
-      ) {
-        setError("An account already exists for this email. Please sign in instead.");
-      } else {
-        setError(msg);
-      }
+      setError(err.message || "Account activation failed");
     } finally {
       setLoading(false);
     }
