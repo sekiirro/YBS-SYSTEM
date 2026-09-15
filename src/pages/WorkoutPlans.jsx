@@ -365,7 +365,7 @@ export default function WorkoutPlans() {
                   Blank Program
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Start fresh with custom split, days, exercises, sets, reps, and RPE.
+                  Start fresh with custom split, days, exercises, sets, reps, and RIR.
                 </p>
               </div>
             </button>

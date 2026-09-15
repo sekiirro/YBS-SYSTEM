@@ -413,7 +413,7 @@ export default function WorkoutPlanBuilder(props = {}) {
           const tpl = await WorkoutsService.getById(templateId);
           if (isMounted && tpl) {
             setPlanId(null);
-            setName(`${tpl.name} (Copy)`);
+            setName(tpl.name);
             setSplitType(tpl.split_type || 'upper_lower');
             setCustomSplitName(tpl.custom_split_name || '');
             setNotes(tpl.notes || '');
@@ -472,7 +472,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                     rep_range: ex.rep_range || '8-12',
                     rest_seconds: ex.rest_seconds || 90,
                     target_weight: ex.target_weight || null,
-                    rpe: ex.rpe || 8,
+                    rpe: ex.rpe ? Number(ex.rpe) : 1,
                     warmup: warmupSets > 0 && workingSets === 0,
                     notes: ex.notes || '',
                     group_id: ex.group_id || null,
@@ -809,7 +809,7 @@ export default function WorkoutPlanBuilder(props = {}) {
     const prev = exList[replaceIndex];
 
     // Swap only the exercise identity/reference. The existing slot, sort
-    // order, and every prescription field (sets, reps, rest, RPE, warm-up,
+    // order, and every prescription field (sets, reps, rest, RIR, warm-up,
     // working sets, notes, group/superset metadata, prescribed sets, …)
     // are preserved via the spread of `prev`.
     const replaced = {
@@ -1720,19 +1720,20 @@ export default function WorkoutPlanBuilder(props = {}) {
                             />
                           </div>
 
-                          {/* Target RPE */}
+                          {/* Target RIR */}
                           <div className="space-y-1">
                             <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Target RPE
+                              Target RIR
                             </label>
                             <input
                               type="number"
-                              min="5"
+                              min="0"
                               max="10"
                               step="0.5"
                               value={ex.rpe || ''}
                               onChange={(e) => handleUpdateExercise(exIdx, { rpe: e.target.value })}
-                              placeholder="8"
+                              placeholder="1"
+                              title="Reps in Reserve — how many reps you could still perform at set completion"
                               className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
                             />
                           </div>

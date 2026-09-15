@@ -75,10 +75,12 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
         return next;
       }
       const available = getAvailableUnitsForFood(food);
-      const preferredUnit = available.find((u) => u.id !== 'g' && u.id !== 'kg') || available[0];
+      // Prefer grams as the default serving unit — the food database is
+      // normalized per 100g, so the g profile carries the canonical amount.
+      const preferredUnit = available.find((u) => u.id === 'g') || available[0];
       setQuantities((q) => ({
         ...q,
-        [food.id]: { amount: preferredUnit.defaultAmount || 1, unit: preferredUnit.id },
+        [food.id]: { amount: preferredUnit.defaultAmount || 100, unit: preferredUnit.id },
       }));
       return [...prev, food.id];
     });

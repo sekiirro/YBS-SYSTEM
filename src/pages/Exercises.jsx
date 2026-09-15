@@ -335,6 +335,10 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
     muscle_group: exercise.muscle_group || '',
     equipment: exercise.equipment || '',
     instructions: exercise.instructions || '',
+    default_rest_seconds: exercise.default_rest_seconds ?? 90,
+    default_rep_min: exercise.default_rep_min ?? 8,
+    default_rep_max: exercise.default_rep_max ?? 12,
+    default_warmup_sets: exercise.default_warmup_sets ?? 1,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -374,6 +378,42 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
           <Input label="Muscle Group" value={form.muscle_group} onChange={(e) => setForm({ ...form, muscle_group: e.target.value })} placeholder="Pectorals" />
         </div>
         <Input label="Equipment" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })} placeholder="Barbell" />
+        <div className="pt-1">
+          <p className="text-[12px] font-medium text-muted-foreground">Default Programming</p>
+          <p className="text-[11px] text-muted-foreground/80">
+            Applied when this exercise is added to a plan. Each plan can override these freely.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Input
+            label="Default Rest Time (sec)"
+            type="number"
+            min={0}
+            value={form.default_rest_seconds}
+            onChange={(e) => setForm({ ...form, default_rest_seconds: Number(e.target.value) || 0 })}
+          />
+          <Input
+            label="Default Rep Min"
+            type="number"
+            min={1}
+            value={form.default_rep_min}
+            onChange={(e) => setForm({ ...form, default_rep_min: Number(e.target.value) || 0 })}
+          />
+          <Input
+            label="Default Rep Max"
+            type="number"
+            min={1}
+            value={form.default_rep_max}
+            onChange={(e) => setForm({ ...form, default_rep_max: Number(e.target.value) || 0 })}
+          />
+        </div>
+        <Input
+          label="Default Warm-up Sets"
+          type="number"
+          min={0}
+          value={form.default_warmup_sets}
+          onChange={(e) => setForm({ ...form, default_warmup_sets: Number(e.target.value) || 0 })}
+        />
         <TextArea label="Instructions" rows={3} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
         {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>}
         <div className="flex justify-end gap-2 pt-2">

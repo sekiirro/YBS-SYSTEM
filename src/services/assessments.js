@@ -76,6 +76,49 @@ export const TemplatesService = {
   },
 
   /**
+   * Duplicate a template into a fresh, independent record in the same
+   * workspace/global scope. Deep-copies every question with NEW question ids
+   * so the duplicate is fully decoupled from the source (editing/deleting the
+   * copy never mutates the original, and vice versa). Client submissions are
+   * never copied — they already snapshot questions at assignment time.
+   *
+   * @param {string} id         - source template id
+   * @param {object} [options]  - { workspaceId, createdBy }
+   *   workspaceId: scope for the new record; defaults to the source's own scope.
+   *                Pass the caller's workspace when a non-admin duplicates a
+   *                global master so the copy lands in an editable workspace.
+   *   createdBy:   the duplicating user's profile id (RLS writes templates_manage
+   *                with created_by = auth.uid()).
+   */
+  async duplicate(id, { workspaceId, createdBy } = {}) {
+    const source = await this.getById(id);
+    const copy = await this.create({
+      workspace_id: workspaceId !== undefined ? workspaceId : source.workspace_id,
+      name: `${source.name} (copy)`,
+      description: source.description,
+      status: source.status,
+      is_active: source.is_active !== false,
+      is_archived: false,
+      created_by: createdBy ?? source.created_by,
+    });
+
+    const questions = (source.assessment_questions || []).map((q) => ({
+      question_type: q.question_type,
+      label: q.label,
+      description: q.description || null,
+      required: q.required || false,
+      options: q.options || [],
+      conditional_rules: q.conditional_rules || null,
+    }));
+
+    if (questions.length > 0) {
+      await QuestionsService.bulkUpsert(copy.id, questions);
+    }
+
+    return this.getById(copy.id);
+  },
+
+  /**
    * Clone a GLOBAL master template into a specific workspace so its staff
    * get their own editable local copy. The global master stays untouched.
    * Resolves to the workspace's existing clone when one already exists.

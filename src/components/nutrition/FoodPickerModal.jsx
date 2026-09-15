@@ -62,11 +62,12 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
   const handleSelectFood = (food) => {
     setSelectedFood(food);
     const available = getAvailableUnitsForFood(food);
-    // Pick the most intuitive default unit:
-    // If food has discrete count units (e.g. medium, piece, slice, scoop, tbsp) as first non-g unit, or default to available[0]
-    const preferredUnit = available.find((u) => u.id !== 'g' && u.id !== 'kg') || available[0];
+    // Prefer grams as the default serving unit — the food database stores
+    // nutritional values normalized per 100g, so the g profile carries the
+    // canonical gram amount appropriate to the food model.
+    const preferredUnit = available.find((u) => u.id === 'g') || available[0];
     setUnit(preferredUnit.id);
-    setAmount(preferredUnit.defaultAmount || 1);
+    setAmount(preferredUnit.defaultAmount || 100);
   };
 
   // Live scaled nutrition preview for the selected food & unit

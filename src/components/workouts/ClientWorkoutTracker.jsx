@@ -497,7 +497,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                 {/* Prescribed targets summary */}
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap font-mono">
                                   <span>{ex.sets || 3} sets × {ex.rep_range || '8-12'} reps</span>
-                                  {ex.rpe && <span>· Target RPE {ex.rpe}</span>}
+                                  {ex.rpe && <span>· Target RIR {ex.rpe}</span>}
                                   {ex.rest_seconds && <span>· {ex.rest_seconds}s rest</span>}
                                 </div>
 
@@ -592,7 +592,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                               </span>
                                             ) : (
                                               <>
-                                                {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RPE ${ex.rpe}` : ''}
+                                                {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RIR ${ex.rpe}` : ''}
                                                 {warmupNote && (
                                                   <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
                                                     {warmupNote}

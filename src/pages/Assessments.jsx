@@ -8,7 +8,7 @@ import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
 import { formatDate, getFormStatusColor, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
-import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2 } from 'lucide-react';
+import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FormBuilder from '@/components/FormBuilder';
 
@@ -210,6 +210,24 @@ export default function Assessments() {
       const full = await TemplatesService.getById(template.id);
       setEditingTemplate(full);
       setBuilderOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ── Duplicate template ──
+  const handleDuplicateTemplate = async (template) => {
+    try {
+      // Global master templates are protected from trainer edits; the new
+      // copy lands in the trainer's active workspace so it stays editable
+      // (same rule as Edit — see openEdit above).
+      const isGlobal = template.workspace_id == null;
+      const scopeId = isGlobal && !isPlatformAdmin(user) ? wsId : template.workspace_id;
+      await TemplatesService.duplicate(template.id, {
+        workspaceId: scopeId,
+        createdBy: user.id,
+      });
+      await loadData();
     } catch (err) {
       console.error(err);
     }
@@ -506,6 +524,11 @@ export default function Assessments() {
                     )}
                     {hasPermission(user, 'forms.update') && (
                       <Button variant="ghost" size="sm" onClick={() => openEdit(t)}>Edit</Button>
+                    )}
+                    {hasPermission(user, 'forms.update') && (
+                      <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(t)}>
+                        <Copy className="w-3.5 h-3.5" /> Duplicate
+                      </Button>
                     )}
                     {hasPermission(user, 'forms.delete') && (
                       <Button variant="ghost" size="sm" onClick={() => handleDeleteTemplate(t.id)}

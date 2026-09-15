@@ -673,6 +673,7 @@ export default function NutritionPlanBuilder(props = {}) {
             </Button>
           </div>
         ) : (
+          <>
           <DragDropContext onDragEnd={handleMealDragEnd}>
             <Droppable droppableId="meals">
               {(provided) => (
@@ -715,6 +716,12 @@ export default function NutritionPlanBuilder(props = {}) {
               )}
             </Droppable>
           </DragDropContext>
+          <div className="flex justify-center pt-1">
+            <Button variant="outline" size="sm" onClick={() => handleAddMeal()}>
+              <Plus className="w-3.5 h-3.5" /> Add Meal
+            </Button>
+          </div>
+          </>
         )}
       </div>
 

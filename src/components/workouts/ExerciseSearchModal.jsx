@@ -16,6 +16,28 @@ const CATEGORIES = [
   { id: 'full_body', label: 'Full Body', labelAr: 'جسم كامل' },
 ];
 
+// Populate the initial programming of a NEW planner row from the Exercise
+// Library defaults (rest / rep range / warm-up sets). RIR defaults to 1 for
+// new rows and working sets default to 2. Custom exercises without a library
+// record fall back to the project standards: 90s rest, 8-12 reps, 1 warm-up.
+const defaultProgrammingFor = (exercise) => {
+  const warmupSets =
+    exercise?.default_warmup_sets != null ? Math.max(0, Number(exercise.default_warmup_sets)) : 1;
+  const repMin = Number(exercise?.default_rep_min) > 0 ? Number(exercise.default_rep_min) : 8;
+  const repMax = Number(exercise?.default_rep_max) > 0 ? Number(exercise.default_rep_max) : 12;
+  const restSeconds = Number(exercise?.default_rest_seconds) > 0 ? Number(exercise.default_rest_seconds) : 90;
+  return {
+    warmup_sets: warmupSets,
+    working_sets: 2,
+    sets: warmupSets + 2,
+    rep_range: `${repMin}-${repMax}`,
+    rest_seconds: restSeconds,
+    rpe: 1,
+    warmup: false,
+    notes: '',
+  };
+};
+
 export default function ExerciseSearchModal({ open, onClose, onSelectExercise, workspaceId, title, confirmLabel, globalOnly = false }) {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -72,14 +94,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
       muscle_group: exercise.muscle_group || null,
       equipment: exercise.equipment || null,
       video_url: exercise.video_url || null,
-      sets: 3,
-      warmup_sets: 0,
-      working_sets: 3,
-      rep_range: '8-12',
-      rest_seconds: 90,
-      rpe: 8,
-      warmup: false,
-      notes: '',
+      ...defaultProgrammingFor(exercise),
     });
     onClose();
   };
@@ -93,14 +108,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
       muscle_group: customCategory,
       equipment: customEquipment,
       video_url: null,
-      sets: 3,
-      warmup_sets: 0,
-      working_sets: 3,
-      rep_range: '8-12',
-      rest_seconds: 90,
-      rpe: 8,
-      warmup: false,
-      notes: '',
+      ...defaultProgrammingFor(null),
     });
     setCustomName('');
     setShowCustomForm(false);
