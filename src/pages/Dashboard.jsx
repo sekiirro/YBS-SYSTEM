@@ -51,7 +51,7 @@ export default function Dashboard() {
 
       const promises = [
         ClientsService.list(clientFilter),
-        AssessmentsService.list(isTrainer ? { assigned_ybs_coach_id: user.id } : {}),
+        AssessmentsService.list({}),
         SubscriptionsService.list(),
         AuditService.list(),
         PackagesService.list(),
