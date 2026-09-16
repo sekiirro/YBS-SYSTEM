@@ -86,7 +86,7 @@ export default function WorkoutPlans() {
       setLoading(true);
       const [clientData, templateData] = await Promise.all([
         WorkoutsService.list({ is_template: false, ...queryScope }),
-        WorkoutsService.list({ is_template: true, ...queryScope }),
+        WorkoutsService.list({ is_template: true }),
       ]);
       setPlans(clientData || []);
       setTemplates(templateData || []);

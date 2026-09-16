@@ -41,7 +41,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboard();
-  }, [user]);
+  }, [user, effectiveWsId]);
 
   const loadDashboard = async () => {
     try {

@@ -12,7 +12,7 @@ import RoleGuard from '@/components/RoleGuard';
 import Layout from '@/components/Layout';
 import PortalLayout from '@/components/PortalLayout';
 
-import HomeRedirect from '@/pages/HomeRedirect';
+import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
 import ClientSignup from '@/pages/ClientSignup';
 import JoinWorkspace from '@/pages/JoinWorkspace';
@@ -74,6 +74,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       {/* Public */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<ClientSignup />} />
       <Route path="/join/:token" element={<JoinWorkspace />} />
@@ -85,7 +86,6 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/pending" element={<PendingApproval />} />
         <Route path="/forbidden" element={<Forbidden />} />
-        <Route path="/" element={<HomeRedirect />} />
 
         <Route element={<Layout />}>
           {/* Platform admin only */}

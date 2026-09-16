@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { NutritionService } from '@/services/nutrition';
 import { PlansService } from '@/services/plans';
 import { hasPermission } from '@/lib/permissions';
+import { getRoleCategory, getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal } from '@/components/ui';
 import { Apple, Search, Plus, FilePlus, Copy, ArrowRight, Trash2, Edit3, User, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,9 @@ export default function NutritionPlans() {
 
   const canCreate = hasPermission(user, 'nutrition.create');
 
+  const wsId = getActiveWorkspaceId(user);
+  const scopeFilter = getRoleCategory(user) === 'workspace' && wsId ? { workspace_id: wsId } : {};
+
   // Server-side template search (RLS-scoped to the active workspace / platform owner)
   const runTemplateSearch = (q) => {
     const trimmed = q.trim();
@@ -46,13 +50,13 @@ export default function NutritionPlans() {
 
   useEffect(() => {
     loadPlans();
-  }, [view]);
+  }, [view, wsId]);
 
   const loadPlans = async () => {
     try {
       setLoading(true);
       const [clientData, templateData] = await Promise.all([
-        NutritionService.list({ is_template: false }),
+        NutritionService.list({ is_template: false, ...scopeFilter }),
         NutritionService.list({ is_template: true }),
       ]);
       setPlans(clientData || []);

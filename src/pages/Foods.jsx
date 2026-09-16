@@ -1,10 +1,34 @@
 import React, { useState, useEffect, useMemo } from 'react';
-
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
 import { FoodsService } from '@/services/foods';
 import { hasPermission } from '@/lib/permissions';
 import { PageHeader, LoadingState, EmptyState, Button, Modal, Input, Select } from '@/components/ui';
 import { Apple, Plus, Search, Archive } from 'lucide-react';
+
+// ─── Category colour tokens ──────────────────────────────────────────────────
+const CATEGORY_STYLES = {
+  protein:    { badge: 'bg-red-500/15 text-red-400 border-red-500/20',     label: 'Protein'    },
+  carbs:      { badge: 'bg-amber-500/15 text-amber-400 border-amber-500/20', label: 'Carbs'    },
+  fats:       { badge: 'bg-purple-500/15 text-purple-400 border-purple-500/20', label: 'Fats' },
+  vegetables: { badge: 'bg-teal-500/15 text-teal-400 border-teal-500/20',   label: 'Vegetables' },
+  fruits:     { badge: 'bg-green-500/15 text-green-400 border-green-500/20', label: 'Fruits'  },
+  dairy:      { badge: 'bg-sky-500/15 text-sky-400 border-sky-500/20',      label: 'Dairy'     },
+  beverages:  { badge: 'bg-blue-500/15 text-blue-400 border-blue-500/20',   label: 'Beverages' },
+  other:      { badge: 'bg-slate-500/15 text-slate-400 border-slate-500/20', label: 'Other'   },
+};
+
+function CategoryBadge({ category }) {
+  const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.other;
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide',
+      style.badge
+    )}>
+      {style.label}
+    </span>
+  );
+}
 
 export default function Foods() {
   const { user } = useAuth();
@@ -78,9 +102,9 @@ export default function Foods() {
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Food</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Serving</th>
                   <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Cal</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Protein</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Carbs</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Fat</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-red-400/80">Protein</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Carbs</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-purple-400/80">Fat</th>
                   {canManage && <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"></th>}
                 </tr>
               </thead>
@@ -88,19 +112,22 @@ export default function Foods() {
                 {filtered.map((f) => (
                   <tr key={f.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-[13px] font-medium">
-                        {f.name}
-                        {f.brand && <span className="ml-2 text-[11px] font-normal text-muted-foreground">{f.brand}</span>}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground capitalize">
-                        {[f.category, f.name_ar].filter(Boolean).join(' · ')}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <p className="text-[13px] font-medium leading-none">
+                          {f.name}
+                          {f.brand && <span className="ml-2 text-[11px] font-normal text-muted-foreground">{f.brand}</span>}
+                        </p>
+                        <CategoryBadge category={f.category} />
+                      </div>
+                      {f.name_ar && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5" dir="rtl">{f.name_ar}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.serving_unit}</td>
-                    <td className="px-4 py-3 text-[12px] text-right tabular-nums">{f.calories}</td>
-                    <td className="px-4 py-3 text-[12px] text-right tabular-nums">{f.protein}g</td>
-                    <td className="px-4 py-3 text-[12px] text-right tabular-nums">{f.carbs}g</td>
-                    <td className="px-4 py-3 text-[12px] text-right tabular-nums">{f.fat}g</td>
+                    <td className="px-4 py-3 text-[12px] text-right tabular-nums text-foreground/80">{f.calories}</td>
+                    <td className="px-4 py-3 text-[12px] text-right tabular-nums font-medium text-red-400">{f.protein}g</td>
+                    <td className="px-4 py-3 text-[12px] text-right tabular-nums font-medium text-amber-400">{f.carbs}g</td>
+                    <td className="px-4 py-3 text-[12px] text-right tabular-nums font-medium text-purple-400">{f.fat}g</td>
                     {canManage && (
                       <td className="px-4 py-3 text-right">
                         <button

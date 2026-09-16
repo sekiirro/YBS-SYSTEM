@@ -157,7 +157,7 @@ export default function Clients() {
     <div>
       <PageHeader
         title="Clients"
-        description={isTrainer ? 'Your assigned client portfolio' : 'All organization clients'}
+        description={isTrainer ? 'All clients in this workspace' : 'All organization clients'}
         actions={
           hasPermission(user, 'clients.create') && (
             <Button onClick={() => setShowCreate(true)}>
@@ -300,7 +300,7 @@ export default function Clients() {
                   {showWsColumn && <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>}
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Package</th>
-                  {!isTrainer && <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Trainer</th>}
+                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Trainer</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Sub End</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
                 </tr>
@@ -329,43 +329,38 @@ export default function Clients() {
                     )}
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.phone || '—'}</span></td>
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{c.package_name || '—'}</span></td>
-                    {!isTrainer && (
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {canAssignTrainer ? (
-                          <div className="space-y-1">
-                            <select
-                              value={c.assigned_ybs_coach_id || ''}
-                              disabled={assigningId === c.id}
-                              onChange={(e) => handleAssignTrainer(c, e.target.value)}
-                              title={trainerName(c.assigned_ybs_coach_id) || 'Assign trainer'}
-                              className="h-8 w-full max-w-[180px] px-2 rounded-lg bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40 disabled:opacity-60 transition-colors"
-                            >
-                              <option value="">No trainer</option>
-                              {trainers.map((t) => (
-                                <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
-                              ))}
-                            </select>
-                            {assigningId === c.id && (
-                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                <Loader2 className="w-3 h-3 animate-spin" /> Saving…
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[12px] text-muted-foreground">{trainerName(c.assigned_ybs_coach_id) || '—'}</span>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {canAssignTrainer ? (
+                        <div className="space-y-1">
+                          <select
+                            value={c.assigned_ybs_coach_id || ''}
+                            disabled={assigningId === c.id}
+                            onChange={(e) => handleAssignTrainer(c, e.target.value)}
+                            title={trainerName(c.assigned_ybs_coach_id) || 'Assign trainer'}
+                            className="h-8 w-full max-w-[180px] px-2 rounded-lg bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40 disabled:opacity-60 transition-colors"
+                          >
+                            <option value="">No trainer</option>
+                            {trainers.map((t) => (
+                              <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
+                            ))}
+                          </select>
+                          {assigningId === c.id && (
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground">{trainerName(c.assigned_ybs_coach_id) || '—'}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3"><span className="text-[12px] text-muted-foreground">{formatDate(c.subscription_end_date)}</span></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {c.status === 'pending' && (
-                          <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
-                        )}
-                        <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
-                          {c.subscription_status?.replace('_', ' ') || 'none'}
-                        </Badge>
-                      </div>
+                      {(c.status === 'active' && c.subscription_status === 'active') ? (
+                        <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
+                      ) : (
+                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20">Awaiting Activation</Badge>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -388,12 +383,11 @@ export default function Clients() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {c.status === 'pending' && (
-                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
+                      {(c.status === 'active' && c.subscription_status === 'active') ? (
+                        <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
+                      ) : (
+                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20">Awaiting Activation</Badge>
                       )}
-                      <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
-                        {c.subscription_status?.replace('_', ' ') || 'none'}
-                      </Badge>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 mt-2.5 text-[11px] text-muted-foreground">

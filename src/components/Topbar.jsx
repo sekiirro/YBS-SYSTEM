@@ -78,7 +78,7 @@ export default function Topbar({ onMenuClick }) {
   const activeWorkspace = workspaces.find((w) => w.id === activeWsId);
 
   return (
-    <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 lg:px-6 glass-strong border-b border-white/[0.08]">
+    <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 lg:px-6 liquid-glass bg-background/70 border-b border-white/[0.08]">
       <div className="flex items-center gap-3 flex-1">
         <motion.button
           className="lg:hidden text-muted-foreground hover:text-foreground"
@@ -96,7 +96,7 @@ export default function Topbar({ onMenuClick }) {
           <input
             type="text"
             placeholder="Search clients, plans, exercises…"
-            className="w-full h-9 pl-9 pr-4 rounded-full bg-white/5 border border-white/10 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:bg-white/[0.07] focus:ring-1 focus:ring-primary/20 transition-all duration-200"
+            className="w-full h-9 pl-9 pr-4 rounded-full bg-secondary/60 border border-border/70 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/40 focus:bg-secondary/80 focus:ring-1 focus:ring-primary/20 transition-all duration-200"
           />
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function Topbar({ onMenuClick }) {
           <Bell className="w-[18px] h-[18px]" />
           <motion.span
             className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary"
-            animate={{ boxShadow: ['0 0 0px hsl(217 91% 60% / 0.6)', '0 0 8px hsl(217 91% 60% / 0.8)', '0 0 0px hsl(217 91% 60% / 0.6)'] }}
+            animate={{ boxShadow: ['0 0 0px hsl(var(--primary)/0.6)', '0 0 8px hsl(var(--primary)/0.8)', '0 0 0px hsl(var(--primary)/0.6)'] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
         </motion.button>
@@ -128,7 +128,7 @@ export default function Topbar({ onMenuClick }) {
             transition={{ duration: 0.15 }}
           >
             <motion.div
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-cyan-400/20 border border-primary/25 flex items-center justify-center text-primary text-xs font-semibold"
+              className="w-8 h-8 rounded-full bg-secondary/80 border border-border/60 flex items-center justify-center text-foreground text-xs font-semibold"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
@@ -151,13 +151,13 @@ export default function Topbar({ onMenuClick }) {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
                 <motion.div
-                  className="absolute right-0 top-full mt-2 w-64 bg-popover border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-64 bg-popover border border-border rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden"
                   variants={dropdownVariants}
                   initial="initial"
                   animate="animate"
                   exit="exit"
                 >
-                  <div className="px-4 py-3 border-b border-white/[0.08]">
+                  <div className="px-4 py-3 border-b border-border/60">
                     <p className="text-[13px] font-medium text-foreground truncate">{user?.full_name || 'User'}</p>
                     <p className="text-[11px] text-muted-foreground truncate mt-0.5">{user?.email}</p>
                     {activeWsId && activeWorkspace && (
@@ -183,7 +183,7 @@ export default function Topbar({ onMenuClick }) {
                     ))}
 
                     {switchable && (
-                      <div className="border-t border-white/[0.08]">
+                      <div className="border-t border-border/60">
                         <p className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                           <Repeat className="w-3 h-3" /> Switch Workspace
                         </p>

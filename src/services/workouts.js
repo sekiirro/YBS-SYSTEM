@@ -149,15 +149,10 @@ export const WorkoutsService = {
     if (filters.client_id) {
       query = query.eq('client_id', filters.client_id);
     }
-    if (filters.workspace_id) {
-      // TEMPLATE lists also surface global templates (workspace_id IS NULL)
-      // — the same scoping search_plan_templates and workout_plans RLS use.
-      // Client programs stay strictly workspace-scoped.
-      if (filters.is_template === true) {
-        query = query.or(`workspace_id.eq.${filters.workspace_id},workspace_id.is.null`);
-      } else {
-        query = query.eq('workspace_id', filters.workspace_id);
-      }
+    // Template visibility is global across every workspace; only client
+    // programs stay strictly workspace-scoped.
+    if (filters.workspace_id && filters.is_template !== true) {
+      query = query.eq('workspace_id', filters.workspace_id);
     }
     if (filters.is_template !== undefined) {
       query = query.eq('is_template', filters.is_template);

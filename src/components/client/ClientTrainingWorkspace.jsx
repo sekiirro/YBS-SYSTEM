@@ -4,18 +4,22 @@ import { AssessmentsService } from '@/services/assessments';
 import WorkoutPlanBuilder from '@/pages/WorkoutPlanBuilder';
 import FormSubmissionPanel from '@/components/FormSubmissionPanel';
 import GeminiAnalysisPanel from '@/components/GeminiAnalysisPanel';
+import SlidingPlannerLayout from '@/components/client/SlidingPlannerLayout';
 import { LoadingState, Button, Modal } from '@/components/ui';
 import {
-  ArrowLeft, Plus, FilePlus, Copy, Search, ArrowRight, Trash2
+  ArrowLeft, Plus, FilePlus, Copy, Search, ArrowRight, Trash2,
+  ChevronDown, ChevronRight, ClipboardList, Sparkles, Dumbbell,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
- * Client-Centric Training Workspace.
+ * Client-Centric Training Workspace — 3-Column Sliding Layout.
  *
- * Embeds the Workout Plan Builder inside the client detail tab so a trainer
- * never leaves the client record to draft, create, assign or edit programs.
- * Also surfaces the client's latest submitted form side-by-side with a Gemini
- * AI training assessment of that submission.
+ * Column 1: Program list + Form Submissions accordion
+ * Column 2: Embedded WorkoutPlanBuilder for the selected program
+ *
+ * The builder already handles day editing, exercises, sets/reps/rest inline,
+ * so columns 2+3 are rendered together via WorkoutPlanBuilder in embedded mode.
  */
 export default function ClientTrainingWorkspace({ client }) {
   const clientId = client?.id;
@@ -35,6 +39,13 @@ export default function ClientTrainingWorkspace({ client }) {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState('');
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
+
+  // Accordion states: independent
+  const [isPlansOpen, setIsPlansOpen] = useState(true);
+  const [isFormsOpen, setIsFormsOpen] = useState(false);
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+
+  const plannerStep = editor ? 2 : 1;
 
   const reloadPlans = useCallback(async () => {
     if (!clientId) return;
@@ -118,94 +129,190 @@ export default function ClientTrainingWorkspace({ client }) {
     return !q || t.name?.toLowerCase().includes(q);
   });
 
-  // ─── Embedded Builder ───────────────────────────────────────
-  if (editor) {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={closeEditor}
-          className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to {clientName ? clientName.split(' ')[0] : 'this client'}'s programs
-        </button>
-        <WorkoutPlanBuilder
-          key={JSON.stringify(editor)}
-          templateId={editor.mode === 'template' ? editor.templateId : undefined}
-          initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
-          clientId={clientId}
-          clientName={clientName}
-          workspaceId={workspaceId}
-          embedded
-          onExit={closeEditor}
-        />
-      </div>
-    );
-  }
-
   if (loading) return <LoadingState label="Loading workout programs…" />;
 
-  return (
-    <div className="space-y-5">
-      {/* Client Form Submission + Gemini AI Analysis */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 items-start gap-4">
-        <FormSubmissionPanel clientId={clientId} />
-        <GeminiAnalysisPanel
-          assessmentId={latestAssessmentId}
-          analysisType="training"
-          clientName={clientName}
-        />
-      </div>
+  // ─── Column 1: Program List + Form Submissions + Analysis ───────
+  const column1Content = (
+    <div className="p-4 space-y-4">
+      {/* 1. Workout Programs Section */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsPlansOpen((prev) => !prev)}
+          className="flex items-center justify-between w-full text-left group py-1"
+        >
+          <h3 className="text-[14px] font-display font-semibold flex items-center gap-2">
+            <Dumbbell className="w-4 h-4 text-muted-foreground" />
+            Workout Programs
+          </h3>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform duration-200",
+              isPlansOpen ? "rotate-0" : "-rotate-90"
+            )}
+          />
+        </button>
 
-      {/* Program List */}
-      <div className="surface-card rounded-xl border border-border/80 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[14px] font-display font-semibold">Workout Programs</h3>
-          <Button size="sm" onClick={() => setNewPlanOpen(true)}>
-            <Plus className="w-3.5 h-3.5" /> New Program
-          </Button>
-        </div>
-
-        {plans.length === 0 ? (
-          <p className="text-[13px] text-muted-foreground py-8 text-center">No workout programs assigned to this client.</p>
-        ) : (
-          <div className="space-y-3">
-            {plans.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => setEditor({ mode: 'edit', planId: p.id })}
-                className="p-4 rounded-xl bg-secondary/30 border border-border hover:border-primary/50 transition-all cursor-pointer flex items-center justify-between group"
+        <div
+          className={cn(
+            "grid transition-all duration-200 ease-in-out",
+            isPlansOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            {plans.length === 0 ? (
+              <Button
+                size="lg"
+                onClick={() => setNewPlanOpen(true)}
+                className="w-full h-auto min-h-[72px] px-6 py-5 rounded-xl text-base sm:text-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
               >
-                <div>
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-primary transition-colors">{p.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-muted-foreground capitalize">
-                      {(p.split_type || 'custom').replace(/_/g, ' ')} · {p.days?.length || 0} sessions
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">·</span>
-                    <span className="text-[11px] text-primary font-mono font-medium">
-                      {p.total_working_sets || 0} working sets/wk
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => handleRemovePlan(p, e)}
-                    className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="Remove program from this client"
+                <Plus className="w-5 h-5" /> New Program
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <Button size="sm" className="w-full" onClick={() => setNewPlanOpen(true)}>
+                  <Plus className="w-3.5 h-3.5" /> New Program
+                </Button>
+
+                {plans.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => setEditor({ mode: 'edit', planId: p.id })}
+                    className={cn(
+                      'p-3 rounded-lg border cursor-pointer transition-colors',
+                      editor?.planId === p.id
+                        ? 'bg-primary/10 border-primary/30'
+                        : 'bg-secondary/30 border-border hover:border-primary/40'
+                    )}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                  <Button size="sm" variant="ghost" className="text-xs">
-                    Open Builder
-                  </Button>
-                </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[13px] font-medium truncate">{p.name}</p>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemovePlan(p, e)}
+                        className="p-1 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                        title="Remove program"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[11px] text-muted-foreground capitalize">
+                        {(p.split_type || 'custom').replace(/_/g, ' ')} · {p.days?.length || 0} sessions
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">·</span>
+                      <span className="text-[11px] text-primary font-mono font-medium">
+                        {p.total_working_sets || 0} working sets/wk
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
+
+      {/* 2. Form Submissions Section */}
+      <div className="border-t border-border pt-3">
+        <button
+          type="button"
+          onClick={() => setIsFormsOpen((prev) => !prev)}
+          className="flex items-center justify-between w-full text-left group py-1"
+        >
+          <h3 className="text-[14px] font-display font-semibold flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-muted-foreground" />
+            Form Submissions
+          </h3>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform duration-200",
+              isFormsOpen ? "rotate-0" : "-rotate-90"
+            )}
+          />
+        </button>
+
+        <div
+          className={cn(
+            "grid transition-all duration-200 ease-in-out",
+            isFormsOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <FormSubmissionPanel clientId={clientId} />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Generate Training Analysis Section */}
+      <div className="border-t border-border pt-3">
+        <button
+          type="button"
+          onClick={() => setIsAnalysisOpen((prev) => !prev)}
+          className="flex items-center justify-between w-full text-left group py-1"
+        >
+          <h3 className="text-[14px] font-display font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Generate Training Analysis
+          </h3>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform duration-200",
+              isAnalysisOpen ? "rotate-0" : "-rotate-90"
+            )}
+          />
+        </button>
+
+        <div
+          className={cn(
+            "grid transition-all duration-200 ease-in-out",
+            isAnalysisOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <GeminiAnalysisPanel
+              assessmentId={latestAssessmentId}
+              analysisType="training"
+              clientName={clientName}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─── Column 2: Embedded Builder ─────────────────────────────────
+  const column2Content = editor ? (
+    <div className="p-4">
+      <button
+        type="button"
+        onClick={closeEditor}
+        className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground transition-colors mb-3 md:hidden"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to programs
+      </button>
+      <WorkoutPlanBuilder
+        key={JSON.stringify(editor)}
+        templateId={editor.mode === 'template' ? editor.templateId : undefined}
+        initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
+        clientId={clientId}
+        clientName={clientName}
+        workspaceId={workspaceId}
+        embedded
+        onExit={closeEditor}
+      />
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <SlidingPlannerLayout
+        step={plannerStep}
+        column1={column1Content}
+        column2={column2Content}
+        column3={null}
+        onBack={closeEditor}
+      />
 
       {/* New Program Selection Modal */}
       <Modal
@@ -331,7 +438,7 @@ export default function ClientTrainingWorkspace({ client }) {
           )}
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 

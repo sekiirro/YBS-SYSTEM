@@ -21,13 +21,13 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: User },
-  { id: 'subscription', label: 'Subscription', icon: CreditCard },
-  { id: 'forms', label: 'Forms', icon: ClipboardList },
-  { id: 'metrics', label: 'Metrics', icon: TrendingUp },
-  { id: 'nutrition', label: 'Nutrition', icon: Apple },
-  { id: 'workout', label: 'Workout', icon: Dumbbell },
-  { id: 'timeline', label: 'Timeline', icon: Activity },
+  { id: 'overview',      label: 'Overview',      icon: User          },
+  { id: 'nutrition',     label: 'Nutrition',      icon: Apple         },
+  { id: 'workout',       label: 'Workout',        icon: Dumbbell      },
+  { id: 'subscription',  label: 'Subscription',   icon: CreditCard    },
+  { id: 'forms',         label: 'Forms',          icon: ClipboardList },
+  { id: 'metrics',       label: 'Metrics',        icon: TrendingUp    },
+  { id: 'timeline',      label: 'Timeline',       icon: Activity      },
 ];
 
 export default function ClientDetail() {
@@ -113,12 +113,11 @@ export default function ClientDetail() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-display font-semibold tracking-tight">{client.full_name}</h1>
-                {client.status === 'pending' && (
-                  <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
+                {(client.status === 'active' && client.subscription_status === 'active') ? (
+                  <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
+                ) : (
+                  <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20">Awaiting Activation</Badge>
                 )}
-                <Badge className={cn(getSubscriptionStatusColor(client.subscription_status), 'capitalize')}>
-                  {client.subscription_status?.replace('_', ' ') || 'none'}
-                </Badge>
               </div>
               <p className="text-[12px] text-muted-foreground font-mono mt-1">{client.client_code}</p>
               <div className="flex items-center gap-4 mt-2 flex-wrap text-[12px] text-muted-foreground">

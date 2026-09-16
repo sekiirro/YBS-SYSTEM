@@ -213,8 +213,7 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
               <p className="text-[13px] font-semibold text-foreground">Joining {workspace.workspace_name || workspace.brand_name}</p>
               {isScopedLink ? (
                 <p className="text-[12px] text-muted-foreground mt-0.5">
-                  Your selected package is <strong className="text-foreground">{workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}</strong>
-                  {workspace.coach_name ? `, coached by ${workspace.coach_name}` : ''}. This cannot be changed during registration.
+                  Your selected package is <strong className="text-foreground">{workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}</strong>. This cannot be changed during registration.
                 </p>
               ) : (
                 <p className="text-[12px] text-muted-foreground mt-0.5">
@@ -227,7 +226,7 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
       )}
       <div className="mb-5 p-3 rounded-md bg-primary/5 border border-primary/15 text-[12px] text-muted-foreground">
         {isScopedLink ? (
-          <>Your registration is submitted for the selected package ({workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}). Once approved you will be assigned to {workspace.coach_name || 'your coach'} and can access your coaching portal.</>
+          <>Your registration is submitted for the selected package ({workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}). Once approved you will be onboarded to {workspace.workspace_name || workspace.brand_name || 'your workspace'} and can access your coaching portal.</>
         ) : (
           <>Your registration is reviewed by the YBS platform team. Once approved, you will be assigned to your workspace and can access your coaching portal.</>
         )}

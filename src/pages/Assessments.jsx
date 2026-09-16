@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { AssessmentsService, TemplatesService, QuestionsService } from '@/services/assessments';
 import { ClientsService } from '@/services/clients';
 import { hasPermission } from '@/lib/permissions';
-import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
+import { getActiveWorkspaceId, isPlatformAdmin, getRoleCategory } from '@/lib/ybs-auth';
 import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
 import { formatDate, getFormStatusColor, getFormStatusLabel, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
@@ -16,6 +16,7 @@ import FormBuilder from '@/components/FormBuilder';
 export default function Assessments() {
   const { user } = useAuth();
   const wsId = getActiveWorkspaceId(user);
+  const roleCat = getRoleCategory(user);
   const [activeTab, setActiveTab] = useState('forms');
   const [loading, setLoading] = useState(true);
   const [forms, setForms] = useState([]);
@@ -77,6 +78,14 @@ export default function Assessments() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // ── Workspace scoping ──
+  // Workspace owners/managers operate strictly inside their active workspace;
+  // platform staff keep the cross-workspace view plus the dropdown.
+  const workspaceScopedForms = useMemo(() => {
+    if (roleCat === 'workspace' && wsId) return forms.filter((f) => f.workspace_id === wsId);
+    return forms;
+  }, [forms, roleCat, wsId]);
+
   // ── Filtering + Most Urgent ──
   // The status dropdown is the single filter/sort control. Status options
   // filter the list and keep the server's default ordering; "Most Urgent"
@@ -88,7 +97,7 @@ export default function Assessments() {
     const isMostUrgent = statusFilter === '__most_urgent__';
     const statusToMatch = isMostUrgent ? 'all' : statusFilter;
 
-    const filtered = forms.filter((f) => {
+    const filtered = workspaceScopedForms.filter((f) => {
       if (search) {
         const q = search.toLowerCase();
         if (!f.name?.toLowerCase().includes(q) && !f.assigned_client_name?.toLowerCase().includes(q)) return false;
@@ -126,7 +135,7 @@ export default function Assessments() {
       if (ua !== ub) return ua - ub;
       return toTs(b.created_at) - toTs(a.created_at);
     });
-  }, [forms, search, statusFilter, workspaceFilter]);
+  }, [workspaceScopedForms, search, statusFilter, workspaceFilter]);
 
   // Workspace dropdown options derive from the RLS-visible forms themselves,
   // so every option by construction respects what the caller can see. No
@@ -134,13 +143,13 @@ export default function Assessments() {
   // name the caller cannot resolve fall back to the short id.
   const workspaceOptions = useMemo(() => {
     const map = new Map();
-    forms.forEach((f) => {
+    workspaceScopedForms.forEach((f) => {
       if (f.workspace_id && !map.has(f.workspace_id)) map.set(f.workspace_id, f.workspace_name);
     });
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [forms]);
+  }, [workspaceScopedForms]);
 
   const filteredTemplates = useMemo(() => {
     if (!search) return templates;

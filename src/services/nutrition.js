@@ -136,7 +136,9 @@ export const NutritionService = {
     if (filters.client_id) {
       query = query.eq('client_id', filters.client_id);
     }
-    if (filters.workspace_id) {
+    // Template visibility is global across every workspace; only client
+    // plans stay strictly workspace-scoped.
+    if (filters.workspace_id && filters.is_template !== true) {
       query = query.eq('workspace_id', filters.workspace_id);
     }
     if (filters.is_template !== undefined) {
