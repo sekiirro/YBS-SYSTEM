@@ -12,7 +12,7 @@ import ClientTrainingWorkspace from '@/components/client/ClientTrainingWorkspace
 import { hasPermission } from '@/lib/permissions';
 import { isPlatformAdmin, isWorkspaceOwner } from '@/lib/ybs-auth';
 import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
-import { formatDate, getSubscriptionStatusColor, getFormStatusColor, daysUntil, getInitials } from '@/lib/ybs-utils';
+import { formatDate, getSubscriptionStatusColor, getFormStatusColor, getFormStatusLabel, daysUntil, getInitials } from '@/lib/ybs-utils';
 import {
   ArrowLeft, Phone, Mail, Calendar, User, Package, CreditCard,
   ClipboardList, TrendingUp, Apple, Dumbbell, Activity, Edit, Plus, Check, Trash2, Archive, Eye,
@@ -340,7 +340,7 @@ function FormsTab({ forms }) {
                       <Eye className="w-3.5 h-3.5 mr-1" /> View Form
                     </Button>
                   )}
-                  <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{f.submission_status}</Badge>
+                  <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{getFormStatusLabel(f.submission_status)}</Badge>
                 </div>
               </div>
             );
@@ -363,7 +363,7 @@ function ViewResponsesModal({ form, onClose }) {
             <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {formatDate(form.submitted_at)}</p>
           </div>
           <Badge className={cn(getFormStatusColor(form.submission_status), 'capitalize')}>
-            {form.submission_status}
+            {getFormStatusLabel(form.submission_status)}
           </Badge>
         </div>
 

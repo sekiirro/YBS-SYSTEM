@@ -130,6 +130,24 @@ export function getFormStatusColor(status) {
   return map[status] || map.pending;
 }
 
+/**
+ * Human label for an assessment's submission_status. The DB value `pending`
+ * means "generated/assigned and waiting for the client response" — never
+ * "not yet generated" (there is no separate "pending generation" record: the
+ * scheduler creates a client assessment atomically the moment a cycle is due).
+ * Rendering the raw enum string in UIs made an assigned, unanswered check-in
+ * look like it had not been generated yet, so the display label disambiguates.
+ */
+export function getFormStatusLabel(status) {
+  const map = {
+    pending: 'Awaiting Response',
+    submitted: 'Submitted',
+    reviewed: 'Reviewed',
+    overdue: 'Overdue',
+  };
+  return map[status] || String(status || '').charAt(0).toUpperCase() + String(status || '').slice(1);
+}
+
 export function formatCurrency(amount, currency = 'EGP') {
   if (amount == null) return '—';
   return new Intl.NumberFormat('en-US', {
@@ -173,4 +191,18 @@ export function getInitials(name) {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+}
+
+/**
+ * Consistent member display name.
+ * A real full name wins. Legacy members whose "full_name" is really their
+ * stored email fall back to the email itself, so a name is never duplicated
+ * as both the primary line and its own secondary line.
+ */
+export function memberDisplayName(member) {
+  if (!member) return 'Unnamed';
+  const full = String(member.full_name || '').trim();
+  const email = String(member.email || '').trim();
+  if (full && full.toLowerCase() !== email.toLowerCase()) return full;
+  return email || 'Unnamed';
 }

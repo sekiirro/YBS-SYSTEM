@@ -360,7 +360,7 @@ export default function Clients() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         {c.status === 'pending' && (
-                          <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Pending</Badge>
+                          <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
                         )}
                         <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
                           {c.subscription_status?.replace('_', ' ') || 'none'}
@@ -389,7 +389,7 @@ export default function Clients() {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {c.status === 'pending' && (
-                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Pending</Badge>
+                        <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 capitalize">Awaiting Activation</Badge>
                       )}
                       <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'capitalize')}>
                         {c.subscription_status?.replace('_', ' ') || 'none'}

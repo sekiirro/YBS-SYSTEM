@@ -7,8 +7,9 @@ import { ClientsService } from '@/services/clients';
 import { canManageTeam } from '@/lib/permissions';
 import { getRoleCategory } from '@/lib/ybs-auth';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input, Select } from '@/components/ui';
-import { getInitials } from '@/lib/ybs-utils';
-import { UsersRound, Plus, Copy } from 'lucide-react';
+import { getInitials, memberDisplayName } from '@/lib/ybs-utils';
+import { toast } from '@/components/ui/use-toast';
+import { UsersRound, Plus, Copy, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Team() {
@@ -17,6 +18,7 @@ export default function Team() {
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
   const [showInvite, setShowInvite] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
   const isAdminView = getRoleCategory(user) === 'admin';
 
   useEffect(() => { loadTeam(); }, []);
@@ -81,6 +83,7 @@ export default function Team() {
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
                   <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Clients</th>
                   <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,11 +92,13 @@ export default function Team() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-semibold">
-                          {getInitials(u.full_name || u.email)}
+                          {getInitials(memberDisplayName(u))}
                         </div>
                         <div>
-                          <p className="text-[13px] font-medium">{u.full_name || 'Unnamed'}</p>
-                          <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                          <p className="text-[13px] font-medium">{memberDisplayName(u)}</p>
+                          {u.email && memberDisplayName(u).toLowerCase() !== u.email.trim().toLowerCase() && (
+                            <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -107,6 +112,17 @@ export default function Team() {
                         {u.status === 'disabled' ? 'Disabled' : 'Active'}
                       </Badge>
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManageTeam(user) && (
+                        <Button
+                          variant="ghost"
+                          className="h-8 px-2 text-[12px] text-muted-foreground hover:text-foreground"
+                          onClick={() => setEditingMember(u)}
+                        >
+                          <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -115,7 +131,86 @@ export default function Team() {
         </div>
       )}
       {showInvite && <InviteModal workspaceId={user?.active_workspace_id} onClose={() => setShowInvite(false)} />}
+      {editingMember && (
+        <EditMemberModal
+          user={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSaved={() => { setEditingMember(null); loadTeam(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function EditMemberModal({ user, onClose, onSaved }) {
+  const full = (user?.full_name || '').trim();
+  const email = (user?.email || '').trim();
+  const hasRealName = full && full.toLowerCase() !== email.toLowerCase();
+
+  const [initialFirst, initialLast] = (() => {
+    const storedFirst = user?.first_name ? user.first_name : '';
+    const storedLast = user?.last_name ? user.last_name : '';
+    if (storedFirst || storedLast) return [storedFirst, storedLast];
+    if (hasRealName) {
+      const parts = full.split(/\s+/);
+      return [parts[0], parts.slice(1).join(' ')];
+    }
+    return ['', ''];
+  })();
+
+  const [firstName, setFirstName] = useState(initialFirst);
+  const [lastName, setLastName] = useState(initialLast);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = async () => {
+    const f = firstName.trim();
+    const l = lastName.trim();
+    if (!f) {
+      setError('Please enter your first name.');
+      return;
+    }
+    if (!l) {
+      setError('Please enter your last name.');
+      return;
+    }
+    if (f.length > 80 || l.length > 80) {
+      setError('Name is too long.');
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      await TeamService.updateMemberName(user.id, f, l);
+      toast('Member name updated.');
+      onSaved();
+    } catch (err) {
+      setError(err.message || 'Failed to update member name.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Edit Member Name">
+      <div className="space-y-4">
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
+        <p className="text-[12px] text-muted-foreground">
+          Update the name for <span className="text-foreground font-medium">{email}</span>. Role, email and workspace access are not changed.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ahmed" autoComplete="off" />
+          <Input label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ali" autoComplete="off" />
+        </div>
+        <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[12px] text-muted-foreground">
+          Full name: <span className="text-foreground font-medium">{firstName.trim()} {lastName.trim()}</span>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

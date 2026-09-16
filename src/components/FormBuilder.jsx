@@ -117,6 +117,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
           description: q.description?.trim() || null,
           required: q.required,
           options: TYPES_WITH_OPTIONS.includes(q.question_type) ? (q.options || []).filter(o => o.trim()) : [],
+          conditional_rules: q.conditional_rules || null,
           sort_order: idx,
         })),
       });
@@ -206,6 +207,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
           description: q.description?.trim() || null,
           required: q.required,
           options: TYPES_WITH_OPTIONS.includes(q.question_type) ? (q.options || []).filter(o => o.trim()) : [],
+          conditional_rules: q.conditional_rules || null,
           sort_order: idx,
         })),
       });
@@ -349,6 +351,27 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
                       />
                       Required
                     </label>
+
+                    {q.question_type === 'number' && (
+                      <select
+                        value={q.conditional_rules?.numeric_accept === 'number_range' ? 'number_range' : 'single'}
+                        onChange={(e) => {
+                          const existing = q.conditional_rules || {};
+                          if (e.target.value === 'number_range') {
+                            updateQuestion(idx, 'conditional_rules', { ...existing, numeric_accept: 'number_range' });
+                          } else {
+                            const next = { ...existing };
+                            delete next.numeric_accept;
+                            updateQuestion(idx, 'conditional_rules', Object.keys(next).length ? next : null);
+                          }
+                        }}
+                        className="h-8 px-2 rounded-lg bg-secondary/50 border border-border text-[12px] focus:outline-none focus:border-primary/40 transition-colors"
+                        title="Answer format"
+                      >
+                        <option value="single">Single Number</option>
+                        <option value="number_range">Number Range</option>
+                      </select>
+                    )}
                   </div>
 
                   {/* Options editor for choice/dropdown types */}

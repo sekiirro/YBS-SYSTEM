@@ -3,10 +3,16 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 // activate-invite
 //
 // Server-side Workspace Owner / Trainer invitation activation.
-// The browser sends ONLY { token, password }; the email, role and workspace
-// are read exclusively from the trusted platform_invites ledger row that the
-// token resolves to. The invitation token is the authorization credential —
-// the typed/displayed email is never used as identity authority.
+// The browser sends ONLY { token, password, first_name, last_name }; the
+// email, role and workspace are read exclusively from the trusted
+// platform_invites ledger row that the token resolves to. The invitation
+// token is the authorization credential — the typed/displayed email is never
+// used as identity authority.
+//
+// first_name / last_name are required for a valid invitation (onboarding
+// collects them): they are trimmed here and persisted as
+// first_name, last_name and full_name = "<first> <last>" on the profile, for
+// both a fresh account and an existing one.
 //
 // It is deliberately deployed with verify_jwt=false: the invitee has no
 // session yet. The token + password pair is its own credential. The
@@ -85,6 +91,8 @@ async function ensureProfile(
   userId: string,
   email: string,
   invitedRole: string,
+  firstName: string,
+  lastName: string,
 ) {
   const { data: profile } = await admin
     .from('profiles')
@@ -101,7 +109,9 @@ async function ensureProfile(
     {
       id: userId,
       email,
-      full_name: email,
+      full_name: `${firstName} ${lastName}`,
+      first_name: firstName,
+      last_name: lastName,
       platform_role: keptRole,
       account_status: 'active',
     },
@@ -154,6 +164,8 @@ async function activateExistingUser(
   workspaceId: string | null,
   password: string,
   inviteId: string,
+  firstName: string,
+  lastName: string,
 ) {
   const appMeta = isPlainObject(existing.raw_app_meta_data)
     ? { ...existing.raw_app_meta_data, activated: true }
@@ -166,7 +178,7 @@ async function activateExistingUser(
   });
   if (updateErr) throw updateErr;
 
-  await ensureProfile(admin, existing.id, email, invitedRole);
+  await ensureProfile(admin, existing.id, email, invitedRole, firstName, lastName);
   if (invitedRole === 'platform_trainer') {
     await ensureTrainerMembership(admin, existing.id, workspaceId);
   }
@@ -210,6 +222,18 @@ Deno.serve(async (req) => {
     return error('weak_password', `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);
   }
 
+  // Onboarding requires a real First Name + Last Name (trimmed server-side;
+  // whitespace-only is rejected, so a bypassed form cannot save an email-only
+  // member). Length-capped to match the update RPC.
+  const firstName = typeof body.first_name === 'string' ? body.first_name.trim() : '';
+  const lastName = typeof body.last_name === 'string' ? body.last_name.trim() : '';
+  if (!firstName || !lastName) {
+    return error('name_required', 'Please enter your first and last name.', 400);
+  }
+  if (firstName.length > 80 || lastName.length > 80) {
+    return error('name_too_long', 'Name is too long.', 400);
+  }
+
   try {
     // 1. Validate the invitation credential against the ledger — the same
     //    token match + status='sent' semantics as get_team_invite(), read
@@ -247,16 +271,19 @@ Deno.serve(async (req) => {
       // 3a. Account already exists (partial activation, signup, or client).
       //     Rotate its password via the Auth Admin API — never client-side
       //     signUp — and provision the invited role for THIS user.
-      await activateExistingUser(admin, existing, email, invitedRole, workspaceId, password, invite.id);
+      await activateExistingUser(admin, existing, email, invitedRole, workspaceId, password, invite.id, firstName, lastName);
     } else {
       // 3b. No account yet. Create it confirmed + password set via the Auth
       //     Admin API; the existing handle_new_user() trigger provisions the
-      //     profile, flips the invite to 'accepted', and the profile-insert
-      //     owner-linking trigger provisions the workspace_owner membership.
-      const { error: createErr } = await admin.auth.admin.createUser({
+      //     profile (full_name from user_metadata), flips the invite to
+      //     'accepted', and the profile-insert owner-linking trigger
+      //     provisions the workspace_owner membership. ensureProfile below
+      //     persists first_name / last_name for the new account.
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
+        user_metadata: { full_name: `${firstName} ${lastName}` },
         app_metadata: { activated: true },
       });
       if (createErr) {
@@ -268,13 +295,15 @@ Deno.serve(async (req) => {
             return error('auth_unavailable', 'Account activation is temporarily unavailable. Please try again.', 500);
           }
           if (retry.data) {
-            await activateExistingUser(admin, retry.data, email, invitedRole, workspaceId, password, invite.id);
+            await activateExistingUser(admin, retry.data, email, invitedRole, workspaceId, password, invite.id, firstName, lastName);
           } else {
             return error('activation_failed', 'Your account could not be activated. Please try again.', 500);
           }
         } else {
           return error('activation_failed', 'Your account could not be activated. Please try again.', 500);
         }
+      } else if (created?.user?.id) {
+        await ensureProfile(admin, created.user.id, email, invitedRole, firstName, lastName);
       }
     }
 

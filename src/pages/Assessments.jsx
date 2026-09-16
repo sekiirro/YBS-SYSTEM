@@ -7,8 +7,9 @@ import { hasPermission } from '@/lib/permissions';
 import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
-import { formatDate, getFormStatusColor, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
-import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2, Copy } from 'lucide-react';
+import { formatDate, getFormStatusColor, getFormStatusLabel, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
+import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2, Copy, Trash2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import FormBuilder from '@/components/FormBuilder';
 
@@ -41,6 +42,11 @@ export default function Assessments() {
   // View response state
   const [viewingForm, setViewingForm] = useState(null);
 
+  // Delete form state
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   // Template → Workspace assignment state (Platform Owner only)
   const [assignWsOpen, setAssignWsOpen] = useState(false);
   const [assignWsTemplate, setAssignWsTemplate] = useState(null);
@@ -71,16 +77,54 @@ export default function Assessments() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Filtering ──
+  // ── Filtering + Most Urgent ──
+  // The status dropdown is the single filter/sort control. Status options
+  // filter the list and keep the server's default ordering; "Most Urgent"
+  // (internal value '__most_urgent__', never sent to the DB) shows ALL forms
+  // sorted by the exact remaining-time counter the Plan Delivery column
+  // displays (planDeliveryState over submitted_at + delivery flags) — not by
+  // due_date and never by display strings.
   const filteredForms = useMemo(() => {
-    return forms.filter((f) => {
+    const isMostUrgent = statusFilter === '__most_urgent__';
+    const statusToMatch = isMostUrgent ? 'all' : statusFilter;
+
+    const filtered = forms.filter((f) => {
       if (search) {
         const q = search.toLowerCase();
         if (!f.name?.toLowerCase().includes(q) && !f.assigned_client_name?.toLowerCase().includes(q)) return false;
       }
-      if (statusFilter !== 'all' && f.submission_status !== statusFilter) return false;
+      if (statusToMatch !== 'all' && f.submission_status !== statusToMatch) return false;
       if (workspaceFilter !== 'all' && f.workspace_id !== workspaceFilter) return false;
       return true;
+    });
+
+    if (!isMostUrgent) return filtered;
+
+    // Numeric urgency mirroring planDeliveryState: overdue -> negative
+    // (overdue by 5 == -5), due today -> 0, days left -> positive. Forms with
+    // no running counter (delivery Done, or SLA not started) have no urgency
+    // and land after all ranked forms. Equal urgency breaks on newest created.
+    const urgency = (f) => {
+      const state = planDeliveryState(f.submitted_at, f.nutrition_delivered, f.workout_delivered);
+      if (!state || state.kind === 'done') return null;
+      if (state.kind === 'overdue') return -state.days;
+      return state.daysLeft;
+    };
+
+    const toTs = (value) => {
+      if (!value) return null;
+      const ts = new Date(value).getTime();
+      return Number.isFinite(ts) ? ts : null;
+    };
+
+    return [...filtered].sort((a, b) => {
+      const ua = urgency(a);
+      const ub = urgency(b);
+      if (ua === null && ub === null) return toTs(b.created_at) - toTs(a.created_at);
+      if (ua === null) return 1;
+      if (ub === null) return -1;
+      if (ua !== ub) return ua - ub;
+      return toTs(b.created_at) - toTs(a.created_at);
     });
   }, [forms, search, statusFilter, workspaceFilter]);
 
@@ -311,6 +355,30 @@ export default function Assessments() {
     }
   };
 
+  // ── Delete form instance ──
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteError('');
+  };
+
+  const handleDeleteForm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await AssessmentsService.deleteInstance(deleteTarget.id);
+      setDeleteTarget(null);
+      toast({ title: 'Form deleted successfully.' });
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setDeleteError(err?.message || 'Failed to delete form.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <LoadingState label="Loading forms…" />;
 
   const TABS = [
@@ -388,7 +456,8 @@ export default function Assessments() {
               className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
             >
               <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
+              <option value="__most_urgent__">Most Urgent</option>
+              <option value="pending">Awaiting Response</option>
               <option value="submitted">Submitted</option>
               <option value="reviewed">Reviewed</option>
               <option value="overdue">Overdue</option>
@@ -445,14 +514,26 @@ export default function Assessments() {
                         </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(f.submitted_at)}</td>
                         <td className="px-4 py-3">
-                          <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{f.submission_status}</Badge>
+                          <Badge className={cn(getFormStatusColor(f.submission_status), 'capitalize')}>{getFormStatusLabel(f.submission_status)}</Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {f.submission_status === 'submitted' && (
-                            <Button variant="ghost" size="sm" onClick={() => openView(f)}>
-                              <Eye className="w-3.5 h-3.5" /> View
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {f.submission_status === 'submitted' && (
+                              <Button variant="ghost" size="sm" onClick={() => openView(f)}>
+                                <Eye className="w-3.5 h-3.5" /> View
+                              </Button>
+                            )}
+                            {hasPermission(user, 'forms.delete') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setDeleteTarget(f); setDeleteError(''); }}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       );
@@ -704,7 +785,7 @@ export default function Assessments() {
                 <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {formatDate(viewingForm.submitted_at)}</p>
               </div>
               <Badge className={cn(getFormStatusColor(viewingForm.submission_status), 'capitalize')}>
-                {viewingForm.submission_status}
+                {getFormStatusLabel(viewingForm.submission_status)}
               </Badge>
             </div>
 
@@ -739,6 +820,41 @@ export default function Assessments() {
                 );
               });
             })()}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Delete Form Confirmation Modal ── */}
+      <Modal open={!!deleteTarget} onClose={closeDelete} title="Delete Form?">
+        {deleteTarget && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-medium" dir="auto">{deleteTarget.name}</p>
+                <Badge className={cn(getFormStatusColor(deleteTarget.submission_status), 'capitalize shrink-0')}>
+                  {getFormStatusLabel(deleteTarget.submission_status)}
+                </Badge>
+              </div>
+              <p className="text-[12px] text-muted-foreground">
+                Client: {deleteTarget.assigned_client_name || '—'}
+              </p>
+              <p className="text-[12px] text-muted-foreground">
+                Responses: {deleteTarget.response_count || 0}
+              </p>
+            </div>
+            <p className="text-[13px] text-foreground/90">
+              Deleting this form will permanently remove this client's form instance and its saved responses. The form template will not be deleted.
+            </p>
+            {deleteError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{deleteError}</div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={closeDelete} disabled={deleting}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteForm} disabled={deleting}>
+                <Trash2 className="w-3.5 h-3.5" />
+                {deleting ? 'Deleting…' : 'Delete Form'}
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

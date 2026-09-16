@@ -5,6 +5,38 @@ import useAutosave from '@/hooks/useAutosave';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, AlertCircle, Save, Send, Smartphone } from 'lucide-react';
 
+const SINGLE_NUMBER_RE = /^[+-]?\d+(\.\d+)?$/;
+const RANGE_DASHES_RE = /[–—]/g;
+
+function isSingleNumber(value) {
+  const s = String(value ?? '').trim();
+  return s !== '' && SINGLE_NUMBER_RE.test(s);
+}
+
+/**
+ * Parses a NUMBER RANGE value ("500 - 2000", "7.5–9", "500- 2000", …).
+ * Accepts `-` / `–` / `—` separators with optional surrounding spaces.
+ * Returns [min, max] or null when the value is not a valid range.
+ * The separator is never dropped nor collapsed into a single scalar.
+ */
+function parseNumberRange(value) {
+  const s = String(value ?? '').trim();
+  if (!s) return null;
+  // Only whitespace around the separator is forgiving; spaces inside a
+  // number component (e.g. "50 0") stay and correctly fail the digit check.
+  const collapsed = s.replace(RANGE_DASHES_RE, '-').replace(/\s*-\s*/g, '-').trim();
+  const parts = collapsed.split('-');
+  if (parts.length !== 2) return null;
+  const [lo, hi] = parts.map((p) => p.trim());
+  if (lo === '' || hi === '') return null;
+  if (!SINGLE_NUMBER_RE.test(lo) || !SINGLE_NUMBER_RE.test(hi)) return null;
+  return [Number(lo), Number(hi)];
+}
+
+function hasRangeSeparator(value) {
+  return /[-–—]/.test(String(value ?? ''));
+}
+
 /**
  * Client-facing form filler.
  * Renders questions from questions_snapshot and handles response input.
@@ -98,8 +130,28 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
     questions.forEach((q) => {
       // file_upload and image_upload are handled via direct follow-up communication, never block submission
       if (q.question_type === 'file_upload' || q.question_type === 'image_upload') return;
-      if (!q.required) return;
+
       const val = responses[q.id];
+
+      // Numeric fields (NUMBER vs NUMBER RANGE) carry their own Arabic
+      // validation and required message.
+      if (q.question_type === 'number') {
+        const isRange = q.conditional_rules?.numeric_accept === 'number_range';
+        if (q.required && (val === undefined || val === null || String(val).trim() === '')) {
+          errs[q.id] = 'هذا السؤال مطلوب.';
+        } else if (val !== undefined && val !== null && String(val).trim() !== '') {
+          if (isRange) {
+            if (!parseNumberRange(val)) errs[q.id] = 'من فضلك أدخل النطاق بالشكل: 7.5–9.';
+          } else if (!isSingleNumber(val)) {
+            errs[q.id] = hasRangeSeparator(val)
+              ? 'من فضلك أدخل رقمًا واحدًا فقط، مثال: 5000.'
+              : 'من فضلك أدخل قيمة رقمية صحيحة.';
+          }
+        }
+        return;
+      }
+
+      if (!q.required) return;
       if (val === undefined || val === null || val === '') {
         errs[q.id] = 'This field is required';
       } else if (Array.isArray(val) && val.length === 0) {
@@ -414,7 +466,21 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
           </select>
         );
 
-      case 'number':
+      case 'number': {
+        const isRange = question.conditional_rules?.numeric_accept === 'number_range';
+        if (isRange) {
+          return (
+            <input
+              type="text"
+              dir="auto"
+              value={value || ''}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={disabled}
+              placeholder="500 – 2000"
+              className={cn(baseInput, errorBorder)}
+            />
+          );
+        }
         return (
           <input
             type="number"
@@ -425,6 +491,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
             className={cn(baseInput, errorBorder)}
           />
         );
+      }
 
       case 'date':
         return (

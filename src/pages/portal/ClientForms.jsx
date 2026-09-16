@@ -4,7 +4,7 @@ import { AssessmentsService } from '@/services/assessments';
 import FormFiller from '@/components/FormFiller';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
 import { LoadingState, Button, Badge } from '@/components/ui';
-import { formatDate, getFormStatusColor } from '@/lib/ybs-utils';
+import { formatDate, getFormStatusColor, getFormStatusLabel } from '@/lib/ybs-utils';
 import { ClipboardList, Clock, CheckCircle2, Eye, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -93,7 +93,7 @@ export default function ClientForms() {
         <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/60 self-start sm:self-auto">
           {[
             { id: 'all', label: 'All', count: forms.length },
-            { id: 'pending', label: 'Pending', count: pendingCount },
+            { id: 'pending', label: 'Awaiting Response', count: pendingCount },
             { id: 'submitted', label: 'Under Review', count: forms.filter((f) => f.submission_status === 'submitted').length },
             { id: 'reviewed', label: 'Reviewed', count: forms.filter((f) => f.submission_status === 'reviewed').length },
           ].map((tab) => (
@@ -142,7 +142,7 @@ export default function ClientForms() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold text-foreground font-display">{f.name}</h3>
                     <Badge className={cn('capitalize text-[11px]', getFormStatusColor(f.submission_status))}>
-                      {f.submission_status === 'submitted' ? 'Under Review' : f.submission_status}
+                      {f.submission_status === 'submitted' ? 'Under Review' : getFormStatusLabel(f.submission_status)}
                     </Badge>
                   </div>
 

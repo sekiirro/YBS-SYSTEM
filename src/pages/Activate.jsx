@@ -4,7 +4,7 @@ import { supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Loader2, UserCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, User, Loader2, UserCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function Activate() {
@@ -14,6 +14,8 @@ export default function Activate() {
   const [email, setEmail] = useState(params.get("email") || "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -67,6 +69,23 @@ export default function Activate() {
       setError("Password must be at least 8 characters");
       return;
     }
+    if (invite) {
+      // Invited members must complete their identity: First + Last are both
+      // required (trimmed; whitespace-only is rejected). The server enforces
+      // this too, so a bypassed form can never save an email-only member.
+      if (!firstName.trim()) {
+        setError("Please enter your first name.");
+        return;
+      }
+      if (!lastName.trim()) {
+        setError("Please enter your last name.");
+        return;
+      }
+      if (firstName.trim().length > 80 || lastName.trim().length > 80) {
+        setError("Name is too long.");
+        return;
+      }
+    }
     if (inviteState === "checking") {
       setError("Verifying your invitation…");
       return;
@@ -82,7 +101,12 @@ export default function Activate() {
         // existing account (rotate password), so `User already registered`
         // can no longer be surfaced for a valid invitation.
         const { data, error } = await supabase.functions.invoke("activate-invite", {
-          body: { token, password },
+          body: {
+            token,
+            password,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+          },
         });
         if (error || !data || data.status !== "ok") {
           let body = null;
@@ -162,6 +186,42 @@ export default function Activate() {
               ) : (
                 ""
               )}
+            </div>
+          )}
+          {invite && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="firstName"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Ahmed"
+                    className="pl-10 h-12"
+                    autoComplete="given-name"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Ali"
+                    className="pl-10 h-12"
+                    autoComplete="family-name"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           )}
           <div className="space-y-2">

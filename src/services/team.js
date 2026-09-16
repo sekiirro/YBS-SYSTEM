@@ -69,5 +69,21 @@ export const TeamService = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  // The ONLY server-sanctioned path to change another member's name: the
+  // profiles_update RLS policy is self-update + platform owner only, so a
+  // workspace owner edits their members through this SECURITY DEFINER RPC.
+  async updateMemberName(userId, firstName, lastName) {
+    const { data, error } = await supabase.rpc('update_member_display_name', {
+      p_user_id: userId,
+      p_first_name: firstName,
+      p_last_name: lastName,
+    });
+    if (error) throw error;
+    if (data && data.success === false && data.reason === 'member_not_found') {
+      throw new Error('This member no longer exists.');
+    }
+    return data;
   }
 };
