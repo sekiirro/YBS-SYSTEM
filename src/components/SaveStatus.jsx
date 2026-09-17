@@ -13,7 +13,7 @@ import { Loader2, Check, AlertCircle, CloudUpload, RefreshCw } from 'lucide-reac
 export default function SaveStatus({ status, dirty, onRetry }) {
   if (status === 'saving') {
     return (
-      <Badge className="text-sky-400 bg-sky-500/10 border-sky-500/20 font-mono">
+      <Badge className="text-[hsl(var(--nutri-info))] bg-[hsl(var(--nutri-info)/0.12)] border-[hsl(var(--nutri-info)/0.25)] font-mono">
         <Loader2 className="w-3 h-3 animate-spin" /> Saving…
       </Badge>
     );
@@ -21,7 +21,7 @@ export default function SaveStatus({ status, dirty, onRetry }) {
 
   if (status === 'saved') {
     return (
-      <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-mono">
+      <Badge className="text-success bg-success/10 border-success/20 font-mono">
         <Check className="w-3 h-3" /> Saved
       </Badge>
     );
@@ -29,13 +29,13 @@ export default function SaveStatus({ status, dirty, onRetry }) {
 
   if (status === 'error' || (dirty && status === 'idle' && onRetry)) {
     return (
-      <Badge className="text-red-400 bg-red-500/10 border-red-500/20 font-mono" variant="default">
+      <Badge className="text-destructive bg-destructive/10 border-destructive/20 font-mono" variant="default">
         <AlertCircle className="w-3 h-3" /> Save failed
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="ml-0.5 inline-flex items-center gap-1 text-red-300 hover:text-red-200 transition-colors"
+            className="ml-0.5 inline-flex items-center gap-1 text-destructive/80 hover:text-destructive transition-colors"
             title="Retry save"
           >
             <RefreshCw className="w-3 h-3" /> Retry
@@ -47,7 +47,7 @@ export default function SaveStatus({ status, dirty, onRetry }) {
 
   if (dirty) {
     return (
-      <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20 font-mono">
+      <Badge className="text-warning bg-warning/10 border-warning/20 font-mono">
         <CloudUpload className="w-3 h-3" /> Unsaved changes
       </Badge>
     );

@@ -43,6 +43,16 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 228 20% 18%;
     --sidebar-ring: 217 91% 60%;
+    /* Nutrition workspace surface tokens */
+    --nutri-surface: 228 22% 11%;
+    --nutri-surface-2: 228 22% 14%;
+    --nutri-border-strong: 228 20% 22%;
+    --nutri-border-soft: 228 20% 14%;
+    --nutri-border-faint: 228 20% 10%;
+    --nutri-info: 203 86% 62%;      /* sky — informational / saving */
+    --nutri-macro-p: 199 91% 63%;    /* protein */
+    --nutri-macro-c: 43 91% 57%;     /* carbs */
+    --nutri-macro-f: 0 86% 63%;      /* fat */
     /* Chart tokens */
     --chart-1: 217 91% 60%;
     --chart-2: 160 84% 39%;
@@ -173,6 +183,93 @@
   .pulse-dot::after {
     content: '';
     @apply absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping;
+  }
+
+  /* ── Nutrition workspace scoped components ── */
+  .nutri-input {
+    @apply w-full h-9 px-3 rounded-lg bg-secondary/40 border border-nutri-border-soft text-[13px] text-foreground placeholder:text-muted-foreground/50;
+    @apply focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-1 focus:ring-offset-card transition-all duration-150;
+  }
+  .nutri-input-sm {
+    @apply w-full h-8 px-2.5 rounded-md bg-secondary/40 border border-nutri-border-soft text-[12px] text-foreground placeholder:text-muted-foreground/50;
+    @apply focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-1 focus:ring-offset-card transition-all duration-150;
+  }
+  .nutri-label {
+    @apply text-[11px] font-medium text-muted-foreground;
+  }
+  .nutri-pill {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/50 border border-nutri-border-soft text-[10px] font-mono text-muted-foreground;
+  }
+  .nutri-card {
+    @apply rounded-xl border border-nutri-border-strong bg-card;
+  }
+  .nutri-card-soft {
+    @apply rounded-xl border border-nutri-border-soft bg-secondary/30;
+  }
+  .nutri-section-label {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .nutri-macro-cell {
+    @apply flex flex-col items-center justify-center px-1.5 py-1 rounded-md bg-secondary/40 border border-nutri-border-soft;
+  }
+  .nutri-macro-cell-value {
+    @apply text-[13px] font-bold font-mono tabular-nums text-foreground leading-tight;
+  }
+  .nutri-macro-cell-label {
+    @apply text-[9px] uppercase tracking-wide text-muted-foreground font-sans leading-tight;
+  }
+  .nutri-food-row {
+    @apply group flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-card border border-nutri-border-soft hover:border-nutri-border-strong transition-colors duration-150;
+  }
+  .nutri-meal-card {
+    @apply rounded-xl border border-nutri-border-strong bg-card;
+  }
+  .nutri-meal-header {
+    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-nutri-border-soft;
+  }
+  .nutri-sticky-actions {
+    @apply sticky bottom-0 z-10 shrink-0 border-t border-nutri-border-soft bg-card/95 backdrop-blur-md py-3;
+  }
+  .nutri-skeleton-bar {
+    @apply h-2.5 rounded bg-secondary/60 animate-pulse;
+  }
+
+  /* Staggered food-row entrance */
+  @keyframes nutri-row-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-nutri-row-in {
+    animation: nutri-row-in 0.26s ease-out both;
+  }
+  @keyframes nutri-row-out {
+    from { opacity: 1; transform: translateX(0); max-height: 200px; }
+    to   { opacity: 0; transform: translateX(-6px); max-height: 0; }
+  }
+  .animate-nutri-row-out {
+    animation: nutri-row-out 0.2s ease-in forwards;
+  }
+  @keyframes nutri-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-nutri-fade-in {
+    animation: nutri-fade-in 0.2s ease-out both;
+  }
+  @keyframes nutri-pop-check {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .animate-nutri-pop-check {
+    animation: nutri-pop-check 0.2s ease-out both;
+  }
+  @keyframes nutri-save-pulse {
+    0%   { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.35); }
+    100% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+  }
+  .animate-nutri-save-pulse {
+    animation: nutri-save-pulse 0.6s ease-out;
   }
 }
 

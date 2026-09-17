@@ -184,7 +184,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Tab content */}
-      <div className="surface-card p-5">
+      <div className={cn("surface-card", activeTab === 'workout' ? "p-0 overflow-hidden" : "p-5")}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

@@ -22,14 +22,14 @@ export default function SlidingPlannerLayout({
   return (
     <div className="relative w-full overflow-hidden">
       {/* ─── Desktop layout ─── */}
-      <div className="hidden md:flex gap-0 transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)]">
+      <div className="hidden md:flex gap-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
         {/* Column 1 — Plan List */}
         <div
           className={cn(
-            'shrink-0 transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
+            'shrink-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto border-r border-nutri-border-strong',
             step === 1 && 'w-full',
-            step === 2 && 'w-[320px] min-w-[280px] border-r border-border/60',
-            step === 3 && 'w-[240px] min-w-[220px] border-r border-border/60',
+            step === 2 && 'w-[300px] min-w-[260px]',
+            step === 3 && 'w-[232px] min-w-[208px]',
           )}
           style={{ maxHeight: 'calc(100vh - 220px)' }}
         >
@@ -39,10 +39,10 @@ export default function SlidingPlannerLayout({
         {/* Column 2 — Plan Detail */}
         <div
           className={cn(
-            'shrink-0 transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
+            'shrink-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
             step < 2 && 'w-0 opacity-0 overflow-hidden',
             step === 2 && 'flex-1 opacity-100',
-            step === 3 && 'w-[340px] min-w-[300px] border-r border-border/60 opacity-100',
+            step === 3 && 'w-[332px] min-w-[296px] border-r border-nutri-border-strong opacity-100',
           )}
           style={{ maxHeight: 'calc(100vh - 220px)' }}
         >
@@ -52,7 +52,7 @@ export default function SlidingPlannerLayout({
         {/* Column 3 — Meal/Day Editor */}
         <div
           className={cn(
-            'shrink-0 transition-all duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
+            'shrink-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
             step < 3 && 'w-0 opacity-0 overflow-hidden',
             step === 3 && 'flex-1 opacity-100',
           )}

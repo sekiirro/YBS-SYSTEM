@@ -1,29 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { NutritionService } from '@/services/nutrition';
 import { AssessmentsService } from '@/services/assessments';
 import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
 import FormSubmissionPanel from '@/components/FormSubmissionPanel';
 import GeminiAnalysisPanel from '@/components/GeminiAnalysisPanel';
-import SlidingPlannerLayout from '@/components/client/SlidingPlannerLayout';
+import PremiumPlannerLayout from '@/components/workouts/PremiumPlannerLayout';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
 import {
-  ArrowLeft, Plus, FilePlus, Copy, Search, ArrowRight, Trash2,
-  ChevronDown, ChevronRight, ClipboardList, Sparkles, Apple,
+  Plus,
+  FilePlus,
+  Copy,
+  Search,
+  ArrowRight,
+  Trash2,
+  ChevronDown,
+  ClipboardList,
+  Sparkles,
+  Apple,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * Client-Centric Nutrition Workspace — 3-Column Sliding Layout.
+ * Client-Centric Nutrition Workspace — Master-Detail 3-Column Architecture.
  *
- * Column 1: Plan list + Form Submissions accordion
- * Column 2: Embedded NutritionPlanBuilder for the selected plan
- * Column 3: (Handled internally by NutritionPlanBuilder — meal editing)
- *
- * The builder already handles all meal/food editing inline, so columns 2+3
- * are rendered together via the NutritionPlanBuilder in embedded mode.
- * The "3-column" progressive disclosure is achieved by:
- *   step=1 → plan list only
- *   step=2 → plan list + builder (which contains meals + detail editing)
+ * Column 1: Plan list + Form Submissions accordion + AI Nutrition Analysis
+ * Column 2: Plan Overview + Meal Master List (embedded NutritionPlanBuilder)
+ * Column 3: Meal Deep Food Editor (slides in when meal is selected)
  */
 export default function ClientNutritionWorkspace({ client }) {
   const clientId = client?.id;
@@ -38,6 +40,7 @@ export default function ClientNutritionWorkspace({ client }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPlanOpen, setNewPlanOpen] = useState(false);
+  const [planSearch, setPlanSearch] = useState('');
   const [templateSearch, setTemplateSearch] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
   const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -49,13 +52,28 @@ export default function ClientNutritionWorkspace({ client }) {
   const [isFormsOpen, setIsFormsOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
-  const plannerStep = editor ? 2 : 1;
+  // Mobile navigation step: 1 = sidebar, 2 = plan overview
+  const [mobileStep, setMobileStep] = useState(1);
 
   const reloadPlans = useCallback(async () => {
     if (!clientId) return;
     try {
       const data = await NutritionService.list({ client_id: clientId });
-      setPlans(data || []);
+      const loadedPlans = data || [];
+      setPlans(loadedPlans);
+      setEditor((curr) => {
+        if (curr?.mode === 'new' || curr?.mode === 'template') {
+          return curr;
+        }
+        if (curr?.planId && loadedPlans.some((p) => p.id === curr.planId)) {
+          return curr;
+        }
+        if (loadedPlans.length > 0) {
+          const activePlan = loadedPlans.find((p) => p.status === 'active' || p.is_active) || loadedPlans[0];
+          return { mode: 'edit', planId: activePlan.id };
+        }
+        return null;
+      });
     } catch (err) {
       console.error('Failed to reload nutrition plans:', err);
     }
@@ -100,15 +118,18 @@ export default function ClientNutritionWorkspace({ client }) {
   const openNewPlan = () => {
     setNewPlanOpen(false);
     setEditor({ mode: 'new' });
+    setMobileStep(2);
   };
 
   const openFromTemplate = (templateId) => {
     setNewPlanOpen(false);
     setEditor({ mode: 'template', templateId });
+    setMobileStep(2);
   };
 
   const closeEditor = async () => {
     setEditor(null);
+    setMobileStep(1);
     await reloadPlans();
   };
 
@@ -123,99 +144,151 @@ export default function ClientNutritionWorkspace({ client }) {
     }
   };
 
-  const filteredTemplates = templates.filter((t) => {
+  const filteredPlans = useMemo(() => {
+    const q = planSearch.trim().toLowerCase();
+    if (!q) return plans;
+    return plans.filter((p) => p.name?.toLowerCase().includes(q));
+  }, [plans, planSearch]);
+
+  const filteredTemplates = useMemo(() => {
     const q = templateSearch.trim().toLowerCase();
-    return !q || t.name?.toLowerCase().includes(q);
-  });
+    if (!q) return templates;
+    return templates.filter((t) => t.name?.toLowerCase().includes(q));
+  }, [templates, templateSearch]);
 
-  if (loading) return <LoadingState label="Loading nutrition plans…" />;
+  if (loading) return <LoadingState label="Loading nutrition workspace…" />;
 
-  // ─── Column 1: Plan List + Form Submissions + Analysis ──────────
+  // ─── Column 1: Master Navigation Sidebar ────────────────────────
   const column1Content = (
     <div className="p-4 space-y-4">
       {/* 1. Nutrition Plans Section */}
       <div>
-        <button
-          type="button"
-          onClick={() => setIsPlansOpen((prev) => !prev)}
-          className="flex items-center justify-between w-full text-left group py-1"
-        >
-          <h3 className="text-[14px] font-display font-semibold flex items-center gap-2">
-            <Apple className="w-4 h-4 text-muted-foreground" />
-            Nutrition Plans
-          </h3>
-          <ChevronDown
-            className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform duration-200",
-              isPlansOpen ? "rotate-0" : "-rotate-90"
-            )}
-          />
-        </button>
+        <div className="flex items-center justify-between py-1">
+          <button
+            type="button"
+            onClick={() => setIsPlansOpen((prev) => !prev)}
+            className="flex items-center gap-2 text-left group"
+          >
+            <Apple className="w-4 h-4 text-primary" />
+            <h3 className="text-[14px] font-display font-semibold text-foreground">
+              Nutrition Plans
+            </h3>
+            <span className="text-[11px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-secondary/80 text-muted-foreground">
+              {plans.length}
+            </span>
+            <ChevronDown
+              className={cn(
+                'w-3.5 h-3.5 text-muted-foreground transition-transform duration-200',
+                isPlansOpen ? 'rotate-0' : '-rotate-90'
+              )}
+            />
+          </button>
+          <Button
+            size="sm"
+            onClick={() => setNewPlanOpen(true)}
+            className="text-[11px] h-7 px-2.5 shadow-sm"
+          >
+            <Plus className="w-3 h-3" /> New Plan
+          </Button>
+        </div>
 
         <div
           className={cn(
-            "grid transition-all duration-200 ease-in-out",
-            isPlansOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+            'grid transition-all duration-200 ease-in-out',
+            isPlansOpen ? 'grid-rows-[1fr] opacity-100 mt-2.5' : 'grid-rows-[0fr] opacity-0 mt-0'
           )}
         >
-          <div className="overflow-hidden">
-            {plans.length === 0 ? (
-              <Button
-                size="lg"
-                onClick={() => setNewPlanOpen(true)}
-                className="w-full h-auto min-h-[72px] px-6 py-5 rounded-xl text-base sm:text-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-              >
-                <Plus className="w-5 h-5" /> New Plan
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Button size="sm" className="w-full" onClick={() => setNewPlanOpen(true)}>
-                  <Plus className="w-3.5 h-3.5" /> New Plan
-                </Button>
+          <div className="overflow-hidden space-y-2">
+            {plans.length > 3 && (
+              <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Filter plans…"
+                  value={planSearch}
+                  onChange={(e) => setPlanSearch(e.target.value)}
+                  className="w-full h-7 pl-8 pr-2.5 rounded-lg bg-secondary/40 border border-border text-[11px] focus:outline-none focus:border-primary/50"
+                />
+              </div>
+            )}
 
-                {plans.map((p) => (
+            {plans.length === 0 ? (
+              <div className="p-4 rounded-xl border border-dashed border-border/70 text-center space-y-2 bg-secondary/10">
+                <p className="text-xs text-muted-foreground">No nutrition plans yet</p>
+                <Button
+                  size="sm"
+                  onClick={() => setNewPlanOpen(true)}
+                  className="w-full text-xs h-8"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Create First Plan
+                </Button>
+              </div>
+            ) : (
+              filteredPlans.map((p) => {
+                const isActive = editor?.planId === p.id;
+                const isDraft = p.status === 'draft';
+                const mealCount = p.nutrition_meals?.length || p.meals?.length || 0;
+
+                return (
                   <div
                     key={p.id}
-                    onClick={() => setEditor({ mode: 'edit', planId: p.id })}
+                    onClick={() => {
+                      setEditor({ mode: 'edit', planId: p.id });
+                      setMobileStep(2);
+                    }}
                     className={cn(
-                      'p-3 rounded-lg border cursor-pointer transition-colors',
-                      editor?.planId === p.id
-                        ? 'bg-primary/10 border-primary/30'
-                        : 'bg-secondary/30 border-border hover:border-primary/40'
+                      'group relative rounded-xl border p-3 cursor-pointer transition-all duration-150 select-none',
+                      isActive
+                        ? 'bg-card border-primary/50 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                        : 'bg-card/40 border-border/40 hover:border-border/80 hover:bg-card'
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[13px] font-medium truncate">{p.name}</p>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge className={cn(
-                          'text-[10px] font-mono capitalize shrink-0',
-                          p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
-                          : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
-                        )}>
-                          {p.status === 'draft' ? 'Draft' : 'Active'}
+                      <p className="text-[13px] font-semibold text-foreground truncate">
+                        {p.name}
+                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-mono capitalize shrink-0 border py-0',
+                            isDraft
+                              ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                              : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                          )}
+                        >
+                          {isDraft ? 'Draft' : 'Active'}
                         </Badge>
                         <button
                           type="button"
                           onClick={(e) => handleRemovePlan(p, e)}
-                          className="p-1 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1 rounded-md text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
                           title="Remove plan"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-3 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-                      {p.daily_calories != null && <span>Cal: {p.daily_calories}</span>}
-                      {p.daily_protein != null && <span>P: {p.daily_protein}g</span>}
-                      {p.daily_carbs != null && <span>C: {p.daily_carbs}g</span>}
-                      {p.daily_fat != null && <span>F: {p.daily_fat}g</span>}
+
+                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground font-mono flex-wrap">
+                      {p.daily_calories != null && (
+                        <span className="text-primary font-medium">{Math.round(p.daily_calories)} kcal</span>
+                      )}
+                      {(p.daily_protein != null || p.daily_carbs != null || p.daily_fat != null) && (
+                        <>
+                          <span>·</span>
+                          <span>
+                            {p.daily_protein != null ? `${Math.round(p.daily_protein)}P ` : ''}
+                            {p.daily_carbs != null ? `${Math.round(p.daily_carbs)}C ` : ''}
+                            {p.daily_fat != null ? `${Math.round(p.daily_fat)}F` : ''}
+                          </span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span className="font-sans text-muted-foreground/80">{mealCount} meals</span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {p.nutrition_meals?.length || p.meals?.length || 0} meals
-                    </p>
                   </div>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -234,16 +307,16 @@ export default function ClientNutritionWorkspace({ client }) {
           </h3>
           <ChevronDown
             className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform duration-200",
-              isFormsOpen ? "rotate-0" : "-rotate-90"
+              'w-4 h-4 text-muted-foreground transition-transform duration-200',
+              isFormsOpen ? 'rotate-0' : '-rotate-90'
             )}
           />
         </button>
 
         <div
           className={cn(
-            "grid transition-all duration-200 ease-in-out",
-            isFormsOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+            'grid transition-all duration-200 ease-in-out',
+            isFormsOpen ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0 mt-0'
           )}
         >
           <div className="overflow-hidden">
@@ -265,16 +338,16 @@ export default function ClientNutritionWorkspace({ client }) {
           </h3>
           <ChevronDown
             className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform duration-200",
-              isAnalysisOpen ? "rotate-0" : "-rotate-90"
+              'w-4 h-4 text-muted-foreground transition-transform duration-200',
+              isAnalysisOpen ? 'rotate-0' : '-rotate-90'
             )}
           />
         </button>
 
         <div
           className={cn(
-            "grid transition-all duration-200 ease-in-out",
-            isAnalysisOpen ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"
+            'grid transition-all duration-200 ease-in-out',
+            isAnalysisOpen ? 'grid-rows-[1fr] opacity-100 mt-3' : 'grid-rows-[0fr] opacity-0 mt-0'
           )}
         >
           <div className="overflow-hidden">
@@ -289,38 +362,48 @@ export default function ClientNutritionWorkspace({ client }) {
     </div>
   );
 
-  // ─── Column 2+3: Embedded Builder ───────────────────────────────
-  const column2Content = editor ? (
-    <div className="p-4">
-      <button
-        type="button"
-        onClick={closeEditor}
-        className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground transition-colors mb-3 md:hidden"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to plans
-      </button>
-      <NutritionPlanBuilder
-        key={JSON.stringify(editor)}
-        templateId={editor.mode === 'template' ? editor.templateId : undefined}
-        initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
-        clientId={clientId}
-        clientName={clientName}
-        workspaceId={workspaceId}
-        embedded
-        onExit={closeEditor}
-      />
-    </div>
-  ) : null;
-
   return (
     <>
-      <SlidingPlannerLayout
-        step={plannerStep}
-        column1={column1Content}
-        column2={column2Content}
-        column3={null}
-        onBack={closeEditor}
-      />
+      <div className="h-[calc(100vh-240px)] min-h-[640px] overflow-hidden">
+        {editor ? (
+          <NutritionPlanBuilder
+            key={editor.mode === 'edit' ? editor.planId : `${editor.mode}-${editor.templateId || 'new'}`}
+            templateId={editor.mode === 'template' ? editor.templateId : undefined}
+            initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
+            clientId={clientId}
+            clientName={clientName}
+            workspaceId={workspaceId}
+            embedded
+            sidebarSlot={column1Content}
+            onPlanSaved={reloadPlans}
+            onExit={closeEditor}
+          />
+        ) : (
+          <PremiumPlannerLayout
+            column1={column1Content}
+            column2={
+              <div className="flex flex-col items-center justify-center h-full text-center px-8 py-20 space-y-5">
+                <div className="w-16 h-16 rounded-2xl bg-secondary/50 border border-border/60 flex items-center justify-center">
+                  <Apple className="w-7 h-7 text-muted-foreground/30" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">No Nutrition Plans</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">
+                    This client does not have any nutrition plans yet. Click &ldquo;New Plan&rdquo; to start.
+                  </p>
+                </div>
+                <Button onClick={() => setNewPlanOpen(true)} className="text-xs shadow-sm">
+                  <Plus className="w-3.5 h-3.5" /> New Plan
+                </Button>
+              </div>
+            }
+            showColumn3={false}
+            step={mobileStep}
+            onBackToCol1={() => setMobileStep(1)}
+            className="h-full"
+          />
+        )}
+      </div>
 
       {/* New Plan Selection Modal */}
       <Modal
@@ -338,7 +421,7 @@ export default function ClientNutritionWorkspace({ client }) {
             <button
               type="button"
               onClick={openNewPlan}
-              className="surface-card p-4 rounded-xl border border-border text-left hover:border-primary/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group"
+              className="rounded-xl border border-border/80 bg-card p-4 text-left hover:border-primary/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group shadow-sm"
             >
               <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-3">
                 <FilePlus className="w-4 h-4 text-primary" />
@@ -355,14 +438,17 @@ export default function ClientNutritionWorkspace({ client }) {
 
             <button
               type="button"
-              onClick={() => { setShowTemplates(true); loadTemplates(); }}
-              className="surface-card p-4 rounded-xl border border-border text-left hover:border-purple-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group"
+              onClick={() => {
+                setShowTemplates(true);
+                loadTemplates();
+              }}
+              className="rounded-xl border border-border/80 bg-card p-4 text-left hover:border-sky-500/50 hover:bg-secondary/30 transition-all flex flex-col justify-between group shadow-sm"
             >
-              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-3">
-                <Copy className="w-4 h-4 text-purple-400" />
+              <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-3">
+                <Copy className="w-4 h-4 text-sky-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-foreground group-hover:text-purple-400 transition-colors">
+                <h4 className="text-sm font-semibold text-foreground group-hover:text-sky-400 transition-colors">
                   Load From Template
                 </h4>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -373,18 +459,18 @@ export default function ClientNutritionWorkspace({ client }) {
           </div>
 
           {showTemplates && (
-            <div id="client-nutrition-templates" className="pt-2 border-t border-border">
+            <div id="client-nutrition-templates" className="pt-3 border-t border-border/40">
               <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                 <Copy className="w-3.5 h-3.5 text-primary" /> Or choose a template below
               </h4>
 
               {templatesLoading ? (
-                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                <p className="text-xs text-muted-foreground py-4 text-center border border-dashed border-border/60 rounded-lg">
                   Loading nutrition templates…
                 </p>
               ) : templatesError ? (
-                <div className="py-3 text-center border border-dashed border-red-500/40 rounded-lg">
-                  <p className="text-xs text-red-400">{templatesError}</p>
+                <div className="py-4 text-center border border-dashed border-destructive/40 rounded-lg">
+                  <p className="text-xs text-destructive">{templatesError}</p>
                   <button
                     type="button"
                     onClick={loadTemplates}
@@ -394,7 +480,7 @@ export default function ClientNutritionWorkspace({ client }) {
                   </button>
                 </div>
               ) : templates.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border/60 rounded-lg">
+                <p className="text-xs text-muted-foreground py-4 text-center border border-dashed border-border/60 rounded-lg">
                   No templates available. You can create one from the Nutrition Plans page.
                 </p>
               ) : (
@@ -406,11 +492,11 @@ export default function ClientNutritionWorkspace({ client }) {
                       placeholder="Search templates…"
                       value={templateSearch}
                       onChange={(e) => setTemplateSearch(e.target.value)}
-                      className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
+                      className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/40 border border-border text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
                     />
                   </div>
 
-                  <div className="max-h-40 overflow-y-auto divide-y divide-border/40 border border-border rounded-lg p-1">
+                  <div className="max-h-48 overflow-y-auto divide-y divide-border/30 border border-border rounded-lg p-1 bg-card">
                     {filteredTemplates.length === 0 ? (
                       <p className="text-xs text-muted-foreground py-3 text-center">No matching templates.</p>
                     ) : (
@@ -424,7 +510,7 @@ export default function ClientNutritionWorkspace({ client }) {
                           <div>
                             <span className="font-medium text-foreground block">{t.name}</span>
                             <span className="text-[11px] text-muted-foreground font-mono">
-                              {Math.round(t.daily_calories || 0)} kcal · {(t.meals?.length || 0)} meals
+                              {Math.round(t.daily_calories || 0)} kcal · {t.meals?.length || 0} meals
                             </span>
                           </div>
                           <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -444,7 +530,7 @@ export default function ClientNutritionWorkspace({ client }) {
 
 /** Picks the most-recently-submitted assessment id from the client's forms. */
 function useMemoLatestAssessment(forms) {
-  return React.useMemo(() => {
+  return useMemo(() => {
     if (!forms || forms.length === 0) return null;
     const sorted = [...forms].sort(
       (a, b) =>

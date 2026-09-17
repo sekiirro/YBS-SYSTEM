@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { PanelGroup, Panel } from 'react-resizable-panels';
 import { useAuth } from '@/lib/AuthContext';
 import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkoutsService, calculateWorkoutVolume } from '@/services/workouts';
 import { ClientsService } from '@/services/clients';
 import { WorkspacesService } from '@/services/workspaces';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +16,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { PlannerResizeHandle } from '@/components/workouts/PremiumPlannerLayout';
 import ExerciseSearchModal from '@/components/workouts/ExerciseSearchModal';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
 import ExerciseVersionLinkModal from '@/components/workouts/ExerciseVersionLinkModal';
@@ -42,7 +55,9 @@ import {
   Coffee,
   Pencil,
   MoreVertical,
+  MoreHorizontal,
   Link2,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -224,6 +239,8 @@ export default function WorkoutPlanBuilder(props = {}) {
     clientId: propClientId,
     clientName: propClientName,
     workspaceId: propWorkspaceId,
+    sidebarSlot,
+    onPlanSaved,
     embedded = false,
     onExit,
   } = props;
@@ -274,7 +291,8 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   // Training Days State
   const [days, setDays] = useState([]);
-  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [activeDayIndex, setActiveDayIndex] = useState(embedded ? null : 0);
+  const [mobileStep, setMobileStep] = useState(2);
 
   // Modals
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -311,6 +329,10 @@ export default function WorkoutPlanBuilder(props = {}) {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renameIndex, setRenameIndex] = useState(null);
   const [renameTitle, setRenameTitle] = useState('');
+
+  // Destructive Action Confirmation Dialogs
+  const [dayToDeleteIndex, setDayToDeleteIndex] = useState(null);
+  const [exerciseToDeleteIndex, setExerciseToDeleteIndex] = useState(null);
 
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
@@ -520,7 +542,7 @@ export default function WorkoutPlanBuilder(props = {}) {
     return calculateWorkoutVolume(days);
   }, [days]);
 
-  const activeDay = days[activeDayIndex] || days[0];
+  const activeDay = activeDayIndex !== null && activeDayIndex >= 0 ? (days[activeDayIndex] || null) : null;
 
   // ─── 2b. Autosave (server-persistent) ──────────────────────────────
   // Once a plan/template row exists AND the load effect has finished
@@ -764,14 +786,15 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   const handleDeleteDay = (index) => {
     if (days.length <= 1) {
-      alert('A workout plan must have at least one session or program item.');
+      setError('A workout plan must have at least one session or program item.');
       return;
     }
-    const target = days[index];
-    const isRest = target?.day_type === 'rest_day' || !!target?.rest_day;
-    const label = isRest ? (target.day_name || 'Rest Day') : (target.day_name || `Session ${index + 1}`);
-    if (!window.confirm(`Delete ${label}?`)) return;
+    setDayToDeleteIndex(index);
+  };
 
+  const executeDeleteDay = () => {
+    if (dayToDeleteIndex === null || dayToDeleteIndex < 0 || dayToDeleteIndex >= days.length) return;
+    const index = dayToDeleteIndex;
     const remaining = days.filter((_, idx) => idx !== index);
     const reindexed = remaining.map((d, idx) => ({
       ...d,
@@ -780,6 +803,7 @@ export default function WorkoutPlanBuilder(props = {}) {
 
     setDays(reindexed);
     setActiveDayIndex((prev) => Math.max(0, prev >= index ? prev - 1 : prev));
+    setDayToDeleteIndex(null);
   };
 
   // ─── 4. Exercises Management ────────────────────────────────────────
@@ -849,9 +873,14 @@ export default function WorkoutPlanBuilder(props = {}) {
   };
 
   const handleDeleteExercise = (exerciseIndex) => {
-    if (!activeDay) return;
-    const exList = (activeDay.exercises || []).filter((_, idx) => idx !== exerciseIndex);
+    setExerciseToDeleteIndex(exerciseIndex);
+  };
+
+  const executeDeleteExercise = () => {
+    if (exerciseToDeleteIndex === null || !activeDay) return;
+    const exList = (activeDay.exercises || []).filter((_, idx) => idx !== exerciseToDeleteIndex);
     handleUpdateDay(activeDayIndex, { exercises: exList });
+    setExerciseToDeleteIndex(null);
   };
 
   const handleDuplicateExercise = (exerciseIndex) => {
@@ -982,6 +1011,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       setPlanId(assigned.id);
       setIsTemplate(false);
       autosave.reset();
+      onPlanSaved?.(assigned);
       setSuccessMessage(`Assigned to ${client.full_name} successfully!`);
       setTimeout(() => setSuccessMessage(''), 3500);
     } catch (err) {
@@ -1011,6 +1041,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       };
       const updated = await WorkoutsService.update(planId, payload, days);
       setPlanId(updated.id);
+      onPlanSaved?.(updated);
       setSuccessMessage(isTemplate
         ? 'Workout template changes saved successfully!'
         : 'Workout program changes saved successfully!');
@@ -1023,108 +1054,303 @@ export default function WorkoutPlanBuilder(props = {}) {
     }
   };
 
-  if (loading) return <LoadingState label="Loading workout program builder…" />;
+  if (loading) {
+    return (
+      <div className={cn(
+        'w-full bg-background select-none',
+        embedded
+          ? 'flex flex-col h-full overflow-hidden'
+          : 'flex flex-col h-[calc(100vh-56px)] overflow-hidden'
+      )}>
+        {/* Top bar skeleton */}
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/40 bg-card/60 shrink-0">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-24 rounded-md" />
+            <Skeleton className="h-5 w-32 rounded-md" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-24 rounded-lg" />
+            <Skeleton className="h-8 w-28 rounded-lg" />
+          </div>
+        </div>
+
+        {/* Multi-column layout skeleton */}
+        <div className="flex-1 flex overflow-hidden">
+          {sidebarSlot ? (
+            <div className="w-64 border-r border-border/40 shrink-0 hidden md:flex flex-col overflow-hidden">
+              {sidebarSlot}
+            </div>
+          ) : !embedded ? (
+            <div className="w-64 border-r border-border/40 p-4 space-y-4 shrink-0 hidden md:block bg-card/20">
+              <Skeleton className="h-4 w-28 rounded-md" />
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <Skeleton className="h-4 w-20 rounded-md" />
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <Skeleton className="h-4 w-16 rounded-md" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          ) : null}
+
+          {/* Col 2: Day cards skeleton */}
+          <div className="w-72 md:w-80 border-r border-border/40 p-3 space-y-2 shrink-0 bg-card/10">
+            <div className="flex items-center justify-between px-1 py-1">
+              <Skeleton className="h-4 w-24 rounded-md" />
+              <Skeleton className="h-3 w-12 rounded-md" />
+            </div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="p-3 rounded-xl border border-border/40 bg-card/40 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="w-7 h-7 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-3.5 w-3/4 rounded-md" />
+                    <Skeleton className="h-2.5 w-1/2 rounded-md" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Col 3: Exercise editor skeleton */}
+          <div className="flex-1 p-4 space-y-3 overflow-hidden bg-background">
+            <div className="flex items-center justify-between pb-3 border-b border-border/40">
+              <div className="space-y-1">
+                <Skeleton className="h-3 w-32 rounded-md" />
+                <Skeleton className="h-5 w-48 rounded-md" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Skeleton className="h-7 w-7 rounded-lg" />
+                <Skeleton className="h-7 w-7 rounded-lg" />
+              </div>
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-3.5 rounded-xl border border-border/40 bg-card/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-40 rounded-md" />
+                    <Skeleton className="h-4 w-16 rounded-md" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-md" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                  {[1, 2, 3, 4, 5].map((c) => (
+                    <div key={c} className="space-y-1">
+                      <Skeleton className="h-2.5 w-12 rounded-md" />
+                      <Skeleton className="h-8 w-full rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-10 w-full rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const libraryWorkspace = workspaces.find((w) => w.id === exerciseLibraryWorkspaceId);
   const canChooseLibrarySource = isPlatformAdmin(user);
 
-  return (
-    <div className="space-y-5 max-w-7xl mx-auto pb-16">
-      {/* ─── Top Action Bar ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={async () => { await autosave.flush(); if (embedded) onExit?.(); else navigate(returnTo || '/workouts'); }}
-            className="p-2 rounded-xl bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-            title="Back to Workout Plans"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-primary font-mono">
-                Workout Plan Builder
-              </span>
-              <Badge className={cn('text-[10px] font-mono capitalize', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : '')}>
-                {isTemplate ? 'Template' : 'Client Plan'}
-              </Badge>
-              {selectedClient && (
-                <Badge className="text-[10px] font-mono bg-primary/10 text-primary border-primary/20">
-                  Client: {selectedClient.full_name}
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">
-              {name || 'Untitled Workout Plan'}
-            </h1>
-          </div>
+  // ─── Derived UI state ──────────────────────────────────────────────
+  // A training day (not rest) is selected → Column 3 opens.
+  // Rest days render their own recovery view inside Column 2/3 area.
+  const selectedDayIsSession = activeDay && !(activeDay.day_type === 'rest_day' || !!activeDay.rest_day);
+  const showExercisePanel = !!activeDay; // Column 3 always shows when ANY day is selected
+
+  // ─── Column content: Config sidebar (standalone only) ──────────────
+  const configSidebarContent = (
+    <div className="flex flex-col h-full">
+      {/* Sticky header */}
+      <div className="px-4 pt-4 pb-3 border-b border-border/60 shrink-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-primary font-mono">Plan Builder</span>
+          <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-secondary text-muted-foreground border-border')}>
+            {isTemplate ? 'Template' : 'Client Plan'}
+          </Badge>
+        </div>
+        <h1 className="text-[13px] font-bold text-foreground truncate" title={name || 'Untitled'}>
+          {name || <span className="text-muted-foreground italic">Untitled</span>}
+        </h1>
+        {selectedClient && (
+          <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{selectedClient.full_name}</p>
+        )}
+      </div>
+
+      {/* Scrollable config body */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {/* Plan Name */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Plan Name</label>
+          <input
+            type="text"
+            placeholder="e.g. 4-Day Hypertrophy Block"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full h-8 px-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
+          />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setTemplateName(name ? `${name} (Template)` : 'New Workout Template');
-              setTemplateModalOpen(true);
+        {/* Split Type */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Split Type</label>
+          <select
+            value={splitType}
+            onChange={(e) => {
+              const newSplit = e.target.value;
+              setSplitType(newSplit);
+              if (newSplit === 'custom') {
+                const customName = customSplitName || 'Session 1';
+                setDays((prev) => prev.map((d, idx) => ({ ...d, day_name: idx === 0 ? customName : d.day_name })));
+              }
             }}
-            className="text-xs"
+            className="w-full h-8 px-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
           >
-            <Bookmark className="w-3.5 h-3.5 text-purple-400" /> Save as Template
-          </Button>
+            {SPLIT_TYPES.map((st) => (
+              <option key={st.id} value={st.id}>{st.label}</option>
+            ))}
+          </select>
+        </div>
 
-          <Button
-            variant="secondary"
-            onClick={planId ? handleSaveChanges : handleSaveAndAssign}
-            disabled={saving}
-            className="text-xs"
-          >
-            <Users className="w-3.5 h-3.5 text-primary" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
-          </Button>
+        {/* Custom Split Name */}
+        {splitType === 'custom' && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Split Title</label>
+            <input
+              type="text"
+              placeholder="e.g. Chest & Back Specialization"
+              value={customSplitName}
+              onChange={(e) => {
+                setCustomSplitName(e.target.value);
+                if (days.length === 1) handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
+              }}
+              className="w-full h-8 px-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
+            />
+          </div>
+        )}
 
-          <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+        {/* Coaching Notes */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Coaching Notes</label>
+          <textarea
+            rows={3}
+            placeholder="e.g. 6-week progressive overload…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground resize-none leading-relaxed"
+          />
+        </div>
+
+        {/* Exercise Library Source */}
+        <div className="rounded-lg bg-secondary/20 border border-border/60 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Exercise Library</label>
+            {canChooseLibrarySource ? (
+              <button type="button" onClick={() => setLibrarySourceOpen(true)} className="text-[10px] text-primary hover:underline">
+                Change
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Lock className="w-2.5 h-2.5" /> Locked
+              </span>
+            )}
+          </div>
+          {libraryWorkspace && (
+            <p className="text-[10px] text-muted-foreground">
+              Source: <span className="font-semibold text-foreground">{libraryWorkspace.name}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Volume Summary */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Flame className="w-3 h-3 text-orange-400" /> Volume
+            </h3>
+            <span className="text-[10px] font-mono font-semibold text-primary">{volumeData.totalWorkingSets} sets/wk</span>
+          </div>
+          <div className="space-y-1">
+            {volumeData.muscleDistribution.slice(0, 5).map((m) => (
+              <div key={m.muscle} className="space-y-0.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="capitalize text-foreground">{m.muscle}</span>
+                  <span className="font-mono text-muted-foreground">{m.sets}s ({m.percentage}%)</span>
+                </div>
+                <div className="w-full h-1 rounded-full bg-secondary/80 overflow-hidden">
+                  <div className="h-full bg-primary rounded-full" style={{ width: `${m.percentage}%` }} />
+                </div>
+              </div>
+            ))}
+            {volumeData.muscleDistribution.length === 0 && (
+              <p className="text-[10px] text-muted-foreground text-center py-2">Add exercises to see muscle distribution</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Alerts */}
-      {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center justify-between">
-          <span>{error}</span>
-          <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-300">
-            ×
-          </button>
+      {/* Bottom actions */}
+      <div className="shrink-0 px-4 py-3 border-t border-border/60 space-y-2">
+        {error && (
+          <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] text-red-400 flex items-center justify-between gap-1">
+            <span className="truncate">{error}</span>
+            <button type="button" onClick={() => setError('')} className="shrink-0 text-red-400 hover:text-red-300">×</button>
+          </div>
+        )}
+        {successMessage && (
+          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 flex items-center gap-1">
+            <Check className="w-3 h-3 shrink-0" />
+            <span className="truncate">{successMessage}</span>
+          </div>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <Button
+            variant="secondary"
+            onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
+            className="w-full text-[11px] h-8"
+          >
+            <Bookmark className="w-3 h-3 text-purple-400" /> Save as Template
+          </Button>
+          <Button
+            onClick={planId ? handleSaveChanges : handleSaveAndAssign}
+            disabled={saving}
+            className="w-full text-[11px] h-8"
+          >
+            <Users className="w-3 h-3" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
+          </Button>
+          <div className="flex justify-center">
+            <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+          </div>
         </div>
-      )}
+      </div>
+    </div>
+  );
 
-      {successMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>{successMessage}</span>
-        </div>
-      )}
-
-      {/* ─── Plan Configuration Header Card ─── */}
-      <div className="surface-card p-4 sm:p-5 rounded-2xl border border-border/80 space-y-4">
-        <div className={cn(
-          'grid gap-4',
-          splitType === 'custom' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'
-        )}>
-          {/* Plan Name */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-foreground">Plan Name *</label>
+  // ─── Column content: Embedded header (embedded mode action bar) ─────
+  const embeddedHeaderContent = (
+    <div className="px-4 py-3 border-b border-border/60 bg-card/60 shrink-0">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-secondary text-muted-foreground border-border')}>
+              {isTemplate ? 'Template' : 'Client Plan'}
+            </Badge>
+            {selectedClient && (
+              <Badge className="text-[9px] font-mono bg-primary/10 text-primary border-primary/20 shrink-0 truncate max-w-[100px]">
+                {selectedClient.full_name}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <input
               type="text"
-              placeholder="e.g. 4-Day Hypertrophy Block"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
+              placeholder="Plan Name"
+              className="text-[13px] font-bold text-foreground bg-transparent border-b border-transparent focus:border-border/80 focus:outline-none px-0 py-0.5 min-w-0 flex-1"
             />
           </div>
-
-          {/* Split Type Selector */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-foreground">Split Type *</label>
+          <div className="flex items-center gap-2 mt-0.5">
             <select
               value={splitType}
               onChange={(e) => {
@@ -1132,753 +1358,819 @@ export default function WorkoutPlanBuilder(props = {}) {
                 setSplitType(newSplit);
                 if (newSplit === 'custom') {
                   const customName = customSplitName || 'Session 1';
-                  setDays((prev) => prev.map((d, idx) => ({
-                    ...d,
-                    day_name: idx === 0 ? customName : d.day_name,
-                  })));
+                  setDays((prev) => prev.map((d, idx) => ({ ...d, day_name: idx === 0 ? customName : d.day_name })));
                 }
               }}
-              className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
+              className="h-6 px-1.5 rounded-md bg-secondary/40 border border-border/60 text-[10px] text-muted-foreground focus:outline-none focus:border-primary/40"
             >
               {SPLIT_TYPES.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.label}
-                </option>
+                <option key={st.id} value={st.id}>{st.label}</option>
               ))}
             </select>
-          </div>
-
-          {/* Custom Split Title (conditional) */}
-          {splitType === 'custom' && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Custom Split Title *</label>
+            {splitType === 'custom' && (
               <input
                 type="text"
-                placeholder="e.g. Chest & Back Specialization"
+                placeholder="Split name"
                 value={customSplitName}
                 onChange={(e) => {
                   setCustomSplitName(e.target.value);
-                  if (days.length === 1) {
-                    handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
-                  }
+                  if (days.length === 1) handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
                 }}
-                className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
+                className="h-6 px-2 rounded-md bg-secondary/40 border border-border/60 text-[10px] text-muted-foreground focus:outline-none focus:border-primary/40 min-w-0 flex-1"
               />
-            </div>
-          )}
-        </div>
-
-        {/* Exercise Library Source */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl bg-secondary/20 border border-border/60 px-3 py-2.5">
-          <div className="min-w-0">
-            <label className="text-xs font-semibold text-foreground">Exercise Library Source</label>
-            <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
-              <Info className="w-3 h-3 shrink-0" />
-              The exercise picker browses this workspace plus the YBS Global Library.
-              {libraryWorkspace && (
-                <span>
-                  Currently:{' '}
-                  <span className="font-semibold text-foreground">{libraryWorkspace.name}</span>
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {canChooseLibrarySource ? (
-              <Button variant="secondary" onClick={() => setLibrarySourceOpen(true)} className="text-xs">
-                Change
-              </Button>
-            ) : (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
-                title="Only the Platform Owner can point a plan at another workspace's exercise library."
-              >
-                <Lock className="w-3 h-3" />
-                Locked
-              </span>
             )}
           </div>
         </div>
-
-        {/* Plan Notes */}
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-foreground">Program Coaching Notes</label>
-          <input
-            type="text"
-            placeholder="e.g. 6-week progressive overload block with deload on week 7..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full h-8 px-3 rounded-xl bg-secondary/30 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
-          />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+          <Button
+            variant="secondary"
+            onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
+            className="text-[10px] h-7 px-2"
+          >
+            <Bookmark className="w-3 h-3 text-purple-400" />
+          </Button>
+          <Button
+            onClick={planId ? handleSaveChanges : handleSaveAndAssign}
+            disabled={saving}
+            className="text-[10px] h-7 px-2.5"
+          >
+            <Users className="w-3 h-3" /> {saving ? '…' : (planId ? 'Save' : 'Assign')}
+          </Button>
+          {onExit && (
+            <button
+              type="button"
+              onClick={async () => { await autosave.flush(); onExit?.(); }}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="Close plan"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
-
-      {/* ─── Main Content Grid: Sessions Editor + Volume Overview ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left / Center: Training Days & Exercises (8 cols) */}
-        <div className="lg:col-span-8 space-y-4">
-          {/* Day Tabs Bar */}
-          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <DragDropContext onDragEnd={handleDayDragEnd}>
-              <Droppable droppableId="day-tabs" direction="horizontal">
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="flex items-center gap-1.5 flex-nowrap"
-                  >
-                    {days.map((d, dIdx) => {
-                      const isRest = d.day_type === 'rest_day' || !!d.rest_day;
-                      const isActive = activeDayIndex === dIdx;
-
-                      return (
-                        <Draggable key={d.id || `day-${dIdx}`} draggableId={d.id || `day-${dIdx}`} index={dIdx}>
-                          {(dragProvided, dragSnapshot) => (
-                            <div
-                              ref={dragProvided.innerRef}
-                              {...dragProvided.draggableProps}
-                              className={cn(
-                                'group relative flex items-center rounded-xl transition-all border shrink-0 select-none',
-                                isActive
-                                  ? isRest
-                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
-                                    : 'bg-primary text-primary-foreground border-primary shadow-sm'
-                                  : isRest
-                                    ? 'bg-amber-500/5 text-amber-400/90 hover:text-amber-300 border-amber-500/30 hover:bg-amber-500/10'
-                                    : 'bg-secondary/40 text-muted-foreground hover:text-foreground border-border/60 hover:bg-secondary/70',
-                                dragSnapshot.isDragging && 'shadow-xl ring-2 ring-primary/60 opacity-95 z-50'
-                              )}
-                            >
-                              {/* Drag Handle */}
-                              <div
-                                {...dragProvided.dragHandleProps}
-                                className={cn(
-                                  'pl-2 pr-1 py-2 cursor-grab active:cursor-grabbing transition-opacity',
-                                  isActive ? 'text-current opacity-70 hover:opacity-100' : 'text-muted-foreground opacity-40 group-hover:opacity-100 hover:opacity-100'
-                                )}
-                                title="Drag to reorder session"
-                              >
-                                <GripVertical className="w-3.5 h-3.5" />
-                              </div>
-
-                              {/* Tab Click Target */}
-                              <button
-                                type="button"
-                                onClick={() => setActiveDayIndex(dIdx)}
-                                className="py-2 pr-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 focus:outline-none"
-                              >
-                                {isRest ? (
-                                  <>
-                                    <BedDouble className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                                    <span>{d.day_name || 'Rest Day'}</span>
-                                    <span
-                                      className={cn(
-                                        'text-[9px] px-1.5 py-0.2 rounded font-mono font-medium',
-                                        isActive ? 'bg-amber-500/30 text-amber-200' : 'bg-amber-500/15 text-amber-400/90'
-                                      )}
-                                    >
-                                      Rest
-                                    </span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>{d.day_name || `Day ${dIdx + 1}`}</span>
-                                    <span
-                                      className={cn(
-                                        'text-[10px] px-1.5 py-0.2 rounded font-mono',
-                                        isActive ? 'bg-black/20 text-white' : 'bg-secondary text-muted-foreground'
-                                      )}
-                                    >
-                                      {d.exercises?.length || 0}
-                                    </span>
-                                  </>
-                                )}
-                              </button>
-
-                              {/* Tab Actions Dropdown Menu */}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className={cn(
-                                      'p-1.5 mr-1 rounded-md transition-all',
-                                      isActive
-                                        ? 'hover:bg-black/20 text-current opacity-80 hover:opacity-100'
-                                        : 'hover:bg-secondary text-muted-foreground hover:text-foreground opacity-40 group-hover:opacity-100'
-                                    )}
-                                    title="Session options"
-                                  >
-                                    <MoreVertical className="w-3.5 h-3.5" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContentCmp align="end" className="w-44">
-                                  {isRest ? (
-                                    <>
-                                      <DropdownMenuItemCmp onClick={() => handleOpenEditRestDay(dIdx)}>
-                                        <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Edit Instructions
-                                      </DropdownMenuItemCmp>
-                                      <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
-                                        <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
-                                      </DropdownMenuItemCmp>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItemCmp
-                                        onClick={() => handleDeleteDay(dIdx)}
-                                        className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
-                                      </DropdownMenuItemCmp>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <DropdownMenuItemCmp onClick={() => handleOpenRename(dIdx)}>
-                                        <Pencil className="w-3.5 h-3.5 mr-2" /> Rename
-                                      </DropdownMenuItemCmp>
-                                      <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
-                                        <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
-                                      </DropdownMenuItemCmp>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItemCmp
-                                        onClick={() => handleDeleteDay(dIdx)}
-                                        className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
-                                      </DropdownMenuItemCmp>
-                                    </>
-                                  )}
-                                </DropdownMenuContentCmp>
-                              </DropdownMenu>
-                            </div>
-                          )}
-                      </Draggable>
-                    );
-                  })}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-
-          {/* Add Session & Add Rest Day Controls */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button variant="secondary" onClick={handleAddDay} className="text-xs whitespace-nowrap">
-              <Plus className="w-3.5 h-3.5" /> Add Session
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleOpenAddRestDay}
-              className="text-xs whitespace-nowrap text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-            >
-              <BedDouble className="w-3.5 h-3.5" /> + Rest Day
-            </Button>
-          </div>
-        </div>
-
-        {/* Active Day Detail Card */}
-        {activeDay && (
-          (activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? (
-            /* Dedicated Rest Day Card */
-            <div className="surface-card p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent space-y-4">
-              {/* Rest Day Header Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
-                <div className="flex items-center gap-2.5 flex-1">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                    <BedDouble className="w-4 h-4" />
-                  </div>
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
-                      type="text"
-                      value={activeDay.day_name || 'Rest Day'}
-                      onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
-                      className="text-base font-bold text-foreground bg-transparent border-b border-dashed border-border/80 focus:border-amber-500 focus:outline-none px-1 py-0.5"
-                      placeholder="Rest Day Title"
-                    />
-                    <Badge className="text-[10px] font-mono bg-amber-500/15 text-amber-300 border-amber-500/30">
-                      Recovery Day
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Rest Day Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleOpenEditRestDay(activeDayIndex)}
-                    className="text-xs h-8 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Edit Instructions
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleDuplicateDay(activeDayIndex)}
-                    className="text-xs h-8"
-                    title="Duplicate Rest Day"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-primary" /> Duplicate
-                  </Button>
-
-                  {days.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDay(activeDayIndex)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Delete Rest Day"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Rest Day Instructions Box */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <Coffee className="w-3.5 h-3.5 text-amber-400" /> Rest Day Coaching Instructions
-                  </label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    Autosaves with plan
-                  </span>
-                </div>
-
-                <textarea
-                  rows={5}
-                  value={activeDay.notes || ''}
-                  onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
-                  placeholder="Keep activity light today.&#10;8–10k steps.&#10;Stay hydrated.&#10;No resistance training."
-                  className="w-full p-3.5 rounded-xl bg-secondary/30 border border-border text-xs focus:outline-none focus:border-amber-500/50 text-foreground leading-relaxed resize-none"
-                />
-              </div>
-
-              {/* Helpful Recovery Guidance Card */}
-              <div className="p-3.5 rounded-xl bg-secondary/20 border border-border/50 text-xs space-y-1 text-muted-foreground">
-                <div className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-amber-400" /> Scheduled Recovery Item
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Rest days do not contain exercises. This item is positioned in your training split sequence and displays your custom recovery instructions directly to the client.
-                </p>
-              </div>
+      {(error || successMessage) && (
+        <div className="mt-2">
+          {error && (
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] text-red-400 flex items-center justify-between gap-1">
+              <span className="truncate">{error}</span>
+              <button type="button" onClick={() => setError('')} className="shrink-0">×</button>
             </div>
-          ) : (
-            /* Training Session Card */
-            <div className="surface-card p-4 sm:p-5 rounded-2xl border border-border/80 space-y-4">
-              {/* Day Header Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <input
-                    type="text"
-                    value={activeDay.day_name}
-                    onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
-                    className="text-base font-bold text-foreground bg-transparent border-b border-dashed border-border/80 focus:border-primary focus:outline-none px-1 py-0.5"
-                    placeholder="Session Name (e.g. Upper A)"
-                  />
-                </div>
+          )}
+          {successMessage && (
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 flex items-center gap-1">
+              <Check className="w-3 h-3 shrink-0" />
+              <span className="truncate">{successMessage}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
-                {/* Session Volume Badge, Duplicate & Delete Day */}
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground">
-                    <Flame className="w-3.5 h-3.5 text-orange-400" />
-                    <span>
-                      {volumeData.sessionVolumes[activeDayIndex]?.workingSets || 0} Working Sets
-                    </span>
-                  </span>
+  // ─── Column content: Day Master List ───────────────────────────────
+  const dayMasterListContent = (
+    <div className="flex flex-col h-full">
+      {/* Day list header */}
+      <div className="px-4 pt-4 pb-3 shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Training Days</h2>
+          <span className="text-[10px] font-mono text-muted-foreground">{days.length} days</span>
+        </div>
+        {notes && (
+          <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{notes}</p>
+        )}
+      </div>
 
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleDuplicateDay(activeDayIndex)}
-                    className="text-xs h-8"
-                    title="Duplicate this session"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-primary" /> Duplicate
-                  </Button>
+      {/* Scrollable day list */}
+      <div className="flex-1 overflow-y-auto px-3 pb-2">
+        <DragDropContext onDragEnd={handleDayDragEnd}>
+          <Droppable droppableId="day-master-list" direction="vertical">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-1.5"
+              >
+                {days.map((d, dIdx) => {
+                  const isRest = d.day_type === 'rest_day' || !!d.rest_day;
+                  const isActive = activeDayIndex === dIdx;
+                  const sv = volumeData.sessionVolumes[dIdx];
+                  const exCount = sv?.totalExercises ?? (d.exercises?.length ?? 0);
+                  const workingSets = sv?.workingSets ?? 0;
 
-                  {days.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDay(activeDayIndex)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Delete Training Day"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Day Notes */}
-              <div className="space-y-1">
-                <input
-                  type="text"
-                  placeholder="Session Coaching Notes (e.g. Focus on chest contraction, keep 2 RIR across compound presses)..."
-                  value={activeDay.notes || ''}
-                  onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
-                  className="w-full h-8 px-3 rounded-xl bg-secondary/30 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
-                />
-              </div>
-
-              {/* Exercises List */}
-              <div className="space-y-3 pt-2">
-                {(activeDay.exercises || []).length === 0 ? (
-                  <div className="py-10 text-center space-y-3 border border-dashed border-border/80 rounded-2xl bg-secondary/10">
-                    <Dumbbell className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">No exercises added to this session yet</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Import canonical exercises from the library or create custom movements.
-                      </p>
-                    </div>
-                    <Button onClick={() => setSearchModalOpen(true)} className="text-xs">
-                      <Plus className="w-3.5 h-3.5" /> Add First Exercise
-                    </Button>
-                  </div>
-                ) : (
-                  <DragDropContext onDragEnd={handleExerciseDragEnd}>
-                    <Droppable droppableId="exercises">
-                      {(dropProvided) => (
-                        <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-3">
-                    {(activeDay.exercises || []).map((ex, exIdx) => (
-                      <Draggable key={ex.id || `ex-${exIdx}`} draggableId={ex.id || `ex-${exIdx}`} index={exIdx}>
-                        {(dragProvided, snapshot) => (
+                  return (
+                    <Draggable key={d.id || `day-${dIdx}`} draggableId={d.id || `day-${dIdx}`} index={dIdx}>
+                      {(dragProvided, dragSnapshot) => (
                         <div
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           className={cn(
-                            'p-3.5 sm:p-4 rounded-xl border border-border/70 bg-secondary/20 hover:border-border transition-all space-y-3',
-                            snapshot.isDragging ? 'shadow-lg shadow-black/10 ring-2 ring-primary/30' : ''
+                            'group relative rounded-xl border select-none transition-colors duration-150 ease-out',
+                            isActive
+                              ? isRest
+                                ? 'bg-card border-amber-500/40 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-400 before:rounded-r'
+                                : 'bg-card border-primary/50 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                              : isRest
+                                ? 'bg-card/40 border-amber-500/20 hover:border-amber-500/40 hover:bg-card'
+                                : 'bg-card/40 border-border/40 hover:border-border/80 hover:bg-card',
+                            dragSnapshot.isDragging && 'shadow-xl ring-1 ring-primary/40 opacity-95 z-50 bg-card'
                           )}
                         >
-                        {/* Exercise Top Row */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveDayIndex(dIdx);
+                              setMobileStep(3);
+                            }}
+                            className="w-full text-left p-3 pr-10 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-xl"
+                            aria-label={`Select day ${dIdx + 1}: ${d.day_name || 'Unnamed'}`}
+                            aria-pressed={isActive}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              {/* Day number */}
+                              <div className={cn(
+                                'flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold font-mono mt-0.5',
+                                isActive
+                                  ? isRest ? 'bg-amber-500/20 text-amber-300' : 'bg-primary/20 text-primary'
+                                  : isRest ? 'bg-amber-500/10 text-amber-400/70' : 'bg-secondary/60 text-muted-foreground'
+                              )}>
+                                {dIdx + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {/* Day name + type badge */}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={cn(
+                                    'text-[13px] font-semibold truncate',
+                                    isActive
+                                      ? isRest ? 'text-amber-200' : 'text-foreground'
+                                      : isRest ? 'text-amber-400/80' : 'text-foreground/85 group-hover:text-foreground'
+                                  )}>
+                                    {d.day_name || `Day ${dIdx + 1}`}
+                                  </span>
+                                  {isRest && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400/90 border border-amber-500/20">
+                                      <BedDouble className="w-2.5 h-2.5" /> REST
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Summary line */}
+                                <p className={cn(
+                                  'text-[11px] mt-0.5 font-medium',
+                                  isActive ? 'text-muted-foreground' : 'text-muted-foreground/70'
+                                )}>
+                                  {isRest ? (
+                                    <span className="text-amber-500/70 font-mono text-[10px]">Recovery</span>
+                                  ) : (
+                                    <span>
+                                      {exCount > 0 ? (
+                                        <>{exCount} exercise{exCount !== 1 ? 's' : ''} · <span className={cn('font-mono', isActive ? 'text-primary' : 'text-primary/70')}>{workingSets} sets</span></>
+                                      ) : (
+                                        <span className="text-muted-foreground/40 text-[10px]">No exercises</span>
+                                      )}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* Right-side controls: drag handle + actions */}
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                            {/* Day actions dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={cn(
+                                    'p-1 rounded-md transition-opacity opacity-45 group-hover:opacity-100',
+                                    isActive ? 'opacity-75 hover:opacity-100' : '',
+                                    'hover:bg-secondary text-muted-foreground hover:text-foreground'
+                                  )}
+                                  title="Day options"
+                                  aria-label="Day options"
+                                >
+                                  <MoreVertical className="w-3.5 h-3.5" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContentCmp align="end" className="w-44">
+                                {isRest ? (
+                                  <>
+                                    <DropdownMenuItemCmp onClick={() => handleOpenEditRestDay(dIdx)}>
+                                      <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Edit Instructions
+                                    </DropdownMenuItemCmp>
+                                    <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
+                                      <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
+                                    </DropdownMenuItemCmp>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItemCmp
+                                      onClick={() => handleDeleteDay(dIdx)}
+                                      className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                    </DropdownMenuItemCmp>
+                                  </>
+                                ) : (
+                                  <>
+                                    <DropdownMenuItemCmp onClick={() => handleOpenRename(dIdx)}>
+                                      <Pencil className="w-3.5 h-3.5 mr-2" /> Rename
+                                    </DropdownMenuItemCmp>
+                                    <DropdownMenuItemCmp onClick={() => handleDuplicateDay(dIdx)}>
+                                      <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
+                                    </DropdownMenuItemCmp>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItemCmp
+                                      onClick={() => handleDeleteDay(dIdx)}
+                                      className="text-red-400 focus:text-red-300 focus:bg-red-500/10"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                    </DropdownMenuItemCmp>
+                                  </>
+                                )}
+                              </DropdownMenuContentCmp>
+                            </DropdownMenu>
+                            {/* Drag handle */}
                             <div
                               {...dragProvided.dragHandleProps}
                               className={cn(
-                                'w-6 h-6 mt-0.5 rounded flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing transition-colors',
-                                snapshot.isDragging
-                                  ? 'bg-primary/20 border border-primary/30 text-primary'
-                                  : 'bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                                'p-1 rounded-md cursor-grab active:cursor-grabbing transition-opacity opacity-45 group-hover:opacity-100',
+                                'text-muted-foreground hover:text-foreground hover:bg-secondary'
                               )}
-                              title="Drag to reorder exercise"
+                              title="Drag to reorder"
+                              data-no-drag
                             >
                               <GripVertical className="w-3.5 h-3.5" />
                             </div>
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-mono text-muted-foreground font-semibold">
-                                #{exIdx + 1}
-                              </span>
-                              <h4 className="text-sm font-semibold text-foreground">{ex.exercise_name}</h4>
-                              {ex._versionInfo && ex._versionInfo.linked === false && (
-                                <span
-                                  className="inline-flex items-center text-[9px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
-                                  title="No linked version of this exercise exists for this workspace yet. The YBS Global version (or the original) is shown until the platform owner links one."
-                                >
-                                  Not Linked
-                                </span>
-                              )}
-                              <Badge className="text-[9px] uppercase font-mono py-0 px-1.5">
-                                {ex.category || 'general'}
-                              </Badge>
-                              {ex.equipment && (
-                                <span className="text-[11px] text-muted-foreground font-sans">
-                                  ({ex.equipment})
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          </div>
-
-                          {/* Exercise Card Actions */}
-                          <div className="flex items-center gap-1">
-                            {ex.video_url && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveVideoExercise(ex);
-                                  setVideoModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1 text-[11px] text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-lg hover:bg-blue-500/20 transition-colors"
-                                title="Watch Demonstration Video"
-                              >
-                                <Video className="w-3 h-3" />
-                                <span className="hidden sm:inline">Watch Demo</span>
-                              </button>
-                            )}
-
-                            {/* Reorder Buttons */}
-                            <button
-                              type="button"
-                              onClick={() => handleMoveExercise(exIdx, -1)}
-                              disabled={exIdx === 0}
-                              className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-                              title="Move Up"
-                            >
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveExercise(exIdx, 1)}
-                              disabled={exIdx === (activeDay.exercises.length - 1)}
-                              className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30"
-                              title="Move Down"
-                            >
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Replace Exercise */}
-                            <button
-                              type="button"
-                              onClick={() => handleReplaceExercise(exIdx)}
-                              className="p-1 rounded text-muted-foreground hover:text-foreground"
-                              title="Replace Exercise"
-                            >
-                              <ArrowLeftRight className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Duplicate */}
-                            <button
-                              type="button"
-                              onClick={() => handleDuplicateExercise(exIdx)}
-                              className="p-1 rounded text-muted-foreground hover:text-foreground"
-                              title="Duplicate Exercise"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Link Exercise Versions (platform owner) */}
-                            {isPlatformAdmin(user) && (
-                              <button
-                                type="button"
-                                onClick={() => setVersionLinkExercise({ id: ex.exercise_id, name: ex.exercise_name })}
-                                className="p-1 rounded text-muted-foreground hover:text-foreground"
-                                title="Link exercise versions across workspaces"
-                              >
-                                <Link2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            {/* Delete */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteExercise(exIdx)}
-                              className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-                              title="Remove Exercise"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </div>
-
-                        {/* Prescriptions Inline Inputs Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 pt-1 text-xs">
-                          {/* Warm-up Sets */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Warm-up Sets
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="10"
-                              value={ex.warmup_sets ?? 0}
-                              onChange={(e) => handleUpdateExercise(exIdx, { warmup_sets: parseInt(e.target.value, 10) || 0 })}
-                              className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
-                            />
-                          </div>
-
-                          {/* Working Sets */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Working Sets
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="30"
-                              value={ex.working_sets ?? 3}
-                              onChange={(e) => handleUpdateExercise(exIdx, { working_sets: parseInt(e.target.value, 10) || 0 })}
-                              className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
-                            />
-                          </div>
-
-                          {/* Reps */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Target Reps
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. 8-10, AMRAP"
-                              value={ex.rep_range}
-                              onChange={(e) => handleUpdateExercise(exIdx, { rep_range: e.target.value })}
-                              className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
-                            />
-                          </div>
-
-                          {/* Target RIR */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Target RIR
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.5"
-                              value={ex.rpe || ''}
-                              onChange={(e) => handleUpdateExercise(exIdx, { rpe: e.target.value })}
-                              placeholder="1"
-                              title="Reps in Reserve — how many reps you could still perform at set completion"
-                              className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
-                            />
-                          </div>
-
-                          {/* Rest Seconds */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Rest (sec)
-                            </label>
-                            <input
-                              type="number"
-                              step="15"
-                              min="0"
-                              value={ex.rest_seconds || 60}
-                              onChange={(e) => handleUpdateExercise(exIdx, { rest_seconds: e.target.value })}
-                              className="w-full h-8 px-2 rounded-lg bg-secondary/60 border border-border text-xs font-mono focus:outline-none focus:border-primary/50 text-foreground"
-                            />
-                          </div>
-
-                          {/* Total Sets Display */}
-                          <div className="space-y-1 flex flex-col justify-end">
-                            <label className="text-[10px] uppercase font-mono text-muted-foreground block">
-                              Total Sets
-                            </label>
-                            <div className="w-full h-8 px-2 rounded-lg bg-secondary/40 border border-border/60 text-xs font-mono flex items-center text-muted-foreground">
-                              {(Number(ex.warmup_sets) || 0) + (Number(ex.working_sets) || 0)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Exercise Notes */}
-                        <div className="pt-1">
-                          <input
-                            type="text"
-                            placeholder="Exercise technique note (e.g. Slow 3s eccentric, full stretch at bottom)..."
-                            value={ex.notes || ''}
-                            onChange={(e) => handleUpdateExercise(exIdx, { notes: e.target.value })}
-                            className="w-full h-7 px-2.5 rounded-lg bg-secondary/40 border border-border/60 text-[11px] text-muted-foreground focus:text-foreground focus:outline-none focus:border-primary/40"
-                          />
-                        </div>
-                      </div>
                       )}
-                      </Draggable>
-                    ))}
-                    {dropProvided.placeholder}
-                    </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-                )}
-
-                {/* Add Exercise Trigger Button */}
-                <div className="pt-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setReplaceIndex(null);
-                      setSearchModalOpen(true);
-                    }}
-                    className="w-full text-xs py-2 border border-dashed border-border hover:border-primary/50"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Exercise to {activeDay.day_name}
-                  </Button>
-                </div>
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
               </div>
-            </div>
-            )
-          )}
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+
+      {/* Add day controls — pinned at bottom */}
+      <div className="shrink-0 px-3 py-3 border-t border-border/60 flex items-center gap-1.5">
+        <Button
+          variant="secondary"
+          onClick={handleAddDay}
+          className="flex-1 text-[11px] h-8"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Session
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleOpenAddRestDay}
+          className="flex-1 text-[11px] h-8 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+        >
+          <BedDouble className="w-3.5 h-3.5" /> + Rest
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ─── Column content: Exercise Editor Panel ─────────────────────────
+  const exerciseEditorContent = activeDay ? (
+    <div className="flex flex-col h-full">
+      {/* Panel header */}
+      <div className={cn(
+        'px-4 pt-4 pb-3 border-b border-border/40 shrink-0',
+        (activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? 'bg-amber-500/4' : ''
+      )}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            {(activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <BedDouble className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80 font-mono">Recovery Day</span>
+                </div>
+                <input
+                  type="text"
+                  value={activeDay.day_name || 'Rest Day'}
+                  onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
+                  className="text-[13px] font-semibold text-amber-200 bg-transparent border-b border-transparent hover:border-amber-500/40 focus:border-amber-500 focus:outline-none px-0 py-0.5 w-full transition-colors"
+                  placeholder="Rest Day Title"
+                />
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+                    Day {activeDayIndex + 1} · {volumeData.sessionVolumes[activeDayIndex]?.workingSets ?? 0} working sets
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={activeDay.day_name}
+                  onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
+                  className="text-[13px] font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary/80 focus:outline-none px-0 py-0.5 w-full transition-colors"
+                  placeholder="Session Name"
+                />
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleDuplicateDay(activeDayIndex)}
+              className="text-[10px] h-7 px-2 rounded-lg"
+              title="Duplicate day"
+            >
+              <Copy className="w-3 h-3" />
+            </Button>
+            {days.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleDeleteDay(activeDayIndex)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Delete day"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDayIndex(null);
+                setMobileStep(2);
+              }}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors ml-0.5"
+              title="Close exercise editor"
+              aria-label="Close exercise editor"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Right: Volume Overview & Muscle Group Distribution (4 cols) */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Total Program Volume Card */}
-          <div className="surface-card p-4 rounded-2xl border border-border/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 text-orange-400" /> Volume Summary
-              </h3>
-              <Badge className="text-[10px] font-mono">
-                {volumeData.totalWorkingSets} Total Working Sets
-              </Badge>
-            </div>
-
-            <div className="p-3 rounded-xl bg-secondary/30 border border-border/60 text-xs text-muted-foreground leading-relaxed flex items-start gap-2">
-              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <span>
-                <strong>YBS Volume Rule:</strong> Total Volume equals the count of working sets. Warm-up sets are excluded.
-              </span>
-            </div>
-
-            {/* Session Volume Breakdown */}
-            <div className="space-y-1.5 pt-1">
-              <h4 className="text-[11px] font-semibold text-foreground">Session Working Sets</h4>
-              <div className="divide-y divide-border/40 border border-border/60 rounded-xl p-2 bg-secondary/10">
-                {volumeData.sessionVolumes.map((sv, idx) => (
-                  <div key={idx} className="py-1.5 flex items-center justify-between text-xs">
-                    <span className="text-foreground">{sv.dayName}</span>
-                    <span className="font-mono font-semibold text-primary">
-                      {sv.workingSets} sets
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Muscle Group Distribution Breakdown */}
-            <div className="space-y-2 pt-2 border-t border-border/50">
-              <h4 className="text-[11px] font-semibold text-foreground">Muscle Group Attribution</h4>
-              {volumeData.muscleDistribution.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground py-2 text-center">
-                  Add exercises to calculate muscle-group volume.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {volumeData.muscleDistribution.map((m) => (
-                    <div key={m.muscle} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="capitalize text-foreground font-medium">{m.muscle}</span>
-                        <span className="font-mono text-muted-foreground text-[11px]">
-                          {m.sets} sets ({m.percentage}%)
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-secondary/80 overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full transition-all duration-500"
-                          style={{ width: `${m.percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Session coaching notes */}
+        <div className="mt-2.5">
+          <input
+            type="text"
+            placeholder={(activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? 'Recovery instructions…' : 'Session coaching notes…'}
+            value={activeDay.notes || ''}
+            onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
+            className="w-full h-8 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[11px] text-muted-foreground placeholder:text-muted-foreground/40 focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+          />
         </div>
       </div>
 
-      {/* ─── Modals ─── */}
+      {/* Exercise editor body */}
+      {(activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? (
+        /* Rest day view */
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div className="py-8 text-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
+              <BedDouble className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-amber-200">{activeDay.day_name || 'Rest Day'}</p>
+              <p className="text-[11px] text-amber-400/70 mt-1">Scheduled recovery — no exercises</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Coffee className="w-3.5 h-3.5 text-amber-400" /> Recovery Instructions
+            </label>
+            <textarea
+              rows={6}
+              value={activeDay.notes || ''}
+              onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
+              placeholder={'Keep activity light today.\n8–10k steps.\nStay hydrated.\nNo resistance training.'}
+              className="w-full p-3.5 rounded-xl bg-secondary/30 border border-border/40 text-xs focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 text-foreground leading-relaxed resize-none transition-colors"
+            />
+          </div>
+          <div className="p-3.5 rounded-xl bg-secondary/20 border border-border/30 text-xs space-y-1 text-muted-foreground">
+            <div className="font-semibold text-foreground flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-amber-400" /> Scheduled Recovery Item
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              Rest days are positioned in your training split sequence. Recovery instructions are shown directly to the client.
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* Training session exercises */
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="space-y-2">
+            {(activeDay.exercises || []).length === 0 ? (
+              <div className="py-12 text-center space-y-3 border border-dashed border-border/40 rounded-xl bg-secondary/10">
+                <Dumbbell className="w-8 h-8 mx-auto text-muted-foreground/30" />
+                <div>
+                  <p className="text-xs font-semibold text-foreground">No exercises yet</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Add exercises from the library or create custom movements.</p>
+                </div>
+                <Button onClick={() => setSearchModalOpen(true)} className="text-xs shadow-sm">
+                  <Plus className="w-3.5 h-3.5" /> Add First Exercise
+                </Button>
+              </div>
+            ) : (
+              <DragDropContext onDragEnd={handleExerciseDragEnd}>
+                <Droppable droppableId="exercises">
+                  {(dropProvided) => (
+                    <div ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-2">
+                      {(activeDay.exercises || []).map((ex, exIdx) => (
+                        <Draggable key={ex.id || `ex-${exIdx}`} draggableId={ex.id || `ex-${exIdx}`} index={exIdx}>
+                          {(dragProvided, snapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              className={cn(
+                                'group rounded-xl border select-none transition-colors duration-150',
+                                snapshot.isDragging
+                                  ? 'border-primary/60 bg-card shadow-xl ring-1 ring-primary/30 opacity-95'
+                                  : 'border-border/40 bg-card/50 hover:border-border/70 hover:bg-card'
+                              )}
+                            >
+                              {/* Exercise top row */}
+                              <div className="flex items-start justify-between gap-2 px-3.5 pt-3 pb-1">
+                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                  {/* Drag handle */}
+                                  <div
+                                    {...dragProvided.dragHandleProps}
+                                    className={cn(
+                                      'w-5 h-5 mt-0.5 rounded flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing transition-opacity',
+                                      snapshot.isDragging
+                                        ? 'bg-primary/20 border border-primary/30 text-primary opacity-100'
+                                        : 'bg-secondary/40 border border-border/40 text-muted-foreground hover:text-foreground opacity-45 group-hover:opacity-100'
+                                    )}
+                                    title="Drag to reorder"
+                                  >
+                                    <GripVertical className="w-3 h-3" />
+                                  </div>
+                                  {/* Exercise identity */}
+                                  <div className="space-y-0.5 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[10px] font-mono text-muted-foreground font-semibold">#{exIdx + 1}</span>
+                                      <h4 className="text-[13px] font-semibold text-foreground truncate">{ex.exercise_name}</h4>
+                                      {ex._versionInfo && ex._versionInfo.linked === false && (
+                                        <span className="inline-flex items-center text-[9px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                          Not Linked
+                                        </span>
+                                      )}
+                                      <Badge variant="outline" className="text-[9px] uppercase font-mono py-0 px-1.5 rounded-md bg-secondary/60 text-muted-foreground border-border/40">
+                                        {ex.category || 'general'}
+                                      </Badge>
+                                      {/* Computed Total Badge */}
+                                      <Badge variant="outline" className="text-[10px] font-mono py-0 px-1.5 rounded-md bg-secondary/40 text-muted-foreground border-border/40">
+                                        {(Number(ex.warmup_sets) || 0) + (Number(ex.working_sets) || 0)} total sets
+                                      </Badge>
+                                    </div>
+                                    {ex.equipment && (
+                                      <span className="text-[11px] text-muted-foreground font-medium">{ex.equipment}</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Exercise actions */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {ex.video_url && (
+                                    <button
+                                      type="button"
+                                      onClick={() => { setActiveVideoExercise(ex); setVideoModalOpen(true); }}
+                                      className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                                      title="Watch Demo"
+                                    >
+                                      <Video className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReplaceExercise(exIdx)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                                    title="Replace"
+                                  >
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Secondary actions dropdown */}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                                        title="More actions"
+                                      >
+                                        <MoreHorizontal className="w-3.5 h-3.5" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContentCmp align="end" className="w-40">
+                                      <DropdownMenuItemCmp onClick={() => handleDuplicateExercise(exIdx)}>
+                                        <Copy className="w-3.5 h-3.5 mr-2 text-primary" /> Duplicate
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuItemCmp
+                                        onClick={() => handleMoveExercise(exIdx, -1)}
+                                        disabled={exIdx === 0}
+                                        className="disabled:opacity-40"
+                                      >
+                                        <ChevronUp className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Move Up
+                                      </DropdownMenuItemCmp>
+                                      <DropdownMenuItemCmp
+                                        onClick={() => handleMoveExercise(exIdx, 1)}
+                                        disabled={exIdx === (activeDay.exercises.length - 1)}
+                                        className="disabled:opacity-40"
+                                      >
+                                        <ChevronDown className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Move Down
+                                      </DropdownMenuItemCmp>
+                                      {isPlatformAdmin(user) && (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItemCmp onClick={() => setVersionLinkExercise({ id: ex.exercise_id, name: ex.exercise_name })}>
+                                            <Link2 className="w-3.5 h-3.5 mr-2 text-primary" /> Link Versions
+                                          </DropdownMenuItemCmp>
+                                        </>
+                                      )}
+                                    </DropdownMenuContentCmp>
+                                  </DropdownMenu>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteExercise(exIdx)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                    title="Remove"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* 5-Column Prescription Grid */}
+                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 px-3.5 pb-2 pt-1">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground block">Warm-up Sets</label>
+                                  <input
+                                    type="number" min="0" max="10"
+                                    value={ex.warmup_sets ?? 0}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { warmup_sets: parseInt(e.target.value, 10) || 0 })}
+                                    className="w-full h-8 px-2.5 rounded-lg bg-secondary/50 border border-border/40 text-[12px] font-mono text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground block">Work Sets</label>
+                                  <input
+                                    type="number" min="0" max="30"
+                                    value={ex.working_sets ?? 3}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { working_sets: parseInt(e.target.value, 10) || 0 })}
+                                    className="w-full h-8 px-2.5 rounded-lg bg-secondary/50 border border-border/40 text-[12px] font-mono text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground block">Reps</label>
+                                  <input
+                                    type="text"
+                                    placeholder="8-12"
+                                    value={ex.rep_range}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { rep_range: e.target.value })}
+                                    className="w-full h-8 px-2.5 rounded-lg bg-secondary/50 border border-border/40 text-[12px] font-mono text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground block">RIR</label>
+                                  <input
+                                    type="number" min="0" max="10" step="0.5"
+                                    value={ex.rpe || ''}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { rpe: e.target.value })}
+                                    placeholder="1"
+                                    className="w-full h-8 px-2.5 rounded-lg bg-secondary/50 border border-border/40 text-[12px] font-mono text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+                                  />
+                                </div>
+                                <div className="space-y-1 col-span-2 sm:col-span-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground block">Rest (s)</label>
+                                  <input
+                                    type="number" step="15" min="0"
+                                    value={ex.rest_seconds || 60}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { rest_seconds: e.target.value })}
+                                    className="w-full h-8 px-2.5 rounded-lg bg-secondary/50 border border-border/40 text-[12px] font-mono text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Notes */}
+                              <div className="px-3.5 pb-3">
+                                <textarea
+                                  rows={2}
+                                  placeholder="Technique note (e.g. Slow 3s eccentric, full stretch)…"
+                                  value={ex.notes || ''}
+                                  onChange={(e) => handleUpdateExercise(exIdx, { notes: e.target.value })}
+                                  className="w-full min-h-[42px] py-1.5 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[11px] text-muted-foreground placeholder:text-muted-foreground/40 focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors resize-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {dropProvided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add exercise footer — only for sessions */}
+      {selectedDayIsSession && (
+        <div className="shrink-0 px-4 py-3 border-t border-border/60">
+          <Button
+            variant="secondary"
+            onClick={() => { setReplaceIndex(null); setSearchModalOpen(true); }}
+            className="w-full text-[11px] h-8 border border-dashed border-border hover:border-primary/50"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Exercise to {activeDay.day_name || `Day ${activeDayIndex + 1}`}
+          </Button>
+        </div>
+      )}
+    </div>
+  ) : (
+    /* No day selected empty state */
+    <div className="flex flex-col items-center justify-center h-full text-center px-8 py-16 space-y-4">
+      <div className="w-14 h-14 rounded-2xl bg-secondary/60 border border-border/60 flex items-center justify-center">
+        <Dumbbell className="w-6 h-6 text-muted-foreground/40" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-foreground">Select a Training Day</p>
+        <p className="text-[12px] text-muted-foreground mt-1">Choose a day from the list to edit its exercises</p>
+      </div>
+    </div>
+  );
+
+  // ─── Render ────────────────────────────────────────────────────────
+  return (
+    <div className={cn(
+      embedded
+        ? 'flex flex-col h-full overflow-hidden'
+        : 'flex flex-col h-[calc(100vh-56px)] overflow-hidden'
+    )}>
+      {/* Standalone-only: back button + top bar */}
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60 bg-card/80 shrink-0">
+          <button
+            type="button"
+            onClick={async () => { await autosave.flush(); navigate(returnTo || '/workouts'); }}
+            className="p-1.5 rounded-lg bg-secondary/50 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            title="Back to Workout Plans"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-primary font-mono">
+            {isTemplate ? 'Template Builder' : 'Workout Plan Builder'}
+          </span>
+          <div className="flex items-center gap-2">
+            <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
+            <Button
+              variant="secondary"
+              onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
+              className="text-[11px] h-8"
+            >
+              <Bookmark className="w-3.5 h-3.5 text-purple-400" /> Template
+            </Button>
+            <Button
+              onClick={planId ? handleSaveChanges : handleSaveAndAssign}
+              disabled={saving}
+              className="text-[11px] h-8"
+            >
+              <Users className="w-3.5 h-3.5" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Alerts */}
+      {!embedded && (error || successMessage) && (
+        <div className="px-4 py-2 shrink-0 space-y-1">
+          {error && (
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400 flex items-center justify-between gap-2">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-300">×</button>
+            </div>
+          )}
+          {successMessage && (
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-400 flex items-center gap-2">
+              <Check className="w-3.5 h-3.5" /> {successMessage}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3-column layout (ONE unified top-level PanelGroup) */}
+      <div className="flex-1 overflow-hidden">
+        {/* Desktop: 3 resizable panels */}
+        <div className="hidden md:flex h-full">
+          <PanelGroup
+            direction="horizontal"
+            autoSaveId={sidebarSlot ? "ybs-client-3col-planner" : "ybs-standalone-planner"}
+            className="h-full"
+          >
+            {/* Col 1: Sidebar (either client's programs sidebarSlot or standalone configSidebarContent) */}
+            <Panel
+              id="planner-col1"
+              order={1}
+              defaultSize={24}
+              minSize={18}
+              maxSize={32}
+              className="flex flex-col overflow-hidden border-r border-border/40"
+            >
+              <div className="flex-1 overflow-y-auto h-full">
+                {sidebarSlot || configSidebarContent}
+              </div>
+            </Panel>
+
+            <PlannerResizeHandle id="planner-gutter-1-2" />
+
+            {/* Col 2: Day list (with embeddedHeaderContent at top if embedded) */}
+            <Panel
+              id="planner-col2"
+              order={2}
+              defaultSize={showExercisePanel ? 28 : 76}
+              minSize={22}
+              className="flex flex-col overflow-hidden"
+            >
+              <div className="flex-1 flex flex-col overflow-hidden h-full">
+                {embedded && embeddedHeaderContent}
+                <div className="flex-1 overflow-y-auto">
+                  {dayMasterListContent}
+                </div>
+              </div>
+            </Panel>
+
+            {/* Col 3: Exercise editor (only when a day is selected) */}
+            {showExercisePanel && (
+              <>
+                <PlannerResizeHandle id="planner-gutter-2-3" />
+                <Panel
+                  id="planner-col3"
+                  order={3}
+                  defaultSize={48}
+                  minSize={28}
+                  className="flex flex-col overflow-hidden border-l border-border/40"
+                >
+                  <div className="flex-1 overflow-y-auto h-full animate-in fade-in-50 duration-200 slide-in-from-right-1">
+                    {exerciseEditorContent}
+                  </div>
+                </Panel>
+              </>
+            )}
+          </PanelGroup>
+        </div>
+
+        {/* Mobile: 3-step progressive navigation */}
+        <div className="md:hidden h-full overflow-y-auto">
+          {mobileStep === 1 && (
+            <div className="h-full">
+              {sidebarSlot || configSidebarContent}
+            </div>
+          )}
+
+          {mobileStep === 2 && (
+            <div className="h-full flex flex-col">
+              {sidebarSlot && (
+                <button
+                  type="button"
+                  onClick={() => setMobileStep(1)}
+                  className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 border-b border-border/40 shrink-0 text-left bg-card/40"
+                >
+                  ← Programs
+                </button>
+              )}
+              <div className="flex-1 overflow-y-auto">
+                {embedded && embeddedHeaderContent}
+                {dayMasterListContent}
+              </div>
+            </div>
+          )}
+
+          {mobileStep === 3 && (
+            <div className="h-full flex flex-col">
+              <button
+                type="button"
+                onClick={() => setMobileStep(2)}
+                className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 border-b border-border/40 shrink-0 text-left bg-card/40"
+              >
+                ← Day List
+              </button>
+              <div className="flex-1 overflow-y-auto animate-in fade-in-50 duration-200">
+                {exerciseEditorContent}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── All modals (unchanged) ─── */}
+
       {/* 1. Exercise Search Modal */}
       <ExerciseSearchModal
         open={searchModalOpen}
-        onClose={() => {
-          setReplaceIndex(null);
-          setSearchModalOpen(false);
-        }}
+        onClose={() => { setReplaceIndex(null); setSearchModalOpen(false); }}
         onSelectExercise={(exercisePayload) => {
           if (replaceIndex !== null) {
             handleReplaceExerciseSelect(exercisePayload);
@@ -1895,10 +2187,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       {activeVideoExercise && (
         <ExerciseVideoModal
           open={videoModalOpen}
-          onClose={() => {
-            setVideoModalOpen(false);
-            setActiveVideoExercise(null);
-          }}
+          onClose={() => { setVideoModalOpen(false); setActiveVideoExercise(null); }}
           exerciseName={activeVideoExercise.exercise_name}
           videoUrl={activeVideoExercise.video_url}
           instructions={activeVideoExercise.notes}
@@ -1915,17 +2204,11 @@ export default function WorkoutPlanBuilder(props = {}) {
       )}
 
       {/* 3. Save as Template Modal */}
-      <Modal
-        open={templateModalOpen}
-        onClose={() => setTemplateModalOpen(false)}
-        title="Save as Reusable Template"
-        size="md"
-      >
+      <Modal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} title="Save as Reusable Template" size="md">
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Save this program structure as a reusable workout template. Templates can be cloned and assigned to any client in the workspace without mutating the original template.
+            Save this program structure as a reusable workout template. Templates can be cloned and assigned to any client without mutating the original.
           </p>
-
           <div className="space-y-1">
             <label className="text-xs font-semibold text-foreground">Template Name *</label>
             <input
@@ -1936,11 +2219,8 @@ export default function WorkoutPlanBuilder(props = {}) {
               className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/50 text-foreground"
             />
           </div>
-
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setTemplateModalOpen(false)} className="text-xs">
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setTemplateModalOpen(false)} className="text-xs">Cancel</Button>
             <Button onClick={handleSaveAsTemplate} disabled={savingTemplate || !templateName.trim()} className="text-xs">
               {savingTemplate ? 'Saving…' : 'Save Template'}
             </Button>
@@ -1949,17 +2229,11 @@ export default function WorkoutPlanBuilder(props = {}) {
       </Modal>
 
       {/* 4. Client Assignment Modal */}
-      <Modal
-        open={clientPickerOpen}
-        onClose={() => setClientPickerOpen(false)}
-        title="Assign Workout Plan to Client"
-        size="md"
-      >
+      <Modal open={clientPickerOpen} onClose={() => setClientPickerOpen(false)} title="Assign Workout Plan to Client" size="md">
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Assign this workout plan to a client in your workspace. This creates an independent snapshot instance for the client so subsequent template edits will not affect active client programming.
+            Assign this workout plan to a client. This creates an independent snapshot instance so subsequent template edits will not affect active client programming.
           </p>
-
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
@@ -1970,7 +2244,6 @@ export default function WorkoutPlanBuilder(props = {}) {
               className="w-full h-8 pl-8 pr-3 rounded-lg bg-secondary/50 border border-border text-xs focus:outline-none focus:border-primary/40"
             />
           </div>
-
           <div className="max-h-60 overflow-y-auto divide-y divide-border/40 border border-border rounded-xl p-1 bg-secondary/10">
             {clients
               .filter((c) => {
@@ -1986,42 +2259,25 @@ export default function WorkoutPlanBuilder(props = {}) {
                   className="w-full text-left p-2.5 rounded-lg hover:bg-secondary/60 flex items-center justify-between text-xs transition-colors group disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <div>
-                    <span className="font-semibold text-foreground block group-hover:text-primary transition-colors">
-                      {c.full_name}
-                    </span>
-                    {c.client_code && (
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        Code: {c.client_code}
-                      </span>
-                    )}
+                    <span className="font-semibold text-foreground block group-hover:text-primary transition-colors">{c.full_name}</span>
+                    {c.client_code && <span className="text-[10px] font-mono text-muted-foreground">Code: {c.client_code}</span>}
                   </div>
-                  <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    Assign →
-                  </span>
+                  <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">Assign →</span>
                 </button>
               ))}
           </div>
-
           <div className="flex justify-end pt-1">
-            <Button variant="secondary" onClick={() => setClientPickerOpen(false)} className="text-xs">
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setClientPickerOpen(false)} className="text-xs">Cancel</Button>
           </div>
         </div>
       </Modal>
 
       {/* 5. Exercise Library Source Modal */}
-      <Modal
-        open={librarySourceOpen}
-        onClose={() => setLibrarySourceOpen(false)}
-        title="Exercise Library Source"
-        size="md"
-      >
+      <Modal open={librarySourceOpen} onClose={() => setLibrarySourceOpen(false)} title="Exercise Library Source" size="md">
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Choose which workspace's exercise library this plan browses. Only workspaces you have access to are listed. Exercises already added to this plan are kept unchanged.
+            Choose which workspace's exercise library this plan browses. Exercises already added are kept unchanged.
           </p>
-
           {workspaces.length === 0 ? (
             <p className="text-xs text-muted-foreground">No workspaces available.</p>
           ) : (
@@ -2030,10 +2286,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                 <button
                   key={w.id}
                   type="button"
-                  onClick={() => {
-                    setExerciseLibraryWorkspaceId(w.id);
-                    setLibrarySourceOpen(false);
-                  }}
+                  onClick={() => { setExerciseLibraryWorkspaceId(w.id); setLibrarySourceOpen(false); }}
                   className={cn(
                     'w-full text-left px-3 py-2.5 rounded-xl border text-xs transition-all',
                     exerciseLibraryWorkspaceId === w.id
@@ -2043,23 +2296,19 @@ export default function WorkoutPlanBuilder(props = {}) {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold">{w.name}</span>
-                    {exerciseLibraryWorkspaceId === w.id && (
-                      <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    )}
+                    {exerciseLibraryWorkspaceId === w.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                   </div>
                   <span className="text-[10px] text-muted-foreground">{w.id}</span>
                 </button>
               ))}
             </div>
           )}
-
           <div className="flex justify-end pt-1">
-            <Button variant="secondary" onClick={() => setLibrarySourceOpen(false)} className="text-xs">
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setLibrarySourceOpen(false)} className="text-xs">Cancel</Button>
           </div>
         </div>
       </Modal>
+
       {/* 6. Rest Day Modal */}
       <Modal
         open={restDayModalOpen}
@@ -2078,7 +2327,6 @@ export default function WorkoutPlanBuilder(props = {}) {
               placeholder="e.g. Rest Day, Active Recovery, Deload Day"
             />
           </div>
-
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">Rest Day Instructions</label>
             <textarea
@@ -2086,26 +2334,12 @@ export default function WorkoutPlanBuilder(props = {}) {
               value={restDayFormInstructions}
               onChange={(e) => setRestDayFormInstructions(e.target.value)}
               className="w-full p-3.5 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:border-amber-500 text-foreground resize-none leading-relaxed"
-              placeholder="Keep activity light today.\n8–10k steps.\nStay hydrated.\nNo resistance training."
+              placeholder={"Keep activity light today.\n8–10k steps.\nStay hydrated.\nNo resistance training."}
             />
-            <p className="text-[11px] text-muted-foreground">
-              These instructions are presented directly to the client as an ordered recovery milestone in their program.
-            </p>
           </div>
-
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRestDayModalOpen(false)}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-            >
+            <Button type="button" variant="secondary" onClick={() => setRestDayModalOpen(false)} className="text-xs">Cancel</Button>
+            <Button type="submit" className="text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold">
               <Check className="w-3.5 h-3.5" /> {restDayEditIndex !== null ? 'Save Instructions' : 'Save Rest Day'}
             </Button>
           </div>
@@ -2113,12 +2347,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       </Modal>
 
       {/* 7. Rename Session Modal */}
-      <Modal
-        open={renameModalOpen}
-        onClose={() => setRenameModalOpen(false)}
-        title="Rename Session"
-        size="sm"
-      >
+      <Modal open={renameModalOpen} onClose={() => setRenameModalOpen(false)} title="Rename Session" size="sm">
         <form onSubmit={handleSaveRename} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">Session Name</label>
@@ -2131,25 +2360,61 @@ export default function WorkoutPlanBuilder(props = {}) {
               placeholder="e.g. Upper 1, Push A"
             />
           </div>
-
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRenameModalOpen(false)}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="text-xs"
-            >
+            <Button type="button" variant="secondary" onClick={() => setRenameModalOpen(false)} className="text-xs">Cancel</Button>
+            <Button type="submit" className="text-xs">
               <Check className="w-3.5 h-3.5" /> Save
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* 8. Delete Session Confirmation Dialog */}
+      <AlertDialog open={dayToDeleteIndex !== null} onOpenChange={(open) => !open && setDayToDeleteIndex(null)}>
+        <AlertDialogContent className="max-w-md bg-card border border-border/80">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground text-sm font-semibold">
+              Delete {days[dayToDeleteIndex]?.day_type === 'rest_day' || days[dayToDeleteIndex]?.rest_day ? 'Rest Day' : 'Session'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
+              Are you sure you want to delete &ldquo;{days[dayToDeleteIndex]?.day_name || `Day ${dayToDeleteIndex + 1}`}&rdquo;? All assigned exercises in this session will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDeleteDay}
+              className="text-xs h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 9. Remove Exercise Confirmation Dialog */}
+      <AlertDialog open={exerciseToDeleteIndex !== null} onOpenChange={(open) => !open && setExerciseToDeleteIndex(null)}>
+        <AlertDialogContent className="max-w-md bg-card border border-border/80">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground text-sm font-semibold">
+              Remove Exercise?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
+              Are you sure you want to remove &ldquo;{activeDay?.exercises?.[exerciseToDeleteIndex]?.exercise_name}&rdquo; from this session?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDeleteExercise}
+              className="text-xs h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

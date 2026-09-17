@@ -4,8 +4,18 @@ import { AssessmentsService } from '@/services/assessments';
 import WorkoutPlanBuilder from '@/pages/WorkoutPlanBuilder';
 import FormSubmissionPanel from '@/components/FormSubmissionPanel';
 import GeminiAnalysisPanel from '@/components/GeminiAnalysisPanel';
-import SlidingPlannerLayout from '@/components/client/SlidingPlannerLayout';
+import PremiumPlannerLayout from '@/components/workouts/PremiumPlannerLayout';
 import { LoadingState, Button, Modal } from '@/components/ui';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   ArrowLeft, Plus, FilePlus, Copy, Search, ArrowRight, Trash2,
   ChevronDown, ChevronRight, ClipboardList, Sparkles, Dumbbell,
@@ -28,6 +38,7 @@ export default function ClientTrainingWorkspace({ client }) {
 
   // null | { mode: 'new' } | { mode: 'template', templateId } | { mode: 'edit', planId }
   const [editor, setEditor] = useState(null);
+  const [planToDelete, setPlanToDelete] = useState(null);
   const [plans, setPlans] = useState([]);
   const [forms, setForms] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -45,13 +56,33 @@ export default function ClientTrainingWorkspace({ client }) {
   const [isFormsOpen, setIsFormsOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
-  const plannerStep = editor ? 2 : 1;
+  // Mobile nav step: 1 = program sidebar, 2 = plan editor
+  const [mobileStep, setMobileStep] = useState(1);
+
+  // When an editor opens/closes, sync mobile step
+  useEffect(() => {
+    setMobileStep(editor ? 2 : 1);
+  }, [editor]);
 
   const reloadPlans = useCallback(async () => {
     if (!clientId) return;
     try {
       const data = await WorkoutsService.list({ client_id: clientId });
-      setPlans(data || []);
+      const loadedPlans = data || [];
+      setPlans(loadedPlans);
+      setEditor((curr) => {
+        if (curr?.mode === 'new' || curr?.mode === 'template') {
+          return curr;
+        }
+        if (curr?.planId && loadedPlans.some((p) => p.id === curr.planId)) {
+          return curr;
+        }
+        if (loadedPlans.length > 0) {
+          const activePlan = loadedPlans.find((p) => p.status === 'active' || p.is_active) || loadedPlans[0];
+          return { mode: 'edit', planId: activePlan.id };
+        }
+        return null;
+      });
     } catch (err) {
       console.error('Failed to reload workout programs:', err);
     }
@@ -113,14 +144,23 @@ export default function ClientTrainingWorkspace({ client }) {
     await reloadPlans();
   };
 
-  const handleRemovePlan = async (plan, e) => {
+  const handleRemovePlan = (plan, e) => {
     e.stopPropagation();
-    if (!window.confirm(`Remove "${plan.name}" from this client? The program will be archived and stop being shown to the client.`)) return;
+    setPlanToDelete(plan);
+  };
+
+  const executeRemovePlan = async () => {
+    if (!planToDelete) return;
     try {
-      await WorkoutsService.delete(plan.id);
+      await WorkoutsService.delete(planToDelete.id);
+      if (editor?.planId === planToDelete.id) {
+        setEditor(null);
+      }
       await reloadPlans();
     } catch (err) {
       console.error('Failed to remove workout program:', err);
+    } finally {
+      setPlanToDelete(null);
     }
   };
 
@@ -164,13 +204,13 @@ export default function ClientTrainingWorkspace({ client }) {
               <Button
                 size="lg"
                 onClick={() => setNewPlanOpen(true)}
-                className="w-full h-auto min-h-[72px] px-6 py-5 rounded-xl text-base sm:text-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                className="w-full h-auto min-h-[60px] px-5 py-4 rounded-xl text-base font-semibold flex items-center justify-center gap-2 shadow-sm border border-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <Plus className="w-5 h-5" /> New Program
+                <Plus className="w-4 h-4" /> New Program
               </Button>
             ) : (
               <div className="space-y-2">
-                <Button size="sm" className="w-full" onClick={() => setNewPlanOpen(true)}>
+                <Button size="sm" className="w-full text-xs" onClick={() => setNewPlanOpen(true)}>
                   <Plus className="w-3.5 h-3.5" /> New Program
                 </Button>
 
@@ -179,14 +219,14 @@ export default function ClientTrainingWorkspace({ client }) {
                     key={p.id}
                     onClick={() => setEditor({ mode: 'edit', planId: p.id })}
                     className={cn(
-                      'p-3 rounded-lg border cursor-pointer transition-colors',
+                      'group relative p-3 rounded-xl border cursor-pointer transition-colors duration-150 select-none',
                       editor?.planId === p.id
-                        ? 'bg-primary/10 border-primary/30'
-                        : 'bg-secondary/30 border-border hover:border-primary/40'
+                        ? 'bg-card border-primary/50 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                        : 'bg-card/40 border-border/40 hover:border-border/80 hover:bg-card'
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[13px] font-medium truncate">{p.name}</p>
+                      <p className="text-[13px] font-semibold text-foreground truncate">{p.name}</p>
                       <button
                         type="button"
                         onClick={(e) => handleRemovePlan(p, e)}
@@ -197,7 +237,7 @@ export default function ClientTrainingWorkspace({ client }) {
                       </button>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[11px] text-muted-foreground capitalize">
+                      <span className="text-[11px] text-muted-foreground capitalize font-medium">
                         {(p.split_type || 'custom').replace(/_/g, ' ')} · {p.days?.length || 0} sessions
                       </span>
                       <span className="text-[11px] text-muted-foreground">·</span>
@@ -281,38 +321,48 @@ export default function ClientTrainingWorkspace({ client }) {
     </div>
   );
 
-  // ─── Column 2: Embedded Builder ─────────────────────────────────
-  const column2Content = editor ? (
-    <div className="p-4">
-      <button
-        type="button"
-        onClick={closeEditor}
-        className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground transition-colors mb-3 md:hidden"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to programs
-      </button>
-      <WorkoutPlanBuilder
-        key={JSON.stringify(editor)}
-        templateId={editor.mode === 'template' ? editor.templateId : undefined}
-        initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
-        clientId={clientId}
-        clientName={clientName}
-        workspaceId={workspaceId}
-        embedded
-        onExit={closeEditor}
-      />
-    </div>
-  ) : null;
-
   return (
     <>
-      <SlidingPlannerLayout
-        step={plannerStep}
-        column1={column1Content}
-        column2={column2Content}
-        column3={null}
-        onBack={closeEditor}
-      />
+      <div className="h-[calc(100vh-240px)] min-h-[640px] overflow-hidden">
+        {editor ? (
+          <WorkoutPlanBuilder
+            key={editor.mode === 'edit' ? editor.planId : `${editor.mode}-${editor.templateId || 'new'}`}
+            templateId={editor.mode === 'template' ? editor.templateId : undefined}
+            initialPlanId={editor.mode === 'edit' ? editor.planId : undefined}
+            clientId={clientId}
+            clientName={clientName}
+            workspaceId={workspaceId}
+            embedded
+            sidebarSlot={column1Content}
+            onPlanSaved={reloadPlans}
+            onExit={closeEditor}
+          />
+        ) : (
+          <PremiumPlannerLayout
+            column1={column1Content}
+            column2={
+              <div className="flex flex-col items-center justify-center h-full text-center px-8 py-20 space-y-5">
+                <div className="w-16 h-16 rounded-2xl bg-secondary/50 border border-border/60 flex items-center justify-center">
+                  <Dumbbell className="w-7 h-7 text-muted-foreground/30" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">No Workout Programs</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">
+                    This client does not have any workout programs yet. Click &ldquo;New Program&rdquo; to start.
+                  </p>
+                </div>
+                <Button onClick={() => setNewPlanOpen(true)} className="text-xs shadow-sm">
+                  <Plus className="w-3.5 h-3.5" /> New Program
+                </Button>
+              </div>
+            }
+            showColumn3={false}
+            step={mobileStep}
+            onBackToCol1={() => setMobileStep(1)}
+            className="h-full"
+          />
+        )}
+      </div>
 
       {/* New Program Selection Modal */}
       <Modal
@@ -438,6 +488,29 @@ export default function ClientTrainingWorkspace({ client }) {
           )}
         </div>
       </Modal>
+
+      {/* Remove Program Confirmation Dialog */}
+      <AlertDialog open={planToDelete !== null} onOpenChange={(open) => !open && setPlanToDelete(null)}>
+        <AlertDialogContent className="max-w-md bg-card border border-border/80">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground text-sm font-semibold">
+              Remove Workout Program?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-xs leading-relaxed">
+              Are you sure you want to remove &ldquo;{planToDelete?.name}&rdquo; from this client? The program will be archived and stop being shown to the client.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-8">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeRemovePlan}
+              className="text-xs h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove Program
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
