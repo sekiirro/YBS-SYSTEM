@@ -288,9 +288,14 @@ export default function NutritionPlanBuilder(props = {}) {
         notes: notes.trim() || null,
       };
       await NutritionService.update(planId, planPayload, meals);
-      onPlanSaved?.();
     },
   });
+
+  // Drain any pending autosave when this builder unmounts (Client Detail tab
+  // switch, plan switch, route change) so edits already applied to the UI
+  // are never lost. `flush` is referentially stable so this only runs on real
+  // unmount, and it is a no-op when there is nothing to persist.
+  useEffect(() => () => { void autosave.flush(); }, [autosave.flush]);
 
   // ── 3. Meal State Modifiers ──
   const handleAddMeal = (customName) => {

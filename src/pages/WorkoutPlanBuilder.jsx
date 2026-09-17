@@ -570,6 +570,12 @@ export default function WorkoutPlanBuilder(props = {}) {
     },
   });
 
+  // Drain any pending autosave when this builder unmounts (Client Detail tab
+  // switch, program switch, route change) so edits already applied to the UI
+  // are never lost. `flush` is referentially stable so this only runs on real
+  // unmount, and it is a no-op when there is nothing to persist.
+  useEffect(() => () => { void autosave.flush(); }, [autosave.flush]);
+
   // Prevent drag initiation when starting on interactive elements
   useEffect(() => {
     const BLOCK = 'INPUT,SELECT,TEXTAREA,BUTTON,[data-no-drag]';
