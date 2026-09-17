@@ -1598,7 +1598,6 @@ export default function WorkoutPlanBuilder(props = {}) {
                                 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                               )}
                               title="Drag to reorder"
-                              data-no-drag
                             >
                               <GripVertical className="w-3.5 h-3.5" />
                             </div>
