@@ -120,7 +120,15 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
         const firstNamePart = nameParts[0] || "";
         const lastNamePart = nameParts.slice(1).join(" ") || "";
 
-        const { data: regData, error: regErr } = await RegistrationLinksService.registerClient({
+        // registerClient() THROWS a typed Error (error.code / error.status) for
+        // every non-2xx backend response and RESOLVES with the success body
+        // only — it never returns a `{ data, error }` tuple. Destructuring
+        // `{ data, error }` here made regData undefined even on success, so the
+        // success path fell through to the generic fallback and every scoped
+        // registration showed "Registration failed. Please try again." Use the
+        // resolved body directly and surface any structured error info through
+        // the same SIGNUP_ERRORS mapping instead of a generic message.
+        const regData = await RegistrationLinksService.registerClient({
           token: joinToken,
           phone: normalizedPhone,
           email: form.email.trim(),
@@ -129,31 +137,20 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
           last_name: lastNamePart,
         });
 
-        if (regErr) {
-          throw new Error(regErr.message || "Registration failed. Please try again.");
+        if (regData?.status !== "ok") {
+          const backendCode = regData?.error?.code || regData?.reason || null;
+          const backendMessage = regData?.error?.message || regData?.message;
+          throw Object.assign(
+            new Error(backendMessage || "Registration failed. Please try again."),
+            backendCode ? { code: backendCode } : {}
+          );
         }
 
-        if (regData?.status === "ok") {
-          if (regData.needs_email_confirmation) {
-            setSignupEmail(form.email.trim());
-            setSignedUp(true);
-          } else {
-            window.location.href = "/pending";
-          }
+        if (regData.needs_email_confirmation) {
+          setSignupEmail(form.email.trim());
+          setSignedUp(true);
         } else {
-          const reasonMap = {
-            link_invalid: "This registration link is invalid. Please check your link or contact support.",
-            link_expired: "This registration link has expired. Please request a new one.",
-            phone_taken: "This phone number is already registered to an account. Please sign in instead.",
-            email_taken: "An account with this email address already exists. Please sign in instead.",
-            activation_failed: "Registration failed. Please try again.",
-          };
-          const reason = regData?.reason;
-          throw new Error(
-            (reason && reasonMap[reason]) ||
-              regData?.message ||
-              "Registration failed. Please try again."
-          );
+          window.location.href = "/pending";
         }
       } else {
         // Non-scoped registration: direct Supabase Auth signup.
