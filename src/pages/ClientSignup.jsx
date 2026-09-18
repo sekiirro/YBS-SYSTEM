@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/utils/supabase";
 import { normalizePhone } from "@/lib/phone";
+import { RegistrationLinksService } from "@/services/registrationLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,79 +73,124 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
         );
       }
 
-      // 1. Register with Supabase Auth.
-      //    When the trainee arrived via a package-scoped client
-      //    registration link, carry the validated link token through
-      //    signup metadata. The server-side handle_new_user() trigger
-      //    resolves it back to the workspace + coach + package — the
-      //    client never submits workspace_id/trainer/package.
-      const meta = {
-        full_name: form.full_name.trim(),
-        phone: normalizedPhone,
-        platform_role: "none",
-        account_status: "pending_approval",
-      };
       if (isScopedLink) {
-        meta.link_token = joinToken;
-      } else if (joinToken) {
-        meta.join_token = joinToken;
-      }
+        // Scoped package-registration link: route through the
+        // client-registration Edge Function so that IP capture +
+        // reservation, atomic account creation, and IP-release on
+        // failure are handled server-side. handle_new_user() fires
+        // automatically from admin.auth.admin.createUser().
+        const nameParts = form.full_name.trim().split(/\s+/).filter(Boolean);
+        const firstNamePart = nameParts[0] || "";
+        const lastNamePart = nameParts.slice(1).join(" ") || "";
 
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        options: { data: meta },
-      });
+        const { data: regData, error: regErr } = await RegistrationLinksService.registerClient({
+          token: joinToken,
+          phone: normalizedPhone,
+          email: form.email.trim(),
+          password: form.password,
+          first_name: firstNamePart,
+          last_name: lastNamePart,
+        });
 
-      if (authErr) {
-        if (authErr.message.includes("already registered") || authErr.message.includes("unique")) {
-          throw new Error("An account with this email address already exists. Please sign in instead.");
+        if (regErr) {
+          throw new Error(regErr.message || "Registration failed. Please try again.");
         }
-        throw new Error(authErr.message);
-      }
 
-      const authUser = authData?.user;
-      if (!authUser) {
-        throw new Error("Unable to create account. Please try again.");
-      }
-
-      // 2. Insert ClientApplication record into database
-      //    NOTE: under email confirmation this runs as anon and is
-      //    denied by RLS — that is expected. The handle_new_user()
-      //    trigger already created the application server-side.
-      const { error: appErr } = await supabase.from("client_applications").insert({
-        user_id: authUser.id,
-        applicant_name: form.full_name.trim(),
-        applicant_phone: normalizedPhone,
-        applicant_email: form.email.trim().toLowerCase(),
-        status: "pending",
-        submitted_at: new Date().toISOString(),
-      });
-
-      if (appErr) {
-        console.warn("Application record notice:", appErr.message);
-      }
-
-      // 3. Ensure profile is set to pending_approval (best-effort)
-      await supabase.from("profiles").upsert({
-        id: authUser.id,
-        email: form.email.trim().toLowerCase(),
-        phone: normalizedPhone,
-        full_name: form.full_name.trim(),
-        platform_role: "none",
-        account_status: "pending_approval",
-      });
-
-      // 4. With email confirmation enabled (mailer_autoconfirm=false),
-      //    signUp() returns a user but NO session. If we have a real
-      //    session we can route straight to /pending; otherwise show a
-      //    confirmation prompt so the trainee verifies their email
-      //    before signing in.
-      if (authData.session) {
-        window.location.href = "/pending";
+        if (regData?.status === "ok") {
+          if (regData.needs_email_confirmation) {
+            setSignupEmail(form.email.trim());
+            setSignedUp(true);
+          } else {
+            window.location.href = "/pending";
+          }
+        } else {
+          const reasonMap = {
+            link_invalid: "This registration link is invalid. Please check your link or contact support.",
+            link_expired: "This registration link has expired. Please request a new one.",
+            phone_taken: "This phone number is already registered to an account. Please sign in instead.",
+            email_taken: "An account with this email address already exists. Please sign in instead.",
+            activation_failed: "Registration failed. Please try again.",
+          };
+          const reason = regData?.reason;
+          throw new Error(
+            (reason && reasonMap[reason]) ||
+              regData?.message ||
+              "Registration failed. Please try again."
+          );
+        }
       } else {
-        setSignupEmail(form.email.trim().toLowerCase());
-        setSignedUp(true);
+        // Non-scoped registration: direct Supabase Auth signup.
+        //    When the trainee arrived via a package-scoped client
+        //    registration link, carry the validated link token through
+        //    signup metadata. The server-side handle_new_user() trigger
+        //    resolves it back to the workspace + coach + package — the
+        //    client never submits workspace_id/trainer/package.
+        const meta = {
+          full_name: form.full_name.trim(),
+          phone: normalizedPhone,
+          platform_role: "none",
+          account_status: "pending_approval",
+        };
+        if (joinToken) {
+          meta.join_token = joinToken;
+        }
+
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          options: { data: meta },
+        });
+
+        if (authErr) {
+          if (authErr.message.includes("already registered") || authErr.message.includes("unique")) {
+            throw new Error("An account with this email address already exists. Please sign in instead.");
+          }
+          throw new Error(authErr.message);
+        }
+
+        const authUser = authData?.user;
+        if (!authUser) {
+          throw new Error("Unable to create account. Please try again.");
+        }
+
+        // 2. Insert ClientApplication record into database
+        //    NOTE: under email confirmation this runs as anon and is
+        //    denied by RLS — that is expected. The handle_new_user()
+        //    trigger already created the application server-side.
+        const { error: appErr } = await supabase.from("client_applications").insert({
+          user_id: authUser.id,
+          applicant_name: form.full_name.trim(),
+          applicant_phone: normalizedPhone,
+          applicant_email: form.email.trim().toLowerCase(),
+          status: "pending",
+          submitted_at: new Date().toISOString(),
+        });
+
+        if (appErr) {
+          console.warn("Application record notice:", appErr.message);
+        }
+
+        // 3. Ensure profile is set to pending_approval (best-effort)
+        await supabase.from("profiles").upsert({
+          id: authUser.id,
+          email: form.email.trim().toLowerCase(),
+          phone: normalizedPhone,
+          full_name: form.full_name.trim(),
+          platform_role: "none",
+          account_status: "pending_approval",
+        });
+
+        // 4. With email confirmation enabled (mailer_autoconfirm=false),
+        //    signUp() returns a user but NO session. If we have a real
+        //    session we can route straight to /pending; otherwise show a
+        //    confirmation prompt so the trainee verifies their email
+        //    before signing in.
+        if (authData.session) {
+          window.location.href = "/pending";
+        } else {
+          setSignupEmail(form.email.trim().toLowerCase());
+          setSignedUp(true);
+        }
       }
     } catch (err) {
       setError(err.message || "Registration failed. Please check your information and try again.");

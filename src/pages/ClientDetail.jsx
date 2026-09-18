@@ -6,16 +6,15 @@ import { ClientsService } from '@/services/clients';
 import { SubscriptionsService } from '@/services/subscriptions';
 import { AssessmentsService } from '@/services/assessments';
 import { MetricsService } from '@/services/metrics';
-import { AuditService } from '@/services/audit';
 import ClientNutritionWorkspace from '@/components/client/ClientNutritionWorkspace';
 import ClientTrainingWorkspace from '@/components/client/ClientTrainingWorkspace';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, canViewFinancials } from '@/lib/permissions';
 import { isPlatformAdmin, isWorkspaceOwner } from '@/lib/ybs-auth';
 import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/components/ui';
-import { formatDate, getSubscriptionStatusColor, getFormStatusColor, getFormStatusLabel, daysUntil, getInitials } from '@/lib/ybs-utils';
+import { formatDate, formatCurrency, getSubscriptionStatusColor, getFormStatusColor, getFormStatusLabel, getInitials } from '@/lib/ybs-utils';
 import {
-  ArrowLeft, Phone, Mail, Calendar, User, Package, CreditCard,
-  ClipboardList, TrendingUp, Apple, Dumbbell, Activity, Edit, Plus, Check, Trash2, Archive, Eye,
+  ArrowLeft, Phone, Mail, Calendar, User,
+  ClipboardList, TrendingUp, Apple, Dumbbell, Activity, Edit, Plus, Check, Trash2, Archive, Eye, PauseCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,6 +36,7 @@ export default function ClientDetail() {
   const { user } = useAuth();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
   const [showEdit, setShowEdit] = useState(false);
   const [timeline, setTimeline] = useState([]);
@@ -55,15 +55,17 @@ export default function ClientDetail() {
       const c = await ClientsService.getById(id);
       setClient(c);
 
-      const [subs, frm, mtr] = await Promise.all([
+      const [subs, frm, mtr, summaryData] = await Promise.all([
         SubscriptionsService.list({ client_id: id }).catch(() => []),
         AssessmentsService.list({ client_id: id }).catch(() => []),
         MetricsService.listByClient(id).catch(() => []),
+        SubscriptionsService.getSummary(id).catch(() => null),
       ]);
       setTimeline([]);
       setSubscriptions(subs);
       setForms(frm);
       setMetrics(mtr);
+      setSummary(summaryData);
     } catch (err) {
       console.error('Error loading client:', err);
     } finally {
@@ -193,8 +195,8 @@ export default function ClientDetail() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
           >
-            {activeTab === 'overview' && <OverviewTab client={client} />}
-            {activeTab === 'subscription' && <SubscriptionTab client={client} subscriptions={subscriptions} user={user} onUpdated={loadClient} />}
+            {activeTab === 'overview' && <OverviewTab client={client} summary={summary} />}
+            {activeTab === 'subscription' && <SubscriptionTab client={client} summary={summary} subscriptions={subscriptions} user={user} onUpdated={loadClient} />}
             {activeTab === 'forms' && <FormsTab forms={forms} />}
             {activeTab === 'metrics' && <MetricsTab metrics={metrics} clientId={id} client={client} onUpdated={loadClient} />}
             {activeTab === 'nutrition' && <ClientNutritionWorkspace client={client} />}
@@ -231,7 +233,27 @@ export default function ClientDetail() {
   );
 }
 
-function OverviewTab({ client }) {
+function OverviewTab({ client, summary }) {
+  const sub = summary?.subscription;
+  const isPreActivation = summary?.pre_activation;
+  const daysRemaining = summary?.subscription?.remaining_days;
+  const canViewFinancials = summary?.can_view_financials;
+
+  const computeDurationLabel = () => {
+    if (!sub?.start_date || !sub?.end_date) return '—';
+    if (isPreActivation) return 'Pending activation';
+    const start = formatDate(sub.start_date);
+    const end = formatDate(sub.end_date);
+    return `${start} → ${end}`;
+  };
+
+  const computeDaysRemainingLabel = () => {
+    if (isPreActivation || daysRemaining === null || daysRemaining === undefined) {
+      return 'Pre-activation — counting begins after Nutrition + Workout plans are activated';
+    }
+    return `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
+  };
+
   const info = [
     { label: 'Date of Birth', value: formatDate(client.date_of_birth) },
     { label: 'Gender', value: client.gender ? client.gender.charAt(0).toUpperCase() + client.gender.slice(1) : '—' },
@@ -239,11 +261,11 @@ function OverviewTab({ client }) {
     { label: 'Current Weight', value: client.current_weight ? `${client.current_weight} kg` : '—' },
     { label: 'Body Fat %', value: client.body_fat ? `${client.body_fat}%` : '—' },
     { label: 'Assigned Trainer', value: client.assigned_trainer_name || '—' },
-    { label: 'Package', value: client.package_name || '—' },
+    { label: 'Package', value: summary?.package?.name || client.package_name || '—' },
     { label: 'Follow-up Day', value: client.follow_up_day ? client.follow_up_day.charAt(0).toUpperCase() + client.follow_up_day.slice(1) : '—' },
     { label: 'Telegram', value: client.telegram_connected ? 'Connected' : 'Not Connected' },
-    { label: 'Subscription End', value: formatDate(client.subscription_end_date) },
   ];
+
   return (
     <div>
       <h3 className="text-[14px] font-display font-semibold mb-4">Client Information</h3>
@@ -255,6 +277,35 @@ function OverviewTab({ client }) {
           </div>
         ))}
       </div>
+
+      <div className="mt-6 pt-4 border-t border-border">
+        <h4 className="text-[11px] text-muted-foreground uppercase tracking-wider mb-3">Subscription</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <div className="flex flex-col">
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Duration</span>
+            <span className="text-[13px] font-medium mt-1">{computeDurationLabel()}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Days Remaining</span>
+            <span className="text-[13px] font-medium mt-1">{computeDaysRemainingLabel()}</span>
+          </div>
+          {canViewFinancials && sub?.start_date && (
+            <>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Price</span>
+                <span className="text-[13px] font-medium mt-1">
+                  {formatCurrency(summary?.financials?.price, summary?.financials?.currency)}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Payment</span>
+                <span className="text-[13px] font-medium mt-1 capitalize">{summary?.financials?.payment_status || '—'}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {client.notes && (
         <div className="mt-6 pt-4 border-t border-border">
           <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Notes</span>
@@ -265,18 +316,88 @@ function OverviewTab({ client }) {
   );
 }
 
-function SubscriptionTab({ client, subscriptions, user, onUpdated }) {
-  const canManage = hasPermission(user, 'clients.update') && user.role !== 'trainer';
-  const pendingSub = (subscriptions || []).find((s) => s.status === 'pending');
+function SubscriptionTab({ summary, subscriptions, user, onUpdated }) {
+  const isAdmin = isPlatformAdmin(user);
+  const canManageLifecycle = isAdmin;
+  const [lifecycleModal, setLifecycleModal] = useState(null);
+  const [lifecycleLoading, setLifecycleLoading] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState('');
+
+  const sub = summary?.subscription;
+  const freeze = summary?.freeze;
+  const isPreActivation = summary?.pre_activation;
+
+  const handleLifecycleAction = async (action, payload) => {
+    setLifecycleLoading(true);
+    setLifecycleError('');
+    try {
+      if (action === 'freeze') {
+        await SubscriptionsService.freeze(sub.id, payload.freezeDays);
+      } else if (action === 'renew') {
+        await SubscriptionsService.renew(sub.id, payload.packageId, payload.extendDays);
+      } else if (action === 'override') {
+        await SubscriptionsService.overrideDates(sub.id, payload.startDate, payload.endDate);
+      }
+      await onUpdated();
+      setLifecycleModal(null);
+    } catch (err) {
+      setLifecycleError(err.message || 'Action failed');
+    } finally {
+      setLifecycleLoading(false);
+    }
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[14px] font-display font-semibold">Subscription History</h3>
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-[14px] font-display font-semibold">Subscription History</h3>
+          {sub && !isPreActivation && (
+            <div className="flex items-center gap-4 mt-2 text-[12px] text-muted-foreground">
+              <span>
+                <span className="font-medium text-foreground">{formatDate(sub.start_date)}</span> →{' '}
+                <span className="font-medium text-foreground">{formatDate(sub.end_date)}</span>
+              </span>
+              {freeze?.is_frozen && (
+                <Badge className="text-sky-400 bg-sky-500/10 border-sky-500/20">
+                  Frozen — {freeze.active?.freeze_days} day{freeze.active?.freeze_days === 1 ? '' : 's'}
+                </Badge>
+              )}
+              {sub.manually_adjusted && (
+                <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20">Manually adjusted</Badge>
+              )}
+            </div>
+          )}
+          {isPreActivation && (
+            <p className="text-[12px] text-muted-foreground mt-2">
+              Subscription counting begins after Nutrition + Workout plans are activated.
+            </p>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
-          {pendingSub && <ActivateClientButton clientId={client.id} onUpdated={onUpdated} />}
-          {canManage && <Button size="sm"><Plus className="w-4 h-4" /> New Subscription</Button>}
+          {canManageLifecycle && sub && !isPreActivation && (
+            <>
+              {freeze?.is_frozen ? (
+                <Button size="sm" variant="outline" disabled>
+                  <PauseCircle className="w-4 h-4 mr-1" /> Frozen
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => setLifecycleModal({ type: 'freeze' })}>
+                  <PauseCircle className="w-4 h-4 mr-1" /> Freeze
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setLifecycleModal({ type: 'override' })}>
+                <Edit className="w-4 h-4 mr-1" /> Edit Dates
+              </Button>
+              <Button size="sm" onClick={() => setLifecycleModal({ type: 'renew' })}>
+                <Plus className="w-4 h-4 mr-1" /> Renew
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
       {subscriptions.length === 0 ? (
         <p className="text-[13px] text-muted-foreground py-8 text-center">No subscription history</p>
       ) : (
@@ -290,13 +411,169 @@ function SubscriptionTab({ client, subscriptions, user, onUpdated }) {
                 </div>
                 <Badge className={cn(getSubscriptionStatusColor(s.status), 'capitalize')}>{s.status.replace('_', ' ')}</Badge>
               </div>
-              {s.price != null && (
-                <p className="text-[12px] text-muted-foreground mt-2">Price: ${s.price} · Payment: <span className="capitalize">{s.payment_status}</span></p>
+              {s.price != null && canViewFinancials(user) && (
+                <p className="text-[12px] text-muted-foreground mt-2">Price: {formatCurrency(s.price)} · Payment: <span className="capitalize">{s.payment_status}</span></p>
               )}
             </div>
           ))}
         </div>
       )}
+
+      {lifecycleModal && (
+        <Modal
+          open={true}
+          onClose={() => !lifecycleLoading && setLifecycleModal(null)}
+          title={
+            lifecycleModal.type === 'freeze' ? 'Freeze Subscription' :
+            lifecycleModal.type === 'renew' ? 'Renew Subscription' :
+            'Override Subscription Dates'
+          }
+          size="md"
+        >
+          <LifecycleModal
+            type={lifecycleModal.type}
+            sub={sub}
+            summary={summary}
+            loading={lifecycleLoading}
+            error={lifecycleError}
+            onCancel={() => setLifecycleModal(null)}
+            onSubmit={handleLifecycleAction}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit }) {
+  const [freezeDays, setFreezeDays] = useState(7);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedPackage, setSelectedPackage] = useState('');
+  const [packages, setPackages] = useState([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+
+  useEffect(() => {
+    if (type === 'renew' && summary?.subscription) {
+      setPackagesLoading(true);
+      SubscriptionsService.listWorkspacePackages(summary.workspace_id)
+        .then((pkgs) => {
+          setPackages(pkgs || []);
+          if (pkgs.length > 0) setSelectedPackage(pkgs[0].id);
+        })
+        .catch(() => {})
+        .finally(() => setPackagesLoading(false));
+    }
+  }, [type, summary]);
+
+  const handleSubmit = () => {
+    if (type === 'freeze') {
+      if (!freezeDays || freezeDays < 1 || freezeDays > 365) return;
+      onSubmit('freeze', { freezeDays: Number(freezeDays) });
+    } else if (type === 'renew') {
+      onSubmit('renew', { packageId: selectedPackage || null, extendDays: null });
+    } else if (type === 'override') {
+      const payload = {
+        startDate: startDate || null,
+        endDate: endDate || null,
+      };
+      if (!payload.startDate && !payload.endDate) return;
+      onSubmit('override', payload);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{error}</div>
+      )}
+
+      {type === 'freeze' && (
+        <>
+          <p className="text-[13px] text-muted-foreground">
+            Freezing pauses the subscription countdown for the specified number of days.
+            The end date is extended by the freeze duration. Days Remaining stays constant during the freeze.
+          </p>
+          <div className="space-y-2">
+            <label className="text-[12px] font-medium">Freeze Duration (days)</label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={freezeDays}
+              onChange={(e) => setFreezeDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 7)))}
+              className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Current Days Remaining: <strong>{summary?.subscription?.remaining_days ?? '—'}</strong>
+            {sub?.end_date && <> · Current End Date: <strong>{formatDate(sub.end_date)}</strong></>}
+          </p>
+        </>
+      )}
+
+      {type === 'renew' && (
+        <>
+          <p className="text-[13px] text-muted-foreground">
+            Create a new subscription cycle. The current cycle is marked as renewed (historical); the new cycle becomes active.
+          </p>
+          {packagesLoading ? (
+            <p className="text-[13px] text-muted-foreground">Loading packages…</p>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-[12px] font-medium">Select Package</label>
+              <select
+                value={selectedPackage}
+                onChange={(e) => setSelectedPackage(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              >
+                <option value="">Same package ({sub?.package_name_snapshot || '—'})</option>
+                {packages.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {formatCurrency(p.price, p.currency)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </>
+      )}
+
+      {type === 'override' && (
+        <>
+          <p className="text-[13px] text-muted-foreground">
+            Override the subscription start/end dates. Leave a field blank to preserve the existing value
+            (start only → end recomputed from package duration).
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[12px] font-medium">Start Date</label>
+              <input
+                type="date"
+                value={startDate || (sub?.start_date || '').split('T')[0]}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              />
+            </div>
+            <div>
+              <label className="text-[12px] font-medium">End Date</label>
+              <input
+                type="date"
+                value={endDate || (sub?.end_date || '').split('T')[0]}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="ghost" onClick={onCancel} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Processing…' : type === 'freeze' ? 'Freeze' : type === 'renew' ? 'Renew' : 'Save Dates'}
+        </Button>
+      </div>
     </div>
   );
 }

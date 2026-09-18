@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { AssessmentsService, TemplatesService, QuestionsService } from '@/services/assessments';
 import { ClientsService } from '@/services/clients';
 import { hasPermission } from '@/lib/permissions';
@@ -15,6 +16,7 @@ import FormBuilder from '@/components/FormBuilder';
 
 export default function Assessments() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const wsId = getActiveWorkspaceId(user);
   const roleCat = getRoleCategory(user);
   const [activeTab, setActiveTab] = useState('forms');
@@ -504,7 +506,18 @@ export default function Assessments() {
                           <p className="text-[13px] font-medium">{f.name}</p>
                           <p className="text-[11px] text-muted-foreground">{f.response_count || 0} responses</p>
                         </td>
-                        <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.assigned_client_name || '—'}</td>
+                        <td className="px-4 py-3">
+                          {f.client_id ? (
+                            <button
+                              onClick={() => navigate(`/clients/${f.client_id}`)}
+                              className="text-[13px] font-medium text-primary hover:text-primary/80 hover:underline transition-colors"
+                            >
+                              {f.assigned_client_name || '—'}
+                            </button>
+                          ) : (
+                            <span className="text-[13px] text-muted-foreground">{f.assigned_client_name || '—'}</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.workspace_name || '—'}</td>
                         <td className="px-4 py-3">
                           {delivery ? (

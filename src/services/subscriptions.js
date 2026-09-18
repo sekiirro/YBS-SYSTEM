@@ -65,4 +65,101 @@ export const SubscriptionsService = {
     if (error) throw error;
     return data;
   },
+
+  // ─── Subscription Lifecycle RPCs (System Owner only) ──────────
+
+  /**
+   * Freeze a subscription. Pauses the countdown, extends end_date by
+   * freeze_days, and records the freeze in subscription_freezes.
+   * System Owner ONLY — enforced server-side.
+   */
+  async freeze(subscriptionId, freezeDays) {
+    const { data, error } = await supabase.rpc('freeze_client_subscription', {
+      p_subscription_id: subscriptionId,
+      p_freeze_days: freezeDays,
+    });
+    if (error) throw error;
+    if (data && data.success === false) {
+      throw new Error(data.message || 'Failed to freeze subscription');
+    }
+    return data;
+  },
+
+  /**
+   * Cancel an active freeze (backend safety valve). System Owner ONLY.
+   */
+  async cancelFreeze(freezeId, reason = null) {
+    const { data, error } = await supabase.rpc('cancel_client_freeze', {
+      p_freeze_id: freezeId,
+      p_reason: reason,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Renew a subscription. Creates a new active cycle.
+   * Optional p_package_id: if provided, only workspace-owned packages
+   *   of the client's workspace are eligible (enforced server-side).
+   * System Owner ONLY — enforced server-side.
+   */
+  async renew(subscriptionId, packageId = null, extendDays = null) {
+    const { data, error } = await supabase.rpc('renew_subscription', {
+      p_subscription_id: subscriptionId,
+      p_package_id: packageId,
+      p_extend_days: extendDays,
+    });
+    if (error) throw error;
+    if (data && data.success === false) {
+      throw new Error(data.message || 'Failed to renew subscription');
+    }
+    return data;
+  },
+
+  /**
+   * Manually override subscription start/end dates. System Owner ONLY.
+   * Rules:
+   *   - Start cannot be after end.
+   *   - Only start -> end recomputed from package duration.
+   *   - Only end -> start preserved.
+   *   - Both -> both respected.
+   *   - Active freeze blocks the override (freeze history untouched).
+   */
+  async overrideDates(subscriptionId, startDate = null, endDate = null) {
+    const { data, error } = await supabase.rpc('override_subscription_dates', {
+      p_subscription_id: subscriptionId,
+      p_start_date: startDate,
+      p_end_date: endDate,
+    });
+    if (error) throw error;
+    if (data && data.success === false) {
+      throw new Error(data.message || 'Failed to override subscription dates');
+    }
+    return data;
+  },
+
+  /**
+   * Read-only lifecycle summary powered by the single-round-trip
+   * client_subscription_summary RPC. Returns freeze-aware days
+   * remaining, current package identity, freeze history, and
+   * permission-gated financial fields.
+   */
+  async getSummary(clientId) {
+    const { data, error } = await supabase.rpc('client_subscription_summary', {
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * List workspace-owned packages for the renewal selector.
+   * Only packages belonging to the client's own workspace.
+   */
+  async listWorkspacePackages(workspaceId) {
+    const { PackagesService } = await import('@/services/packages');
+    const packages = await PackagesService.list(workspaceId);
+    // The list() helper already scopes to the workspace or global.
+    return packages.filter((p) => p.is_active !== false);
+  },
 };
