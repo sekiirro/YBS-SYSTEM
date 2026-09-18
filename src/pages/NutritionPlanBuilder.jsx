@@ -291,7 +291,7 @@ export default function NutritionPlanBuilder(props = {}) {
   // Client Detail tabs never loses a draft that was never explicitly saved.
   // Standalone/new-template flows keep the explicit first-save behaviour.
   const canAutoCreate = embedded && !isTemplate && !planId && status === 'draft' && !!selectedClient?.id;
-  const autosaveEnabled = initialized && !isTemplate && status === 'draft' && (!!planId || canAutoCreate);
+  const autosaveEnabled = initialized && (!!planId || canAutoCreate);
   const autosaveSnapshot = JSON.stringify([name, notes, meals]);
   const autosave = useAutosave({
     id: planId,
@@ -317,15 +317,10 @@ export default function NutritionPlanBuilder(props = {}) {
       onPlanSaved?.();
     },
     save: async () => {
-      const planPayload = {
-        workspace_id: wsId,
-        client_id: selectedClient?.id,
-        assigned_ybs_coach_id: user?.id,
+      await NutritionService.update(planIdRef.current || planId, {
         name: name.trim(),
-        is_template: false,
         notes: notes.trim() || null,
-      };
-      await NutritionService.update(planIdRef.current || planId, planPayload, meals);
+      }, meals);
     },
   });
 
