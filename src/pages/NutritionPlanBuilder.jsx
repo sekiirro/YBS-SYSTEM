@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { PanelGroup, Panel } from 'react-resizable-panels';
@@ -150,7 +150,15 @@ export default function NutritionPlanBuilder(props = {}) {
 
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
+  // Baseline for a brand-new (never-saved) draft, captured at load time so
+  // autosave only creates the row after a real edit (never on mount).
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [initialized, setInitialized] = useState(false);
+
+  // Tracks the live plan id synchronously so the manual save path can never
+  // create a second row while an autosave-created draft is settling.
+  const planIdRef = useRef(planId);
+  useEffect(() => { planIdRef.current = planId; }, [planId]);
 
   // ── 1. Load Initial Data ──
   useEffect(() => {
@@ -229,7 +237,10 @@ export default function NutritionPlanBuilder(props = {}) {
               const matched = clientList.find((c) => c.id === queryClientId);
               setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
-            if (isMounted) setInitialized(true);
+            if (isMounted) {
+              setInitialSnapshot(JSON.stringify([`${tpl.name} (Copy)`, tpl.notes || '', copiedMeals]));
+              setInitialized(true);
+            }
           }
         } else {
           // New Blank Plan
@@ -242,17 +253,21 @@ export default function NutritionPlanBuilder(props = {}) {
           setName('New Nutrition Plan');
           setIsTemplate(searchParams.get('type') === 'template');
           setStatus(searchParams.get('type') === 'template' ? 'active' : 'draft');
-          setMeals([
+          const defaultMeals = [
             { id: `meal-1-${Date.now()}`, meal_name: 'Breakfast', notes: '', sort_order: 0, day_number: 1, items: [] },
             { id: `meal-2-${Date.now()}`, meal_name: 'Lunch', notes: '', sort_order: 1, day_number: 1, items: [] },
             { id: `meal-3-${Date.now()}`, meal_name: 'Dinner', notes: '', sort_order: 2, day_number: 1, items: [] },
-          ]);
+          ];
+          setMeals(defaultMeals);
 
           if (queryClientId) {
             const matched = clientList.find((c) => c.id === queryClientId);
             setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
-          if (isMounted) setInitialized(true);
+          if (isMounted) {
+            setInitialSnapshot(JSON.stringify(['New Nutrition Plan', '', defaultMeals]));
+            setInitialized(true);
+          }
         }
       } catch (err) {
         console.error('Error loading builder state:', err);
@@ -271,13 +286,36 @@ export default function NutritionPlanBuilder(props = {}) {
   const planTotals = useMemo(() => calculatePlanTotals(meals), [meals]);
 
   // ── 2b. Autosave (server-persistent for drafts) ──
-  const autosaveEnabled = !!planId && !isTemplate && status === 'draft' && initialized;
+  // A brand-new CLIENT draft (opened from a client's page) auto-creates its
+  // row on the first real edit, then keeps autosaving in place — so switching
+  // Client Detail tabs never loses a draft that was never explicitly saved.
+  // Standalone/new-template flows keep the explicit first-save behaviour.
+  const canAutoCreate = embedded && !isTemplate && !planId && status === 'draft' && !!selectedClient?.id;
+  const autosaveEnabled = initialized && !isTemplate && status === 'draft' && (!!planId || canAutoCreate);
   const autosaveSnapshot = JSON.stringify([name, notes, meals]);
   const autosave = useAutosave({
     id: planId,
     enabled: autosaveEnabled,
     snapshot: autosaveSnapshot,
-    lastSavedSnapshot: serverSnapshot,
+    lastSavedSnapshot: planId ? serverSnapshot : initialSnapshot,
+    create: canAutoCreate ? async () => {
+      const created = await NutritionService.create({
+        workspace_id: wsId,
+        client_id: selectedClient?.id,
+        assigned_ybs_coach_id: user?.id,
+        name: name.trim() || 'New Nutrition Plan',
+        is_template: false,
+        notes: notes.trim() || null,
+        status: 'draft',
+      }, meals);
+      return created?.id;
+    } : undefined,
+    onCreated: (newId, snap) => {
+      planIdRef.current = newId;
+      setPlanId(newId);
+      setServerSnapshot(snap);
+      onPlanSaved?.();
+    },
     save: async () => {
       const planPayload = {
         workspace_id: wsId,
@@ -287,7 +325,7 @@ export default function NutritionPlanBuilder(props = {}) {
         is_template: false,
         notes: notes.trim() || null,
       };
-      await NutritionService.update(planId, planPayload, meals);
+      await NutritionService.update(planIdRef.current || planId, planPayload, meals);
     },
   });
 
@@ -483,6 +521,7 @@ export default function NutritionPlanBuilder(props = {}) {
 
     try {
       setSaving(true);
+      const currentPlanId = planIdRef.current || planId;
       const planPayload = {
         workspace_id: wsId,
         client_id: isTemplate ? null : selectedClient?.id,
@@ -490,14 +529,17 @@ export default function NutritionPlanBuilder(props = {}) {
         name: name.trim(),
         is_template: isTemplate,
         notes: notes.trim() || null,
-        status: planId ? undefined : isTemplate ? 'active' : 'draft',
+        status: currentPlanId ? undefined : isTemplate ? 'active' : 'draft',
       };
 
-      if (planId) {
-        await NutritionService.update(planId, planPayload, meals);
+      if (currentPlanId) {
+        await NutritionService.update(currentPlanId, planPayload, meals);
       } else {
         const created = await NutritionService.create(planPayload, meals);
-        if (created?.id) setPlanId(created.id);
+        if (created?.id) {
+          planIdRef.current = created.id;
+          setPlanId(created.id);
+        }
       }
 
       setSuccessMessage('Plan saved successfully');
@@ -517,7 +559,12 @@ export default function NutritionPlanBuilder(props = {}) {
 
   // ── 5. Activate & Assign (draft → active) ──
   const handleActivate = async () => {
-    if (!planId) {
+    // Drain pending autosave first: an embedded draft's first edit may have
+    // auto-created the row which is still settling, and activating must reuse
+    // that exact plan id rather than erroring before it exists.
+    await autosave.flush();
+    const currentPlanId = planIdRef.current || planId;
+    if (!currentPlanId) {
       setError('Save the draft first, then activate and assign it.');
       return;
     }
@@ -535,7 +582,6 @@ export default function NutritionPlanBuilder(props = {}) {
     }
 
     setError('');
-    await autosave.flush();
     setSaving(true);
     try {
       const planPayload = {
@@ -546,8 +592,8 @@ export default function NutritionPlanBuilder(props = {}) {
         is_template: false,
         notes: notes.trim() || null,
       };
-      await NutritionService.update(planId, planPayload, meals);
-      await NutritionService.activatePlan(planId, selectedClient.id);
+      await NutritionService.update(currentPlanId, planPayload, meals);
+      await NutritionService.activatePlan(currentPlanId, selectedClient.id);
       setStatus('active');
       setSuccessMessage('Plan activated and assigned to client!');
       setTimeout(() => setSuccessMessage(''), 3000);

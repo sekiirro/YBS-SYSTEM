@@ -19,6 +19,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  *   - `enabled` gates saving (e.g. drafts only, not-yet-submitted only) and
  *     `id` gates it per entity (null => disabled, preserving the explicit
  *     first-save/assign/create flows).
+ *   - Optional `create`: when the entity has no id yet (a brand-new draft),
+ *     the FIRST meaningful change can create the row once and continue
+ *     autosaving in place. `create` must resolve to the new id. `onCreated`
+ *     fires with that id so the caller can adopt it. Callers that omit
+ *     `create` keep the original "explicit first save" behaviour exactly.
  *   - No overlapping saves: a hard in-flight lock ensures a second save is
  *     queued and runs only after the current one settles.
  *   - On failure the unsaved state stays in memory (dirty stays true),
@@ -38,7 +43,9 @@ export default function useAutosave({
   snapshot,
   lastSavedSnapshot,
   save,
+  create = undefined,
   onSaved = undefined,
+  onCreated = undefined,
   onError = undefined,
 }) {
   const [status, setStatus] = useState(/** @type {'idle' | 'saving' | 'saved' | 'error'} */ ('idle'));
@@ -57,13 +64,17 @@ export default function useAutosave({
   const snapshotRef = useRef(snapshot);
   const lastSavedRef = useRef(lastSavedSnapshot ?? null);
   const saveRef = useRef(save);
+  const createRef = useRef(create);
   const onSavedRef = useRef(onSaved);
+  const onCreatedRef = useRef(onCreated);
   const onErrorRef = useRef(onError);
 
   useEffect(() => { idRef.current = id; });
   useEffect(() => { enabledRef.current = enabled; });
   useEffect(() => { saveRef.current = save; });
+  useEffect(() => { createRef.current = create; });
   useEffect(() => { onSavedRef.current = onSaved; });
+  useEffect(() => { onCreatedRef.current = onCreated; });
   useEffect(() => { onErrorRef.current = onError; });
 
   const clearTimers = useCallback(() => {
@@ -77,16 +88,30 @@ export default function useAutosave({
       queuedRef.current = true;
       return false;
     }
-    if (!idRef.current || !enabledRef.current) return false;
+    if (!enabledRef.current) return false;
 
     const target = snapshotRef.current;
     if (!target || target === lastSavedRef.current) return false;
 
+    const isCreate = !idRef.current;
+    const createFn = createRef.current;
+    if (isCreate && typeof createFn !== 'function') return false;
+
     inFlightRef.current = true;
     setStatus('saving');
     setError(null);
+    let result = null;
+    let didCreate = false;
     try {
-      const result = await saveRef.current();
+      if (isCreate) {
+        const newId = await createFn();
+        if (!newId) throw new Error('Failed to create draft');
+        idRef.current = newId;
+        result = newId;
+        didCreate = true;
+      } else {
+        result = await saveRef.current();
+      }
       lastSavedRef.current = target;
       retryCountRef.current = 0;
       setDirty(false);
@@ -96,8 +121,6 @@ export default function useAutosave({
         () => setStatus((s) => (s === 'saved' ? 'idle' : s)),
         2200
       );
-      onSavedRef.current?.(result);
-      return true;
     } catch (err) {
       const message = err?.message || 'Failed to save changes';
       setStatus('error');
@@ -119,6 +142,18 @@ export default function useAutosave({
         timerRef.current = setTimeout(() => { void doSave(); }, debounceMs);
       }
     }
+
+    // Post-save callbacks run only after a successful persistence AND after the
+    // success state is settled. The id is already adopted (idRef) before they
+    // run. They are isolated so a callback/refetch error can never turn a
+    // persisted save — or the initial auto-create — into a failed save.
+    try {
+      if (didCreate) onCreatedRef.current?.(result, target);
+      onSavedRef.current?.(result);
+    } catch (callbackErr) {
+      onErrorRef.current?.(callbackErr);
+    }
+    return true;
   }, [debounceMs]);
 
   // Change detection: schedule a debounced save whenever the snapshot string
@@ -126,7 +161,7 @@ export default function useAutosave({
   useEffect(() => {
     snapshotRef.current = snapshot;
 
-    if (!enabled || id == null) {
+    if (!enabled || (id == null && typeof createRef.current !== 'function')) {
       clearTimers();
       inFlightRef.current = false;
       setDirty(false);
@@ -160,7 +195,7 @@ export default function useAutosave({
   // Warn before refresh/close if there is unsaved or in-flight work.
   useEffect(() => {
     const handler = (e) => {
-      if (!enabledRef.current || !idRef.current) return;
+      if (!enabledRef.current || (!idRef.current && typeof createRef.current !== 'function')) return;
       if (dirty || status === 'saving') {
         e.preventDefault();
         e.returnValue = '';

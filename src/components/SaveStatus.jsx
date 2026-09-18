@@ -27,7 +27,7 @@ export default function SaveStatus({ status, dirty, onRetry }) {
     );
   }
 
-  if (status === 'error' || (dirty && status === 'idle' && onRetry)) {
+  if (status === 'error') {
     return (
       <Badge className="text-destructive bg-destructive/10 border-destructive/20 font-mono" variant="default">
         <AlertCircle className="w-3 h-3" /> Save failed

@@ -336,10 +336,18 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   // Server baseline for autosave (serialized state as loaded from the DB).
   const [serverSnapshot, setServerSnapshot] = useState(null);
+  // Baseline for a brand-new (never-saved) draft, captured at load time so
+  // autosave only creates the row after a real edit (never on mount).
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
   // Becomes true only after the load effect finishes hydrating state for the
   // requested mode. Autosave stays disabled until then so no PATCH can fire
   // with default/blank state or before a failed load is reported.
   const [initialized, setInitialized] = useState(false);
+
+  // Tracks the live plan id synchronously so the manual save/assign path can
+  // never create a second row while an autosave-created draft is settling.
+  const planIdRef = useRef(planId);
+  useEffect(() => { planIdRef.current = planId; }, [planId]);
 
   // ─── 1. Load Initial Plan / Template Data ───────────────────────────
   useEffect(() => {
@@ -513,19 +521,33 @@ export default function WorkoutPlanBuilder(props = {}) {
               const matched = clientList.find((c) => c.id === queryClientId);
               setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
-            if (isMounted) setInitialized(true);
+            if (isMounted) {
+              setInitialSnapshot(JSON.stringify([
+                tpl.name,
+                tpl.split_type || 'upper_lower',
+                tpl.custom_split_name || '',
+                tpl.notes || '',
+                wsId || null,
+                clonedDays,
+              ]));
+              setInitialized(true);
+            }
           }
         } else {
           setName('New Workout Program');
           setIsTemplate(searchParams.get('type') === 'template');
           setSplitType('upper_lower');
-          setDays(getDefaultDays('upper_lower', ''));
+          const defaultDays = getDefaultDays('upper_lower', '');
+          setDays(defaultDays);
 
           if (queryClientId) {
             const matched = clientList.find((c) => c.id === queryClientId);
             setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
           }
-          if (isMounted) setInitialized(true);
+          if (isMounted) {
+            setInitialSnapshot(JSON.stringify(['New Workout Program', 'upper_lower', '', '', wsId || null, defaultDays]));
+            setInitialized(true);
+          }
         }
       } catch (err) {
         console.error('Error loading workout builder data:', err);
@@ -547,17 +569,41 @@ export default function WorkoutPlanBuilder(props = {}) {
   // ─── 2b. Autosave (server-persistent) ──────────────────────────────
   // Once a plan/template row exists AND the load effect has finished
   // hydrating state, the latest edits are persisted automatically in place.
-  // Brand-new plans (no id) keep the explicit "Save & Assign" flow —
-  // autosave never creates rows on its own and never reassigns a plan
-  // to a client. The initialized gate additionally guarantees no PATCH
-  // can fire with default/blank state or after a failed load.
-  const autosaveEnabled = !!planId && initialized;
+  // A brand-new CLIENT program (opened from a client's page) auto-creates its
+  // row on the first real edit, then keeps autosaving in place — so switching
+  // Client Detail tabs never loses a program that was never explicitly saved.
+  // Standalone/new-template flows keep the explicit "Save & Assign" flow.
+  // The initialized gate additionally guarantees no PATCH can fire with
+  // default/blank state or after a failed load.
+  const canAutoCreate = embedded && !isTemplate && !planId && !!selectedClient?.id;
+  const autosaveEnabled = initialized && (!!planId || canAutoCreate);
   const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, exerciseLibraryWorkspaceId, days]);
   const autosave = useAutosave({
     id: planId,
     enabled: autosaveEnabled,
     snapshot: autosaveSnapshot,
-    lastSavedSnapshot: serverSnapshot,
+    lastSavedSnapshot: planId ? serverSnapshot : initialSnapshot,
+    create: canAutoCreate ? async () => {
+      const created = await WorkoutsService.create({
+        workspace_id: planWorkspaceId || wsId,
+        client_id: selectedClient?.id,
+        assigned_ybs_coach_id: user?.id || null,
+        name: name.trim() || 'New Workout Program',
+        split_type: splitType,
+        custom_split_name: splitType === 'custom' ? customSplitName.trim() : null,
+        is_template: false,
+        source_template_id: null,
+        notes: notes.trim() || null,
+        exercise_library_workspace_id: exerciseLibraryWorkspaceId || planWorkspaceId || wsId,
+      }, days);
+      return created?.id;
+    } : undefined,
+    onCreated: (newId, snap) => {
+      planIdRef.current = newId;
+      setPlanId(newId);
+      setServerSnapshot(snap);
+      onPlanSaved?.();
+    },
     save: async () => {
       const payload = {
         name: name.trim(),
@@ -566,7 +612,7 @@ export default function WorkoutPlanBuilder(props = {}) {
         notes: notes.trim() || null,
         exercise_library_workspace_id: exerciseLibraryWorkspaceId,
       };
-      await WorkoutsService.update(planId, payload, days);
+      await WorkoutsService.update(planIdRef.current || planId, payload, days);
     },
   });
 
@@ -978,8 +1024,16 @@ export default function WorkoutPlanBuilder(props = {}) {
     }
   };
 
-  const handleSaveAndAssign = () => {
+  const handleSaveAndAssign = async () => {
     if (!validatePlan()) return;
+    // Drain any pending autosave first. For an embedded client program the
+    // first edit auto-creates the draft, so after flushing we already have a
+    // real plan id and must update it in place instead of inserting again.
+    await autosave.flush();
+    if (planIdRef.current) {
+      await handleSaveChanges();
+      return;
+    }
     // When the builder was opened from a client's page (`clientId` query
     // param), the client is already pre-selected from the RLS-authorized
     // client list. Assign directly without re-opening the picker — the
@@ -994,6 +1048,11 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   const handleAssignToClient = async (client) => {
     if (assigningRef.current) return;
+    if (planIdRef.current) {
+      setClientPickerOpen(false);
+      await handleSaveChanges();
+      return;
+    }
     assigningRef.current = true;
     setSaving(true);
     try {
@@ -1014,6 +1073,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       const assigned = await WorkoutsService.create(planPayload, days);
       setClientPickerOpen(false);
       setSelectedClient(client);
+      planIdRef.current = assigned.id;
       setPlanId(assigned.id);
       setIsTemplate(false);
       autosave.reset();
@@ -1034,7 +1094,8 @@ export default function WorkoutPlanBuilder(props = {}) {
   // row in place instead of silently duplicating it.
   const handleSaveChanges = async () => {
     if (!validatePlan()) return;
-    if (!planId) return;
+    const currentPlanId = planIdRef.current || planId;
+    if (!currentPlanId) return;
     try {
       await autosave.flush();
       setSaving(true);
@@ -1045,7 +1106,8 @@ export default function WorkoutPlanBuilder(props = {}) {
         notes: notes.trim() || null,
         exercise_library_workspace_id: exerciseLibraryWorkspaceId,
       };
-      const updated = await WorkoutsService.update(planId, payload, days);
+      const updated = await WorkoutsService.update(currentPlanId, payload, days);
+      planIdRef.current = updated.id;
       setPlanId(updated.id);
       onPlanSaved?.(updated);
       setSuccessMessage(isTemplate
