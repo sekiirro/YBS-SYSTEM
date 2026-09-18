@@ -14,7 +14,7 @@ import { LoadingState, Badge, Button, Modal, Input, Select, TextArea } from '@/c
 import { formatDate, formatCurrency, getSubscriptionStatusColor, getFormStatusColor, getFormStatusLabel, getInitials } from '@/lib/ybs-utils';
 import {
   ArrowLeft, Phone, Mail, Calendar, User,
-  ClipboardList, TrendingUp, Apple, Dumbbell, Activity, Edit, Plus, Check, Trash2, Archive, Eye, PauseCircle,
+  ClipboardList, TrendingUp, Apple, Dumbbell, Activity, Edit, Plus, Check, Trash2, Archive, Eye, PauseCircle, CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
