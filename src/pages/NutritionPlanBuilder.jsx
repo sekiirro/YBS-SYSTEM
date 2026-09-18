@@ -5,6 +5,7 @@ import { PanelGroup, Panel } from 'react-resizable-panels';
 import { useAuth } from '@/lib/AuthContext';
 import { getActiveWorkspaceId } from '@/lib/ybs-auth';
 import { NutritionService, calculatePlanTotals } from '@/services/nutrition';
+import { calculateFoodNutrients } from '@/lib/nutritionUnits';
 import { ClientsService } from '@/services/clients';
 import { LoadingState, Button, Badge, Modal } from '@/components/ui';
 import { PlannerResizeHandle } from '@/components/workouts/PremiumPlannerLayout';
@@ -1202,15 +1203,16 @@ export default function NutritionPlanBuilder(props = {}) {
                     fat: it.fat && it.amount ? (Number(it.fat) / Number(it.amount)) * 100 : 0,
                   };
                   const numAmt = Number(newAmt) || 0;
-                  const factor = baseFood.serving_size ? numAmt / baseFood.serving_size : numAmt / 100;
+                  const scaled = calculateFoodNutrients(baseFood, numAmt, newUnit || it.unit || 'g');
                   const updated = {
                     ...it,
                     amount: numAmt,
                     unit: newUnit || it.unit || 'g',
-                    calories: Math.round(Number(baseFood.calories || 0) * factor),
-                    protein: Math.round(Number(baseFood.protein || 0) * factor * 10) / 10,
-                    carbs: Math.round(Number(baseFood.carbs || 0) * factor * 10) / 10,
-                    fat: Math.round(Number(baseFood.fat || 0) * factor * 10) / 10,
+                    calories: scaled.calories,
+                    protein: scaled.protein,
+                    carbs: scaled.carbs,
+                    fat: scaled.fat,
+                    gramWeight: scaled.gramWeight,
                     base_food: baseFood,
                   };
                   handleUpdateItemAmount(selectedMealIndex, itIdx, updated);
