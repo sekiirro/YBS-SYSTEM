@@ -9,6 +9,32 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Phone, Mail, Lock, Loader2, MailCheck, Building2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
+// Stable error-codes from the client-registration Edge Function map to
+// user-facing messages. Backend codes are preferred over fragile string
+// matching so every registration failure renders as an inline form error.
+const SIGNUP_ERRORS = {
+  missing_token: "This registration link is missing its token. Please open the link again from the invitation.",
+  link_unavailable: "Unable to verify the registration link. Please check your link and try again.",
+  link_invalid: "This registration link is invalid or no longer active.",
+  link_inactive: "This registration link is no longer active. Please ask the brand owner for a new link.",
+  ip_unavailable:
+    "Unable to determine your network location for registration protection. Please try again from the same browser/network.",
+  ip_taken:
+    "An account has already been registered from this network using this registration link. Please contact the brand owner if you believe this is an error.",
+  reservation_failed: "Your registration could not be started. Please try again.",
+  phone_check_failed: "Unable to verify your phone number. Please try again.",
+  phone_taken: "This phone number is already registered to an account. Please sign in instead, or use a different phone number.",
+  email_taken: "An account with this email address already exists. Please sign in instead.",
+  weak_password: "Password must be at least 8 characters.",
+  invalid_name: "Please enter a valid full name.",
+  registration_failed: "Unable to create your account. Please try again.",
+  registration_network_error:
+    "We could not reach the registration service. Please check your internet connection and try again.",
+  registration_bad_response: "The registration service returned an unexpected response. Please try again.",
+  bad_request: "Invalid registration request. Please try again.",
+  server_not_configured: "The registration service is not configured. Please contact support.",
+};
+
 export default function ClientSignup({ workspace = null, joinToken = null }) {
   const [form, setForm] = useState({
     full_name: "",
@@ -52,6 +78,17 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
     setLoading(true);
 
     try {
+      // Defensive guard: a package-scoped link can only be submitted with its
+      // token. Never invoke the Edge Function when the registration-link state
+      // did not resolve — turn it into an inline form error instead of an
+      // unhandled exception. The standalone /register page (non-scoped) has no
+      // token and is unaffected.
+      if (isScopedLink && (!joinToken || !joinToken.trim())) {
+        throw Object.assign(new Error(SIGNUP_ERRORS.missing_token), {
+          code: "missing_token",
+        });
+      }
+
       // 0. Guard against phone collisions. profiles.phone is UNIQUE, and
       //    handle_new_user() inserts the trainee profile during signup. If
       //    this phone already exists that INSERT aborts and Supabase Auth
@@ -193,7 +230,12 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
         }
       }
     } catch (err) {
-      setError(err.message || "Registration failed. Please check your information and try again.");
+      const code = err?.code;
+      setError(
+        (code && SIGNUP_ERRORS[code]) ||
+          err.message ||
+          "Registration failed. Please check your information and try again."
+      );
     } finally {
       setLoading(false);
     }

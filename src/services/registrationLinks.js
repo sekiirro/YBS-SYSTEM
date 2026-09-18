@@ -44,13 +44,37 @@ export const RegistrationLinksService = {
       phone,
       password,
     };
-    const resp = await fetch(REGISTRATION_FN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
 
-    const data = await resp.json();
+    // Any failure must surface as a controlled error (with a stable code),
+    // never as an uncaught rejection that could reach the Error Boundary.
+    let resp;
+    try {
+      resp = await fetch(REGISTRATION_FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (networkErr) {
+      const err = new Error(
+        'We could not reach the registration service. Please check your internet connection and try again.'
+      );
+      err.code = 'registration_network_error';
+      err.status = 0;
+      err.cause = networkErr;
+      throw err;
+    }
+
+    let data = null;
+    try {
+      data = await resp.json();
+    } catch (jsonErr) {
+      const err = new Error('The registration service returned an unexpected response. Please try again.');
+      err.code = 'registration_bad_response';
+      err.status = resp.status;
+      err.cause = jsonErr;
+      throw err;
+    }
+
     if (!resp.ok) {
       const err = new Error(data?.error?.message || 'Registration failed');
       err.code = data?.error?.code || 'registration_failed';
