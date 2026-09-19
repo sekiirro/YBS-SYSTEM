@@ -191,7 +191,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
         if (change.unlink) {
           items.push({ ...idOrName, workspace_id: wsId });
         } else if (change.exercise) {
-          items.push({ ...idOrName, exercise_id: change.exercise.id, workspace_id: wsId });
+          items.push({ ...idOrName, exercise_id: change.exercise.exercise_id, workspace_id: wsId });
         }
       }
 
@@ -218,7 +218,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
   const effectiveFor = (tabKey) => {
     const change = pending[tabKey];
     if (change?.unlink) return { linked: false };
-    if (change?.exercise) return { linked: true, name: change.exercise.name, videoUrl: change.exercise.video_url };
+    if (change?.exercise) return { linked: true, name: change.exercise.exercise_name, videoUrl: change.exercise.video_url };
     const row = linkedByTab[tabKey];
     if (row) return { linked: true, name: row.exercise_name, videoUrl: row.video_url };
     return { linked: false };
