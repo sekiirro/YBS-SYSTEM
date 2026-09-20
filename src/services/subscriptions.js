@@ -66,6 +66,22 @@ export const SubscriptionsService = {
     return data;
   },
 
+  /**
+   * Authorized manual activation override (forced activation while the
+   * required plans are still pending). Server-side enforced: Platform
+   * Owner or the Workspace Owner of the client's workspace. Writes the
+   * durable activation_source='manual_override' marker + audit entry and
+   * is excluded from activation reconciliation. Trigger-backstop for the
+   * plan-delivery rule is still enforced for every other path.
+   */
+  async activateWithOverride(clientId) {
+    const { data, error } = await supabase.rpc('override_activate_client', {
+      p_client_id: clientId,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   // ─── Subscription Lifecycle RPCs (System Owner only) ──────────
 
   /**

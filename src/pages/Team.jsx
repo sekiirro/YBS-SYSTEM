@@ -73,25 +73,25 @@ export default function Team() {
       {users.length === 0 ? (
         <EmptyState icon={UsersRound} title="No team members" description="Invite trainers and coaches to your team" />
       ) : (
-        <div className="surface-card overflow-hidden">
+        <div className="surface-card overflow-hidden border border-white/[0.08]">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Member</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Role</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Clients</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Member</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Role</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Phone</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Clients</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Status</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] hover:shadow-[inset_2px_0_0_hsl(var(--primary))] transition-all duration-300 group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-semibold">
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.08)] flex items-center justify-center text-primary text-[11px] font-semibold shrink-0">
                           {getInitials(memberDisplayName(u))}
                         </div>
                         <div>

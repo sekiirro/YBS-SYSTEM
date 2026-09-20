@@ -1,3 +1,10 @@
+# Scorecard scratch files (may embed credentials - do not commit)
+auth_test.json
+refresh.json
+test_query.cjs
+ybs-autosave-verify.mjs
+ybs-cleanup-dryrun.cjs
+
 #env
 .env
 .env.*

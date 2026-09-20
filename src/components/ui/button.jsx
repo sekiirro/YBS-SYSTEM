@@ -6,19 +6,19 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium tracking-tight transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-[13px] font-medium tracking-tight transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] hover:bg-primary/90 hover:shadow-[0_0_50px_-8px_hsl(var(--primary)/0.8)]",
+          "bg-primary text-primary-foreground shadow-[0_0_24px_-8px_hsl(var(--primary))] hover:bg-primary/90 hover:shadow-[0_0_32px_-8px_hsl(var(--primary))]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-rose-500 text-white shadow-[0_0_24px_-8px_rgba(244,63,94,0.6)] hover:bg-rose-600 hover:shadow-[0_0_32px_-8px_rgba(244,63,94,0.8)]",
         outline:
-          "border border-white/15 bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5",
+          "border border-white/[0.12] bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]",
         secondary:
-          "bg-secondary/80 text-secondary-foreground border border-white/10 hover:bg-secondary/60",
-        ghost: "text-foreground/80 hover:text-foreground hover:bg-white/5",
+          "bg-white/[0.06] text-foreground border border-white/[0.08] hover:bg-white/[0.1] hover:border-white/[0.12] shadow-sm",
+        ghost: "text-foreground/80 hover:text-foreground hover:bg-white/[0.06]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

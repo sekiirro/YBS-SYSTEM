@@ -7,6 +7,7 @@ import { SubscriptionsService } from '@/services/subscriptions';
 import { AssessmentsService } from '@/services/assessments';
 import { MetricsService } from '@/services/metrics';
 import ClientNutritionWorkspace from '@/components/client/ClientNutritionWorkspace';
+import ClientProgressPanel from '@/components/clients/ClientProgressPanel';
 import ClientTrainingWorkspace from '@/components/client/ClientTrainingWorkspace';
 import { hasPermission, canViewFinancials } from '@/lib/permissions';
 import { isPlatformAdmin, isWorkspaceOwner } from '@/lib/ybs-auth';
@@ -42,7 +43,7 @@ export default function ClientDetail() {
   const [timeline, setTimeline] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [forms, setForms] = useState([]);
-  const [metrics, setMetrics] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const [dangerAction, setDangerAction] = useState(null); // 'remove' | 'delete' | null
 
   useEffect(() => {
@@ -106,10 +107,10 @@ export default function ClientDetail() {
       </button>
 
       {/* Header card */}
-      <div className="surface-card p-5 mb-4">
+      <div className="surface-card p-5 mb-4 bg-gradient-to-br from-[#0d1322] to-[#0b0f19] border border-white/[0.08]">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/15 flex items-center justify-center text-primary text-lg font-semibold shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 shadow-[0_0_20px_rgba(59,130,246,0.15)] flex items-center justify-center text-primary text-lg font-semibold shrink-0">
               {getInitials(client.full_name)}
             </div>
             <div>
@@ -119,6 +120,9 @@ export default function ClientDetail() {
                   <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
                 ) : (
                   <Badge className="text-amber-400 bg-amber-500/10 border-amber-500/20">Awaiting Activation</Badge>
+                )}
+                {client.activation_source === 'manual_override' && (
+                  <Badge className="text-violet-300 bg-violet-500/10 border-violet-500/25">Manual Override</Badge>
                 )}
               </div>
               <p className="text-[12px] text-muted-foreground font-mono mt-1">{client.client_code}</p>
@@ -135,8 +139,8 @@ export default function ClientDetail() {
                 <Edit className="w-4 h-4" /> Edit
               </Button>
             )}
-            {client.status === 'pending' && canEdit && (
-              <ActivateClientButton clientId={id} onUpdated={loadClient} />
+            {client.status !== 'active' && canEdit && (
+              <ActivateClientButton clientId={id} canOverride={canManageClient(client)} onUpdated={loadClient} />
             )}
             {canManageClient(client) && (
               <>
@@ -155,7 +159,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+      <div className="flex gap-1 mb-4 overflow-x-auto pb-1 border-b border-white/[0.06]">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -164,16 +168,16 @@ export default function ClientDetail() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors duration-200',
+                'relative flex items-center gap-2 px-3.5 py-2.5 rounded-t-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200',
                 isActive
-                  ? 'text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="activeClientTab"
-                  className="absolute inset-0 rounded-lg bg-secondary border border-border"
+                  className="absolute inset-0 rounded-t-lg bg-primary/10 border-b-2 border-primary"
                   transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }}
                 />
               )}
@@ -198,7 +202,7 @@ export default function ClientDetail() {
             {activeTab === 'overview' && <OverviewTab client={client} summary={summary} />}
             {activeTab === 'subscription' && <SubscriptionTab client={client} summary={summary} subscriptions={subscriptions} user={user} onUpdated={loadClient} />}
             {activeTab === 'forms' && <FormsTab forms={forms} />}
-            {activeTab === 'metrics' && <MetricsTab metrics={metrics} clientId={id} client={client} onUpdated={loadClient} />}
+            {activeTab === 'metrics' && <ClientProgressPanel metrics={metrics} clientId={id} client={client} onUpdated={loadClient} />}
             {activeTab === 'nutrition' && <ClientNutritionWorkspace client={client} />}
             {activeTab === 'workout' && <ClientTrainingWorkspace client={client} />}
             {activeTab === 'timeline' && <TimelineTab timeline={timeline} />}
@@ -676,74 +680,6 @@ function ViewResponsesModal({ form, onClose }) {
   );
 }
 
-function MetricsTab({ metrics, clientId, client, onUpdated }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const { user } = useAuth();
-  const canEdit = hasPermission(user, 'metrics.update');
-
-  const handleDelete = async (metricId) => {
-    if (!window.confirm('Delete this metrics entry? This cannot be undone.')) return;
-    try {
-      await MetricsService.delete(metricId);
-      onUpdated();
-    } catch (err) {
-      console.error('Failed to delete metric:', err);
-    }
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[14px] font-display font-semibold">Progress Metrics</h3>
-        {canEdit && <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Entry</Button>}
-      </div>
-      {metrics.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground py-8 text-center">No metrics recorded yet</p>
-      ) : (
-        <div className="space-y-3">
-          {metrics.map((m) => (
-            <div key={m.id} className="p-4 rounded-lg bg-secondary/30 border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[13px] font-medium">{formatDate(m.entry_date)}</p>
-                <div className="flex items-center gap-2">
-                  {m.ai_analysis && <Badge className="text-primary bg-primary/10 border-primary/20">AI Analyzed</Badge>}
-                  {canEdit && (
-                    <button
-                      onClick={() => handleDelete(m.id)}
-                      className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Delete entry"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-[12px]">
-                {m.weight != null && <Metric label="Weight" value={`${m.weight} kg`} />}
-                {m.body_fat != null && <Metric label="Body Fat" value={`${m.body_fat}%`} />}
-                {m.chest != null && <Metric label="Chest" value={`${m.chest} cm`} />}
-                {m.waist != null && <Metric label="Waist" value={`${m.waist} cm`} />}
-                {m.right_arm != null && <Metric label="R Arm" value={`${m.right_arm} cm`} />}
-                {m.right_thigh != null && <Metric label="R Thigh" value={`${m.right_thigh} cm`} />}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {showAdd && <AddMetricModal clientId={clientId} workspaceId={client.workspace_id} assignedCoachId={user?.id || client.assigned_ybs_coach_id} onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); onUpdated(); }} />}
-    </div>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <div>
-      <span className="text-muted-foreground">{label}</span>
-      <p className="font-medium mt-0.5">{value}</p>
-    </div>
-  );
-}
-
 function TimelineTab({ timeline }) {
   return (
     <div>
@@ -767,20 +703,27 @@ function TimelineTab({ timeline }) {
   );
 }
 
-function ActivateClientButton({ clientId, onUpdated }) {
+function ActivateClientButton({ clientId, canOverride, onUpdated }) {
   const [subscriptions, setSubscriptions] = useState([]);
+  const [readiness, setReadiness] = useState(null);
   const [open, setOpen] = useState(false);
   const [subId, setSubId] = useState('');
+  const [overrideConfirmed, setOverrideConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [loaded, setLoaded] = useState(false);
 
-  // Load the client's (pending) subscriptions when opening.
-  const loadSubs = async () => {
+  // Load the client's subscriptions + activation readiness on open.
+  const loadData = async () => {
     setErr('');
     setSubId('');
-    const subs = await SubscriptionsService.list({ client_id: clientId }).catch(() => []);
+    setOverrideConfirmed(false);
+    const [subs, ready] = await Promise.all([
+      SubscriptionsService.list({ client_id: clientId }).catch(() => []),
+      ClientsService.activationReadiness(clientId).catch(() => null),
+    ]);
     setSubscriptions(subs || []);
+    setReadiness(ready);
     const active = (subs || []).find((s) => s.status === 'active') || (subs || [])[0];
     if (active) setSubId(active.id);
     setLoaded(true);
@@ -788,15 +731,21 @@ function ActivateClientButton({ clientId, onUpdated }) {
 
   const handleOpen = async () => {
     setOpen(true);
-    if (!loaded) await loadSubs();
+    if (!loaded) await loadData();
   };
 
+  const needsOverride = readiness ? readiness.required_plans_delivered === false : false;
+
   const handleActivate = async () => {
-    if (!subId) { setErr('Please select a subscription to activate'); return; }
     setBusy(true);
     setErr('');
     try {
-      await SubscriptionsService.activate(subId);
+      if (needsOverride) {
+        await SubscriptionsService.activateWithOverride(clientId);
+      } else {
+        if (!subId) { setErr('Please select a subscription to activate'); return; }
+        await SubscriptionsService.activate(subId);
+      }
       setOpen(false);
       onUpdated();
     } catch (e) {
@@ -811,34 +760,57 @@ function ActivateClientButton({ clientId, onUpdated }) {
       <Button onClick={handleOpen}>
         <Check className="w-4 h-4 mr-1" /> Activate Client
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Activate Client Package" size="md">
+      <Modal open={open} onClose={() => setOpen(false)} title={needsOverride ? 'Activate Client (Manual Override)' : 'Activate Client Package'} size="md">
         <div className="space-y-4">
-          <p className="text-[13px] text-muted-foreground">
-            Activation requires both a delivered Nutrition plan and a delivered Workout plan.
-            Clients are activated automatically the moment the second plan is delivered — this
-            button re-checks the same rule server-side.
-          </p>
           {err && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{err}</div>
           )}
-          {subscriptions.length === 0 ? (
-            <div className="p-3 rounded-md bg-primary/5 border border-primary/15 text-[13px] text-muted-foreground">
-              No subscriptions found. Assign a package to this client first.
-            </div>
+          {needsOverride ? (
+            <>
+              <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/25 text-[13px] text-amber-300">
+                Required plans are not fully delivered yet — Nutrition: {readiness.nutrition_delivered ? 'delivered' : 'pending'} · Workout: {readiness.workout_delivered ? 'delivered' : 'pending'}. Automatic activation waits until BOTH are delivered; a manual override bypasses that rule and requires Platform/Workspace Owner authorization.
+              </div>
+              {canOverride ? (
+                <label className="flex items-start gap-2 text-[13px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={overrideConfirmed}
+                    onChange={(e) => setOverrideConfirmed(e.target.checked)}
+                    className="mt-0.5 text-primary focus:ring-primary"
+                  />
+                  <span>I authorize a manual activation override. The client will be marked as an intentional override and this action will be audited and excluded from automatic reconciliation.</span>
+                </label>
+              ) : (
+                <p className="text-[13px] text-muted-foreground">Only a Platform Owner or the Workspace Owner can authorize a manual activation override.</p>
+              )}
+            </>
           ) : (
-            <Select label="Subscription" value={subId} onChange={(e) => setSubId(e.target.value)}>
-              <option value="">Select subscription…</option>
-              {subscriptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.package_name || 'Package'} · {s.currency} {s.price} · {formatDate(s.start_date)}
-                </option>
-              ))}
-            </Select>
+            <>
+              <p className="text-[13px] text-muted-foreground">
+                Activation requires both a delivered Nutrition plan and a delivered Workout plan.
+                Clients are activated automatically the moment the second plan is delivered — this
+                button re-checks the same rule server-side.
+              </p>
+              {subscriptions.length === 0 ? (
+                <div className="p-3 rounded-md bg-primary/5 border border-primary/15 text-[13px] text-muted-foreground">
+                  No subscriptions found. Assign a package to this client first.
+                </div>
+              ) : (
+                <Select label="Subscription" value={subId} onChange={(e) => setSubId(e.target.value)}>
+                  <option value="">Select subscription…</option>
+                  {subscriptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.package_name || 'Package'} · {s.currency} {s.price} · {formatDate(s.start_date)}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </>
           )}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleActivate} disabled={busy || subscriptions.length === 0}>
-              {busy ? 'Activating…' : 'Activate'}
+            <Button onClick={handleActivate} disabled={busy || (needsOverride ? !(canOverride && overrideConfirmed) : subscriptions.length === 0)}>
+              {busy ? 'Activating…' : needsOverride ? 'Activate (Override)' : 'Activate'}
             </Button>
           </div>
         </div>
@@ -890,69 +862,6 @@ function EditClientModal({ client, onClose, onSaved }) {
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function AddMetricModal({ clientId, workspaceId, assignedCoachId, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    entry_date: new Date().toISOString().split('T')[0],
-    weight: '',
-    body_fat: '',
-    chest: '',
-    waist: '',
-    hip: '',
-    right_arm: '',
-    left_arm: '',
-    right_thigh: '',
-    left_thigh: '',
-    notes: '',
-  });
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const data = {
-        ...form,
-        client_id: clientId,
-        workspace_id: workspaceId || undefined,
-        assigned_ybs_coach_id: assignedCoachId || undefined,
-      };
-      Object.keys(data).forEach((k) => {
-        if (data[k] === '' || data[k] == null) delete data[k];
-        if (typeof data[k] === 'string' && k !== 'entry_date' && k !== 'notes' && data[k] !== '') data[k] = parseFloat(data[k]);
-      });
-      await MetricsService.create(data);
-      onSaved();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal open onClose={onClose} title="Add Metrics Entry" size="lg">
-      <div className="space-y-4">
-        <Input label="Date" type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Input label="Weight (kg)" type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} />
-          <Input label="Body Fat %" type="number" value={form.body_fat} onChange={(e) => setForm({ ...form, body_fat: e.target.value })} />
-          <Input label="Chest (cm)" type="number" value={form.chest} onChange={(e) => setForm({ ...form, chest: e.target.value })} />
-          <Input label="Waist (cm)" type="number" value={form.waist} onChange={(e) => setForm({ ...form, waist: e.target.value })} />
-          <Input label="Hip (cm)" type="number" value={form.hip} onChange={(e) => setForm({ ...form, hip: e.target.value })} />
-          <Input label="R Arm (cm)" type="number" value={form.right_arm} onChange={(e) => setForm({ ...form, right_arm: e.target.value })} />
-          <Input label="L Arm (cm)" type="number" value={form.left_arm} onChange={(e) => setForm({ ...form, left_arm: e.target.value })} />
-          <Input label="R Thigh (cm)" type="number" value={form.right_thigh} onChange={(e) => setForm({ ...form, right_thigh: e.target.value })} />
-          <Input label="L Thigh (cm)" type="number" value={form.left_thigh} onChange={(e) => setForm({ ...form, left_thigh: e.target.value })} />
-        </div>
-        <TextArea label="Notes" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Entry'}</Button>
         </div>
       </div>
     </Modal>

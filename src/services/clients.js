@@ -42,6 +42,18 @@ export const ClientsService = {
     return data;
   },
 
+  /**
+   * Reports whether the client's required plans are delivered (nutrition
+   * + workout) — powers the activation warning in the UI. Read-only.
+   */
+  async activationReadiness(clientId) {
+    const { data, error } = await supabase.rpc('client_activation_readiness', {
+      p_client_id: clientId,
+    });
+    if (error) return null;
+    return data;
+  },
+
   async countActive(workspaceId) {
     let query = supabase
       .from('clients')

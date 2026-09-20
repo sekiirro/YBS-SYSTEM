@@ -221,7 +221,7 @@ export default function PendingApplications() {
       />
 
       {/* Filters */}
-      <div className="surface-card p-4 mb-4">
+      <div className="surface-card p-4 mb-4 bg-gradient-to-br from-[#0d1322] to-[#0b0f19] border border-white/[0.08]">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -229,7 +229,7 @@ export default function PendingApplications() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, phone, or email…"
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40"
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] placeholder:text-muted-foreground/60 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function PendingApplications() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="pending">Pending</option>
               <option value="under_review">Under Review</option>
@@ -255,15 +255,15 @@ export default function PendingApplications() {
           No applications match this filter.
         </div>
       ) : (
-        <div className="surface-card overflow-hidden">
+        <div className="surface-card overflow-hidden border border-white/[0.08]">
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border">
+                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
                   {['Applicant', 'Workspace / Brand', 'Package', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
                     <th
                       key={h}
-                      className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+                      className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70"
                     >
                       {h}
                     </th>
@@ -272,7 +272,7 @@ export default function PendingApplications() {
               </thead>
               <tbody>
                 {filtered.map((a) => (
-                  <tr key={a.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <tr key={a.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] hover:shadow-[inset_2px_0_0_hsl(var(--primary))] transition-all duration-300">
                     <td className="px-4 py-3">
                       <p className="text-[13px] font-medium">{a.applicant_name}</p>
                       <p className="text-[11px] text-muted-foreground">{a.applicant_email}</p>

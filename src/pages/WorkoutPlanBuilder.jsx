@@ -1396,11 +1396,11 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   // ─── Column content: Embedded header (embedded mode action bar) ─────
   const embeddedHeaderContent = (
-    <div className="px-4 py-3 border-b border-border/60 bg-card/60 shrink-0">
+    <div className="px-4 py-3 border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-[#0b0f19] shrink-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-secondary text-muted-foreground border-border')}>
+            <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-white/[0.04] text-muted-foreground border-white/[0.08]')}>
               {isTemplate ? 'Template' : 'Client Plan'}
             </Badge>
             {selectedClient && (
@@ -1415,7 +1415,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Plan Name"
-              className="text-[13px] font-bold text-foreground bg-transparent border-b border-transparent focus:border-border/80 focus:outline-none px-0 py-0.5 min-w-0 flex-1"
+              className="text-[13px] font-bold text-foreground bg-transparent border-b border-transparent focus:border-primary/50 focus:outline-none px-0 py-0.5 min-w-0 flex-1 placeholder:text-muted-foreground/50 transition-colors"
             />
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -1429,7 +1429,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setDays((prev) => prev.map((d, idx) => ({ ...d, day_name: idx === 0 ? customName : d.day_name })));
                 }
               }}
-              className="h-6 px-1.5 rounded-md bg-secondary/40 border border-border/60 text-[10px] text-muted-foreground focus:outline-none focus:border-primary/40"
+              className="h-6 px-1.5 rounded-md bg-[#0d1322] border border-white/[0.08] text-[10px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               {SPLIT_TYPES.map((st) => (
                 <option key={st.id} value={st.id}>{st.label}</option>
@@ -1444,7 +1444,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setCustomSplitName(e.target.value);
                   if (days.length === 1) handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
                 }}
-                className="h-6 px-2 rounded-md bg-secondary/40 border border-border/60 text-[10px] text-muted-foreground focus:outline-none focus:border-primary/40 min-w-0 flex-1"
+                className="h-6 px-2 rounded-md bg-[#0d1322] border border-white/[0.08] text-[10px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 min-w-0 flex-1 transition-colors"
               />
             )}
           </div>
@@ -1530,21 +1530,21 @@ export default function WorkoutPlanBuilder(props = {}) {
                   return (
                     <Draggable key={d.id || `day-${dIdx}`} draggableId={d.id || `day-${dIdx}`} index={dIdx}>
                       {(dragProvided, dragSnapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          className={cn(
-                            'group relative rounded-xl border select-none transition-colors duration-150 ease-out',
-                            isActive
-                              ? isRest
-                                ? 'bg-card border-amber-500/40 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-400 before:rounded-r'
-                                : 'bg-card border-primary/50 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
-                              : isRest
-                                ? 'bg-card/40 border-amber-500/20 hover:border-amber-500/40 hover:bg-card'
-                                : 'bg-card/40 border-border/40 hover:border-border/80 hover:bg-card',
-                            dragSnapshot.isDragging && 'shadow-xl ring-1 ring-primary/40 opacity-95 z-50 bg-card'
-                          )}
-                        >
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            className={cn(
+                              'group relative rounded-xl border select-none transition-colors duration-150 ease-out',
+                              isActive
+                                ? isRest
+                                  ? 'bg-[#0d1322] border-amber-500/40 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-400 before:rounded-r'
+                                  : 'bg-[#0d1322] border-primary/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                                : isRest
+                                  ? 'bg-[#0b0f19] border-amber-500/20 hover:border-amber-500/40 hover:bg-[#0d1322]'
+                                  : 'bg-[#0b0f19] border-white/[0.08] hover:border-white/[0.12] hover:bg-[#0d1322]',
+                              dragSnapshot.isDragging && 'shadow-xl ring-1 ring-primary/40 opacity-95 z-50 bg-[#0d1322]'
+                            )}
+                          >
                           <button
                             type="button"
                             onClick={() => {

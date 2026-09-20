@@ -15,7 +15,13 @@ import {
   History,
   Check,
   Thermometer,
-  Target
+  Target,
+  Plus,
+  Minus,
+  Pause,
+  RotateCcw,
+  X,
+  Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +31,10 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
   const [activeLog, setActiveLog] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef(null);
+
+  // Inter-set rest timer state: { totalSeconds, remainingSeconds, isPaused, exerciseName, isFinished }
+  const [restTimer, setRestTimer] = useState(null);
+  const restTimerIntervalRef = useRef(null);
 
   // Set inputs state keyed by `${exerciseIndex}_${setNumber}`: { weight, reps, rpe, completed, logId }
   const [setInputs, setSetInputs] = useState({});
@@ -58,6 +68,64 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [activeLog]);
+
+  // Inter-set rest timer countdown effect
+  useEffect(() => {
+    if (restTimer && !restTimer.isPaused && !restTimer.isFinished) {
+      restTimerIntervalRef.current = setInterval(() => {
+        setRestTimer((prev) => {
+          if (!prev || prev.isPaused) return prev;
+          if (prev.remainingSeconds <= 1) {
+            // Capability-safe vibration on timer completion
+            if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+              try {
+                navigator.vibrate([120, 60, 120]);
+              } catch (_) {}
+            }
+            return { ...prev, remainingSeconds: 0, isFinished: true };
+          }
+          return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+        });
+      }, 1000);
+    } else {
+      if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    }
+    return () => {
+      if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    };
+  }, [restTimer?.isPaused, restTimer?.isFinished, !!restTimer]);
+
+  const startRestTimer = (seconds, exerciseName) => {
+    if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    setRestTimer({
+      totalSeconds: seconds,
+      remainingSeconds: seconds,
+      isPaused: false,
+      exerciseName,
+      isFinished: false,
+    });
+  };
+
+  const handlePauseResumeRest = () => {
+    setRestTimer((prev) => (prev ? { ...prev, isPaused: !prev.isPaused } : null));
+  };
+
+  const handleAddRest30s = () => {
+    setRestTimer((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        totalSeconds: prev.totalSeconds + 30,
+        remainingSeconds: prev.remainingSeconds + 30,
+        isFinished: false,
+      };
+    });
+  };
+
+  const handleDismissRest = () => {
+    if (restTimerIntervalRef.current) clearInterval(restTimerIntervalRef.current);
+    setRestTimer(null);
+  };
 
   // Load history when switching to history tab
   useEffect(() => {
@@ -124,6 +192,26 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
     }
   };
 
+  // Stepper helper for mobile touch entry (preserves decimals and manual typing)
+  const handleStepValue = (exIdx, setNumber, field, step, min = 0, max = 999) => {
+    const key = `${exIdx}_${setNumber}`;
+    setSetInputs((prev) => {
+      const currentVal = prev[key]?.[field];
+      let num = currentVal !== '' && currentVal != null ? parseFloat(currentVal) : 0;
+      if (isNaN(num)) num = 0;
+      let next = Math.round((num + step) * 10) / 10;
+      if (next < min) next = min;
+      if (next > max) next = max;
+      return {
+        ...prev,
+        [key]: {
+          ...(prev[key] || {}),
+          [field]: next === 0 && field !== 'rpe' ? '' : String(next),
+        },
+      };
+    });
+  };
+
   // Log or toggle a set
   const handleToggleSet = async (ex, exIdx, setNumber) => {
     const key = `${exIdx}_${setNumber}`;
@@ -164,6 +252,11 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           completed: willBeCompleted,
         },
       }));
+
+      // Automatically launch inter-set rest timer if prescribed rest duration exists
+      if (willBeCompleted && ex.rest_seconds && Number(ex.rest_seconds) > 0) {
+        startRestTimer(Number(ex.rest_seconds), ex.exercise_name || ex.name || 'Exercise');
+      }
     } catch (err) {
       console.error('Failed to save set log:', err);
       // revert optimistic update
@@ -194,6 +287,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
   const handleFinishWorkout = async () => {
     if (!activeLog) return;
     try {
+      handleDismissRest();
       const completedSetsCount = Object.values(setInputs).filter((s) => s.completed).length;
       await WorkoutsService.completeWorkoutLog(activeLog.id, {
         duration_seconds: elapsedSeconds,
@@ -522,9 +616,10 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                             )}
                           </div>
 
-                          {/* Interactive Set Table */}
+                          {/* Interactive Set Table Container */}
                           <div className="p-3 bg-secondary/10">
-                            <div className="overflow-x-auto">
+                            {/* Desktop Set Table */}
+                            <div className="hidden md:block overflow-x-auto">
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="text-muted-foreground border-b border-border/30 text-[11px]">
@@ -674,6 +769,198 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                 </tbody>
                               </table>
                             </div>
+
+                            {/* Mobile Touch-Friendly Set Cards */}
+                            <div className="md:hidden space-y-2.5">
+                              {setsList.map((setNum) => {
+                                const key = `${exIdx}_${setNum}`;
+                                const state = setInputs[key] || {};
+                                const isCompleted = !!state.completed;
+                                const isWarmup = setNum <= warmupCount;
+                                const warmupNote = isWarmup ? getWarmupNote(ex, setNum) : null;
+
+                                return (
+                                  <div
+                                    key={setNum}
+                                    className={cn(
+                                      'p-3.5 rounded-xl border transition-all',
+                                      isCompleted
+                                        ? 'bg-emerald-500/5 border-emerald-500/40 shadow-sm'
+                                        : activeLog
+                                        ? 'bg-card border-border/80 hover:border-primary/40'
+                                        : 'bg-secondary/20 border-border/40'
+                                    )}
+                                  >
+                                    {/* Set Header Info */}
+                                    <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-border/30">
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className={cn(
+                                            'inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-md text-xs font-mono font-bold',
+                                            isCompleted
+                                              ? 'bg-emerald-500/20 text-emerald-400'
+                                              : isWarmup
+                                              ? 'bg-amber-500/15 text-amber-400'
+                                              : 'bg-secondary text-muted-foreground'
+                                          )}
+                                        >
+                                          {isWarmup ? `Warmup ${setNum}` : `Set ${setNum - warmupCount}`}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground font-mono">
+                                          {isWarmup ? warmupNote : `${ex.rep_range || '8-12'} reps ${ex.rpe ? `@ RIR ${ex.rpe}` : ''}`}
+                                        </span>
+                                      </div>
+
+                                      {isCompleted && (
+                                        <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                                          <CheckCircle2 className="w-3.5 h-3.5" /> Logged
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Stepper Inputs Row */}
+                                    <div className="grid grid-cols-2 gap-2.5 pt-3">
+                                      {/* Weight Stepper */}
+                                      <div>
+                                        <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                          Weight (kg)
+                                        </label>
+                                        <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10">
+                                          <button
+                                            type="button"
+                                            disabled={!activeLog}
+                                            onClick={() => handleStepValue(exIdx, setNum, 'weight', -2.5, 0)}
+                                            className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                            aria-label={`Decrease weight for set ${setNum}`}
+                                          >
+                                            <Minus className="w-4 h-4" />
+                                          </button>
+                                          <input
+                                            type="number"
+                                            step="0.5"
+                                            placeholder="—"
+                                            value={state.weight ?? ''}
+                                            onChange={(e) => handleInputChange(exIdx, setNum, 'weight', e.target.value)}
+                                            disabled={!activeLog}
+                                            className={cn(
+                                              'w-full text-center bg-transparent font-mono text-xs font-bold focus:outline-none',
+                                              isCompleted ? 'text-emerald-400' : 'text-foreground'
+                                            )}
+                                          />
+                                          <button
+                                            type="button"
+                                            disabled={!activeLog}
+                                            onClick={() => handleStepValue(exIdx, setNum, 'weight', 2.5, 0)}
+                                            className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                            aria-label={`Increase weight for set ${setNum}`}
+                                          >
+                                            <Plus className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Reps Stepper */}
+                                      <div>
+                                        <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                          Reps
+                                        </label>
+                                        <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10">
+                                          <button
+                                            type="button"
+                                            disabled={!activeLog}
+                                            onClick={() => handleStepValue(exIdx, setNum, 'reps', -1, 0)}
+                                            className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                            aria-label={`Decrease reps for set ${setNum}`}
+                                          >
+                                            <Minus className="w-4 h-4" />
+                                          </button>
+                                          <input
+                                            type="number"
+                                            step="1"
+                                            placeholder="—"
+                                            value={state.reps ?? ''}
+                                            onChange={(e) => handleInputChange(exIdx, setNum, 'reps', e.target.value)}
+                                            disabled={!activeLog}
+                                            className={cn(
+                                              'w-full text-center bg-transparent font-mono text-xs font-bold focus:outline-none',
+                                              isCompleted ? 'text-emerald-400' : 'text-foreground'
+                                            )}
+                                          />
+                                          <button
+                                            type="button"
+                                            disabled={!activeLog}
+                                            onClick={() => handleStepValue(exIdx, setNum, 'reps', 1, 0)}
+                                            className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                            aria-label={`Increase reps for set ${setNum}`}
+                                          >
+                                            <Plus className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Optional RIR / RPE Stepper */}
+                                      {ex.rpe && (
+                                        <div className="col-span-2">
+                                          <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                            Target RIR / RPE
+                                          </label>
+                                          <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10 max-w-[220px]">
+                                            <button
+                                              type="button"
+                                              disabled={!activeLog}
+                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', -0.5, 5, 10)}
+                                              className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                              aria-label={`Decrease RPE for set ${setNum}`}
+                                            >
+                                              <Minus className="w-3.5 h-3.5" />
+                                            </button>
+                                            <input
+                                              type="number"
+                                              step="0.5"
+                                              min="5"
+                                              max="10"
+                                              placeholder="—"
+                                              value={state.rpe ?? ''}
+                                              onChange={(e) => handleInputChange(exIdx, setNum, 'rpe', e.target.value)}
+                                              disabled={!activeLog}
+                                              className="w-full text-center bg-transparent text-foreground font-mono text-xs font-bold focus:outline-none"
+                                            />
+                                            <button
+                                              type="button"
+                                              disabled={!activeLog}
+                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', 0.5, 5, 10)}
+                                              className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
+                                              aria-label={`Increase RPE for set ${setNum}`}
+                                            >
+                                              <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Big Touch-Friendly Set Completion Button */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleSet(ex, exIdx, setNum)}
+                                      disabled={!activeLog || savingSet[key]}
+                                      className={cn(
+                                        'w-full h-11 mt-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm',
+                                        isCompleted
+                                          ? 'bg-emerald-500/20 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40'
+                                          : activeLog
+                                          ? 'bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.99]'
+                                          : 'bg-secondary/40 text-muted-foreground/40 border border-border/30 cursor-not-allowed'
+                                      )}
+                                    >
+                                      <Check className={cn('w-4 h-4', isCompleted ? 'stroke-[2.5]' : 'stroke-2')} />
+                                      <span>{isCompleted ? 'Set Completed ✓ (Tap to Undo)' : 'Complete Set'}</span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
                             {!activeLog && (
                               <p className="text-[11px] text-muted-foreground/70 text-center pt-2">
                                 Click "Start This Workout" above to enable live set tracking.
@@ -688,6 +975,126 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Floating Inter-Set Rest Timer */}
+      {restTimer && (
+        <div
+          role="region"
+          aria-label="Rest period countdown"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] md:bottom-6 right-4 left-4 md:left-auto md:w-96 z-40 animate-in slide-in-from-bottom-4 duration-300"
+        >
+          <div
+            className={cn(
+              'surface-card p-4 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all',
+              restTimer.isFinished
+                ? 'bg-emerald-950/95 border-emerald-500/60 shadow-emerald-500/20'
+                : 'bg-card/95 border-primary/40 shadow-primary/15'
+            )}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className={cn(
+                    'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0',
+                    restTimer.isFinished
+                      ? 'bg-emerald-500/20 text-emerald-400 animate-pulse'
+                      : 'bg-primary/20 text-primary'
+                  )}
+                >
+                  <Timer className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block leading-tight">
+                    {restTimer.isFinished ? 'Rest Complete!' : 'Rest Interval'}
+                  </span>
+                  <p className="text-xs font-medium text-foreground truncate max-w-[200px] sm:max-w-[240px]">
+                    {restTimer.exerciseName}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDismissRest}
+                aria-label="Close rest timer"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Countdown & Progress bar */}
+            <div className="py-1">
+              <div className="flex items-baseline justify-between mb-1.5 font-mono">
+                <span
+                  className={cn(
+                    'text-3xl font-extrabold tracking-tight tabular-nums',
+                    restTimer.isFinished ? 'text-emerald-400' : 'text-primary'
+                  )}
+                >
+                  {formatTimer(restTimer.remainingSeconds)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {restTimer.isFinished ? 'Ready for next set!' : `Prescribed: ${restTimer.totalSeconds}s`}
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary/80 overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full transition-all duration-1000 ease-linear rounded-full',
+                    restTimer.isFinished ? 'bg-emerald-500 w-full' : 'bg-primary'
+                  )}
+                  style={{
+                    width: restTimer.isFinished
+                      ? '100%'
+                      : `${Math.max(0, Math.min(100, (restTimer.remainingSeconds / (restTimer.totalSeconds || 1)) * 100))}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50">
+              <button
+                type="button"
+                onClick={handlePauseResumeRest}
+                className="flex-1 h-9 px-3 rounded-lg bg-secondary/80 hover:bg-secondary text-xs font-semibold text-foreground flex items-center justify-center gap-1.5 transition-colors"
+              >
+                {restTimer.isPaused ? (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Resume</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-3.5 h-3.5 fill-current" />
+                    <span>Pause</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddRest30s}
+                className="h-9 px-3 rounded-lg bg-secondary/60 hover:bg-secondary text-xs font-medium text-foreground border border-border flex items-center gap-1 transition-colors"
+                title="Add 30 seconds to rest timer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>+30s</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDismissRest}
+                className="h-9 px-3 rounded-lg hover:bg-secondary/40 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

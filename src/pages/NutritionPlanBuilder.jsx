@@ -772,7 +772,7 @@ export default function NutritionPlanBuilder(props = {}) {
   const planOverviewContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Plan Header */}
-      <div className="shrink-0 p-4 border-b border-border/40 bg-card/40 space-y-3">
+      <div className="shrink-0 p-4 border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-[#0b0f19] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -781,7 +781,7 @@ export default function NutritionPlanBuilder(props = {}) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nutrition Plan Name"
-                className="text-base sm:text-lg font-display font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary focus:outline-none transition-colors px-0 py-0.5 rounded-none"
+                className="text-base sm:text-lg font-display font-semibold text-foreground bg-transparent border-b border-transparent hover:border-white/[0.12] focus:border-primary/50 focus:outline-none transition-colors px-0 py-0.5 rounded-none placeholder:text-muted-foreground/50"
               />
               <Badge
                 className={cn(
@@ -955,9 +955,9 @@ export default function NutritionPlanBuilder(props = {}) {
                             className={cn(
                               'group relative rounded-xl border p-3 cursor-pointer transition-all duration-150 select-none',
                               isSelected
-                                ? 'bg-card border-primary/50 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
-                                : 'bg-card/40 border-border/50 hover:border-border/90 hover:bg-card/80',
-                              snapshot.isDragging && 'shadow-lg ring-2 ring-primary/30 z-20'
+                                ? 'bg-[#0d1322] border-primary/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                                : 'bg-[#0b0f19] border-white/[0.08] hover:border-white/[0.12] hover:bg-[#0d1322]',
+                              snapshot.isDragging && 'shadow-lg ring-2 ring-primary/30 z-20 bg-[#0d1322]'
                             )}
                           >
                             <div className="flex items-center justify-between gap-2">

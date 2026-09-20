@@ -161,23 +161,25 @@ export default function Dashboard() {
 
       {/* Operational Alert banner for admin */}
       {isAdmin && adminStats.pendingApprovals > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/25 shadow-[inset_2px_0_0_rgb(245,158,11)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+            </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{adminStats.pendingApprovals} Client Application{adminStats.pendingApprovals > 1 ? 's' : ''} Awaiting Review</p>
               <p className="text-xs text-muted-foreground">New clients have self-registered and require workspace assignment and trainer allocation.</p>
             </div>
           </div>
           <Link to="/admin/applications">
-            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-black font-medium">Review Approvals</Button>
+            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-[0_0_16px_rgba(245,158,11,0.3)]">Review Approvals</Button>
           </Link>
         </div>
       )}
 
       {/* Workspace Operational & Capacity Strip (Section 22) */}
       {workspaceStats && (
-        <div className="surface-card p-4 mb-6 border border-border">
+        <div className="surface-card p-4 mb-6 border border-border bg-gradient-to-br from-[#0d1322] to-[#0b0f19] shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -315,21 +317,21 @@ export default function Dashboard() {
               <h3 className="text-[14px] font-display font-semibold">Quick Actions</h3>
             </div>
             <div className="space-y-2">
-              <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
-                <span className="text-[13px] font-medium">View Clients</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+              <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
+                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">View Clients</span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
-              <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
-                <span className="text-[13px] font-medium">Manage Subscriptions</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+              <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
+                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Manage Subscriptions</span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
-              <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
-                <span className="text-[13px] font-medium">Review Forms</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+              <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
+                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Review Forms</span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
-              <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/70 hover:translate-x-1 transition-all duration-200 group">
-                <span className="text-[13px] font-medium">Team Management</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+              <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
+                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Team Management</span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
             </div>
           </div>
@@ -359,7 +361,7 @@ export default function Dashboard() {
               {expiringClients.map((c) => {
                 const days = daysUntil(c.subscription_end_date);
                 return (
-                  <Link key={c.id} to={`/clients/${c.id}`} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/60 transition-colors">
+                  <Link key={c.id} to={`/clients/${c.id}`} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-amber-500/[0.05] border border-white/[0.04] hover:border-amber-500/20 transition-all duration-200 group">
                     <div className="min-w-0">
                       <p className="text-[13px] font-medium truncate">{c.full_name}</p>
                       <p className="text-[11px] text-muted-foreground">{c.client_code} · {c.package_name || 'No package'}</p>
@@ -386,7 +388,7 @@ export default function Dashboard() {
             <div className="space-y-3">
               {recentActivity.map((event) => (
                 <div key={event.id} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(59,130,246,0.6)] mt-1.5 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-medium">{event.title}</p>
                     <p className="text-[11px] text-muted-foreground">{event.client_name} · {formatDate(event.created_date, 'MMM d, h:mm a')}</p>

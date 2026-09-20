@@ -311,9 +311,10 @@ export default function Settings() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Navigation Sidebar */}
         <div className="lg:w-60 shrink-0">
-          <div className="surface-card p-2 space-y-1">
+          <div className="surface-card p-2 space-y-1 border border-white/[0.08]">
             {sections.map((s) => {
               const Icon = s.icon;
+              const isActive = section === s.id;
               return (
                 <button
                   key={s.id}
@@ -322,13 +323,13 @@ export default function Settings() {
                     setFeedback({ error: '', success: '' });
                   }}
                   className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-left',
-                    section === s.id
-                      ? 'bg-secondary text-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 text-left',
+                    isActive
+                      ? 'bg-primary/10 text-primary border border-primary/20 shadow-[inset_2px_0_0_hsl(var(--primary))]'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04] border border-transparent'
                   )}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
+                  <Icon className={cn('w-4 h-4 shrink-0', isActive && 'text-primary')} />
                   <span>{s.label}</span>
                 </button>
               );
@@ -338,7 +339,11 @@ export default function Settings() {
 
         {/* Content Pane */}
         <div className="flex-1">
-          <div className="surface-card p-6">
+          <div className="surface-card overflow-hidden border border-white/[0.08]">
+            <div className="px-6 py-5 border-b border-white/[0.06] bg-gradient-to-br from-[#0d1322] to-[#0b0f19]">
+              {/* Section heading rendered inside content pane */}
+            </div>
+            <div className="p-6">
             {feedback.error && (
               <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
                 {feedback.error}
@@ -816,6 +821,7 @@ export default function Settings() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

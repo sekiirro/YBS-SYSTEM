@@ -222,47 +222,55 @@ export default function Packages() {
 
 function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
   return (
-    <div className="surface-card p-5 transition-all hover:glow-subtle">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="text-[15px] font-display font-semibold">{p.name}</h3>
-          <div className="flex items-center gap-1.5 mt-1">
-            <Badge className="text-muted-foreground bg-secondary border-border capitalize">{p.tier}</Badge>
-            {isTemplate && (
-              <Badge className="text-foreground bg-secondary border-border">Default Template</Badge>
+    <div className="surface-card overflow-hidden group transition-all duration-300 hover:border-primary/25 hover:shadow-[0_0_24px_rgba(59,130,246,0.06)] hover:-translate-y-0.5">
+      {/* Card Header */}
+      <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] bg-gradient-to-br from-[#0d1322] to-[#0b0f19]">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-display font-semibold truncate pr-2">{p.name}</h3>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <Badge className="text-muted-foreground bg-white/[0.06] border-white/10 capitalize">{p.tier}</Badge>
+              {isTemplate && (
+                <Badge className="text-sky-400 bg-sky-500/10 border-sky-500/20">Default Template</Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(p)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title={`Edit ${p.name}`}
+              >
+                <Edit className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {p.is_active ? (
+              <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
+            ) : (
+              <Badge className="text-zinc-400 bg-zinc-500/10 border-zinc-500/20">Inactive</Badge>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          {canEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(p)}
-              className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              title={`Edit ${p.name}`}
-            >
-              <Edit className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {p.is_active ? (
-            <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
-          ) : (
-            <Badge className="text-zinc-400 bg-zinc-500/10 border-zinc-500/20">Inactive</Badge>
-          )}
-        </div>
       </div>
-      <p className="text-2xl font-display font-semibold tabular-nums">{formatCurrency(p.price)}</p>
-      <p className="text-[12px] text-muted-foreground mt-1">{p.duration} {p.duration_unit}</p>
-      {p.description && <p className="text-[12px] text-muted-foreground mt-3">{p.description}</p>}
-      {p.features?.length > 0 && (
-        <ul className="mt-3 space-y-1">
-          {p.features.slice(0, 3).map((f, i) => (
-            <li key={i} className="text-[12px] text-muted-foreground flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-primary" /> {f}
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Card Body */}
+      <div className="px-5 py-4">
+        <p className="text-2xl font-display font-bold tabular-nums text-foreground">
+          {formatCurrency(p.price)}
+        </p>
+        <p className="text-[12px] text-muted-foreground mt-1">{p.duration} {p.duration_unit}</p>
+        {p.description && <p className="text-[12px] text-muted-foreground mt-3 leading-relaxed">{p.description}</p>}
+        {p.features?.length > 0 && (
+          <ul className="mt-3 space-y-1">
+            {p.features.slice(0, 3).map((f, i) => (
+              <li key={i} className="text-[12px] text-muted-foreground flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_rgba(59,130,246,0.5)]" /> {f}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

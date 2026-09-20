@@ -180,11 +180,11 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-6 pb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4 md:pt-6 md:pb-6 overflow-hidden">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl flex flex-col max-h-[92vh]">
+      <div className="relative w-full h-full md:h-auto md:max-w-2xl md:max-h-[92vh] bg-background md:bg-card md:border md:border-border md:rounded-2xl md:shadow-2xl flex flex-col overflow-hidden z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-border bg-card/95 backdrop-blur shrink-0 sticky top-0 z-10">
           <div>
             <h2 className="text-[15px] font-display font-semibold text-foreground">{assessment?.name || 'Form'}</h2>
             <p className="text-[12px] text-muted-foreground mt-0.5">{questions.length} questions</p>
@@ -195,12 +195,18 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
                 <CheckCircle2 className="w-3 h-3" /> Submitted
               </Badge>
             )}
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
+            <button
+              onClick={onClose}
+              aria-label="Close form"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/60 text-xl leading-none transition-colors"
+            >
+              ×
+            </button>
           </div>
         </div>
 
-        {/* Questions */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        {/* Questions Flow */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
           {validationErrors._form && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {validationErrors._form}
@@ -222,25 +228,25 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
                     </h3>
                   </div>
                 )}
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <span className="text-[11px] font-medium text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded mt-0.5 shrink-0">
+                <div className="surface-card p-3.5 sm:p-4 rounded-xl border border-border/70 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-0.5 shrink-0 font-mono">
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-foreground" dir="auto">
+                      <p className="text-[14px] font-medium text-foreground leading-snug" dir="auto">
                         {q.label}
-                        {q.required && <span className="text-red-400 ml-1">*</span>}
+                        {q.required && <span className="text-red-400 ml-1 font-bold">*</span>}
                       </p>
                       {q.description && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5" dir="auto">
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed" dir="auto">
                           {q.description}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="pl-7">
+                  <div className="pt-1">
                     <QuestionInput
                       question={q}
                       value={responses[q.id]}
@@ -255,30 +261,46 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
           })}
         </div>
 
-        {/* Footer */}
+        {/* Sticky Mobile/Desktop Footer Action Bar */}
         {!isSubmitted && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-border shrink-0">
+          <div
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+            className="flex items-center justify-between px-4 sm:px-5 py-3 border-t border-border bg-card/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10 shadow-lg"
+          >
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={handleSave} disabled={saving || submitting}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSave}
+                disabled={saving || submitting}
+                className="h-9 px-3.5 text-xs font-medium"
+              >
                 <Save className="w-3.5 h-3.5" />
-                {saving ? 'Saving…' : 'Save Progress'}
+                <span>{saving ? 'Saving…' : 'Save Progress'}</span>
               </Button>
               {!isSubmitted && (
                 <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
               )}
               {saveMessage && (
-                <span className="text-[11px] text-emerald-400">{saveMessage}</span>
+                <span className="text-[11px] text-emerald-400 font-medium hidden sm:inline">{saveMessage}</span>
               )}
             </div>
-            <Button onClick={handleSubmit} disabled={saving || submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={saving || submitting}
+              className="h-9 px-4 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+            >
               <Send className="w-3.5 h-3.5" />
-              {submitting ? 'Submitting…' : 'Submit Form'}
+              <span>{submitting ? 'Submitting…' : 'Submit Form'}</span>
             </Button>
           </div>
         )}
 
         {isSubmitted && (
-          <div className="px-5 py-4 border-t border-border shrink-0 text-center">
+          <div
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+            className="px-4 sm:px-5 py-3.5 border-t border-border bg-card/95 shrink-0 text-center sticky bottom-0 z-10"
+          >
             <p className="text-[13px] text-muted-foreground">This form has been submitted. Your plan will be ready within 3–7 days.</p>
           </div>
         )}
