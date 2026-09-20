@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Fragment } from 'react';
+import React, { useState, useEffect, useRef, Fragment, useMemo } from 'react';
 import { WorkoutsService } from '@/services/workouts';
 import { Button, Modal } from '@/components/ui';
 import ExerciseVideoModal from '@/components/workouts/ExerciseVideoModal';
@@ -21,7 +21,9 @@ import {
   Pause,
   RotateCcw,
   X,
-  Timer
+  Timer,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -152,10 +154,276 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  // ── Autosave / offline-safe session persistence ────────────────────────
+  const STORAGE_KEY = 'ybs-active-workout-session';
+
+  // History detail modal (click a log to inspect the actual logged sets)
+  const [historyDetail, setHistoryDetail] = useState(null);
+  const [historyDetailLoading, setHistoryDetailLoading] = useState(false);
+
+  // Previous-weight references from the client's own completed sessions
+  // keyed by `${exercise_key}__${set_number}` -> most recent kg.
+  const [prevWeights, setPrevWeights] = useState({});
+
+  // Sync status: 'idle' | 'syncing' | 'offline'
+  const [syncState, setSyncState] = useState('idle');
+  const setInputsRef = useRef(setInputs);
+  const activeLogRef = useRef(activeLog);
+  const currentDayRef = useRef(currentDay);
+  const dirtyKeysRef = useRef(new Set());
+  const syncInFlightRef = useRef(false);
+  const syncTimerRef = useRef(null);
+  const restoredOnceRef = useRef(false);
+  const prevWeightsFetchedRef = useRef(false);
+
+  useEffect(() => {
+    setInputsRef.current = setInputs;
+  }, [setInputs]);
+  useEffect(() => {
+    activeLogRef.current = activeLog;
+  }, [activeLog]);
+  useEffect(() => {
+    currentDayRef.current = currentDay;
+  }, [currentDay]);
+
+  // Build the previous-weights map once (most recent completed session wins).
+  useEffect(() => {
+    if (!client?.id || prevWeightsFetchedRef.current) return;
+    prevWeightsFetchedRef.current = true;
+    WorkoutsService.getPreviousWorkoutWeights(client.id)
+      .then((logs) => {
+        const map = {};
+        (logs || []).forEach((log) => {
+          (log.workout_set_logs || []).forEach((s) => {
+            if (s.weight_kg == null || !s.completed) return;
+            const exKey = s.exercise_id || String(s.exercise_name || '').trim().toLowerCase();
+            if (!exKey) return;
+            const key = `${exKey}__${s.set_number}`;
+            // first occurrence wins because logs come in most-recent-first order
+            if (map[key] === undefined) map[key] = Number(s.weight_kg);
+          });
+        });
+        setPrevWeights(map);
+      })
+      .catch(() => {});
+  }, [client?.id]);
+
+  const persistWorkoutState = () => {
+    if (!client?.id || !workout?.id || !activeLogRef.current) return;
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          v: 1,
+          clientId: client.id,
+          workoutPlanId: workout.id,
+          activeLog: activeLogRef.current,
+          activeDayIdx,
+          elapsedSeconds,
+          sessionNotes,
+          setInputs: setInputsRef.current,
+          pendingKeys: [...dirtyKeysRef.current],
+          savedAt: Date.now(),
+        })
+      );
+    } catch (_) {}
+  };
+
+  const clearWorkoutState = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (_) {}
+    dirtyKeysRef.current = new Set();
+  };
+
+  const markDirty = (key) => dirtyKeysRef.current.add(key);
+
+  const scheduleSync = (delay = 600) => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      syncTimerRef.current = null;
+      flushPendingSync();
+    }, delay);
+  };
+
+  const syncSet = async (ex, setNumber, state, completedOverride) => {
+    const log = activeLogRef.current;
+    if (!log) return;
+    const completed = completedOverride !== undefined ? completedOverride : !!state.completed;
+    const base = {
+      weight_kg: state.weight ? Number(state.weight) : null,
+      reps_completed: state.reps ? Number(state.reps) : null,
+      rpe: state.rpe ? Number(state.rpe) : null,
+      completed,
+    };
+    if (state.logId) {
+      return WorkoutsService.updateSetLog(state.logId, base);
+    }
+    return WorkoutsService.upsertSetLog({
+      workout_log_id: log.id,
+      workout_exercise_id: ex.id || null,
+      exercise_id: ex.exercise_id || null,
+      exercise_name: ex.exercise_name || ex.name || 'Exercise',
+      set_number: setNumber,
+      is_warmup: setNumber <= getWarmupCount(ex),
+      ...base,
+    });
+  };
+
+  const flushPendingSync = async () => {
+    if (syncInFlightRef.current) return;
+    const keys = [...dirtyKeysRef.current];
+    if (!keys.length) return;
+    const log = activeLogRef.current;
+    if (!log) {
+      dirtyKeysRef.current = new Set();
+      return;
+    }
+    syncInFlightRef.current = true;
+    setSyncState('syncing');
+    let failures = 0;
+    for (const key of keys) {
+      const [exIdx, setNumber] = key.split('_').map(Number);
+      const ex = currentDayRef.current?.exercises?.[exIdx];
+      const state = setInputsRef.current?.[key];
+      if (!ex || !state) {
+        dirtyKeysRef.current.delete(key);
+        continue;
+      }
+      try {
+        setSavingSet((prev) => ({ ...prev, [key]: true }));
+        const savedRow = await syncSet(ex, setNumber, state);
+        dirtyKeysRef.current.delete(key);
+        // Adopt the row id so later edits update in place instead of re-searching.
+        if (savedRow?.id && !state.logId) {
+          setSetInputs((prev) => {
+            const cur = prev[key];
+            if (!cur) return prev;
+            return { ...prev, [key]: { ...cur, logId: savedRow.id } };
+          });
+        }
+      } catch (err) {
+        failures += 1;
+      } finally {
+        setSavingSet((prev) => ({ ...prev, [key]: false }));
+      }
+    }
+    syncInFlightRef.current = false;
+    if (failures > 0) {
+      setSyncState('offline');
+      scheduleSync(4000);
+    } else {
+      setSyncState((s) => (s === 'offline' ? s : 'idle'));
+    }
+    // Keys that arrived mid-sync must not be left without a retry.
+    if (dirtyKeysRef.current.size > 0 && !syncTimerRef.current) {
+      scheduleSync(failures > 0 ? 4000 : 800);
+    }
+  };
+
+  // Restore an interrupted in-progress session on (re)mount so edits, the
+  // live elapsed timer, notes and pending syncs survive a refresh/offline.
+  useEffect(() => {
+    if (!client?.id || !workout?.id || restoredOnceRef.current) return;
+    restoredOnceRef.current = true;
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    } catch (_) {}
+    if (
+      !saved ||
+      saved.v !== 1 ||
+      saved.clientId !== client.id ||
+      saved.workoutPlanId !== workout.id ||
+      !saved.activeLog
+    ) {
+      return;
+    }
+    setActiveDayIdx(Math.max(0, Math.min(Number(saved.activeDayIdx) || 0, Math.max(0, (workout.days?.length || 1) - 1))));
+    setActiveLog(saved.activeLog);
+    activeLogRef.current = saved.activeLog;
+    setElapsedSeconds(Number(saved.elapsedSeconds) || 0);
+    setSessionNotes(saved.sessionNotes || '');
+    if (saved.setInputs) {
+      setSetInputs(saved.setInputs);
+      setInputsRef.current = saved.setInputs;
+    }
+    if (Array.isArray(saved.pendingKeys) && saved.pendingKeys.length) {
+      saved.pendingKeys.forEach((k) => dirtyKeysRef.current.add(k));
+      scheduleSync(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.id, workout?.id]);
+
+  // Persist the whole session frame whenever meaningful state changes.
+  useEffect(() => {
+    persistWorkoutState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setInputs, activeLog, elapsedSeconds, sessionNotes, activeDayIdx, syncState]);
+
+  // Flush pending edits as soon as connectivity returns.
+  useEffect(() => {
+    const onOnline = () => {
+      setSyncState('idle');
+      if (dirtyKeysRef.current.size > 0) scheduleSync(0);
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const prevWeightFor = (ex, setNumber) => {
+    const exKey = ex?.exercise_id || String(ex?.exercise_name || ex?.name || '').trim().toLowerCase();
+    if (!exKey) return undefined;
+    return prevWeights[`${exKey}__${setNumber}`];
+  };
+
+  const handleUsePrevWeight = (exIdx, setNumber, weight) => {
+    handleInputChange(exIdx, setNumber, 'weight', String(weight));
+  };
+
+  const effortLabel = (val) => {
+    const n = Number(val);
+    if (!Number.isFinite(n)) return null;
+    return n <= 5 ? `RIR ${n}` : `RPE ${n}`;
+  };
+
+  const openHistoryDetail = async (log) => {
+    if (!log) return;
+    setHistoryDetail(log);
+    setHistoryDetailLoading(true);
+    try {
+      const detail = await WorkoutsService.getLogDetail(log.id);
+      if (detail) setHistoryDetail(detail);
+    } catch (err) {
+      console.error('Failed to load workout log details:', err);
+    } finally {
+      setHistoryDetailLoading(false);
+    }
+  };
+
+  const historyDetailGroups = useMemo(() => {
+    if (!historyDetail || !Array.isArray(historyDetail.workout_set_logs)) return [];
+    const groups = [];
+    const byName = {};
+    [...historyDetail.workout_set_logs]
+      .sort((a, b) => Number(a.set_number) - Number(b.set_number))
+      .forEach((s) => {
+        const groupName = s.exercise_name || 'Exercise';
+        if (!byName[groupName]) {
+          byName[groupName] = [];
+          groups.push({ name: groupName, sets: byName[groupName] });
+        }
+        byName[groupName].push(s);
+      });
+    return groups;
+  }, [historyDetail]);
+
   // Start workout session
   const handleStartWorkout = async () => {
     if (!client?.id) return;
     try {
+      clearWorkoutState();
+      setSyncState('idle');
       const log = await WorkoutsService.startWorkoutLog({
         workspace_id: client.workspace_id,
         client_id: client.id,
@@ -164,6 +432,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         session_name: currentDay?.day_name || `Session ${activeDayIdx + 1}`,
       });
       setActiveLog(log);
+      activeLogRef.current = log;
       setElapsedSeconds(0);
       setCompletedSummary(null);
 
@@ -180,12 +449,13 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           initialInputs[key] = {
             weight: isWarmup ? '' : ex.target_weight || '',
             reps: defaultReps || '',
-            rpe: ex.rpe || '',
+            rpe: 1,
             completed: false,
           };
         }
       });
       setSetInputs(initialInputs);
+      setInputsRef.current = initialInputs;
     } catch (err) {
       console.error('Failed to start workout log:', err);
       alert('Could not start workout session. Please try again.');
@@ -210,10 +480,13 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         },
       };
     });
+    markDirty(key);
+    if (activeLog) scheduleSync(700);
   };
 
-  // Log or toggle a set
-  const handleToggleSet = async (ex, exIdx, setNumber) => {
+  // Toggle set completion first, then sync to the backend through the
+  // resilient debounced path — local state is never lost while offline.
+  const handleToggleSet = (ex, exIdx, setNumber) => {
     const key = `${exIdx}_${setNumber}`;
     const current = setInputs[key] || {};
     const willBeCompleted = !current.completed;
@@ -226,49 +499,13 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         completed: willBeCompleted,
       },
     }));
-
-    if (!activeLog) return;
-
-    try {
-      setSavingSet((prev) => ({ ...prev, [key]: true }));
-      const logged = await WorkoutsService.logSet({
-        workout_log_id: activeLog.id,
-        workout_exercise_id: ex.id || null,
-        exercise_id: ex.exercise_id || null,
-        exercise_name: ex.exercise_name || ex.name || 'Exercise',
-        set_number: setNumber,
-        is_warmup: setNumber <= getWarmupCount(ex),
-        weight_kg: current.weight ? Number(current.weight) : null,
-        reps_completed: current.reps ? Number(current.reps) : null,
-        rpe: current.rpe ? Number(current.rpe) : null,
-        completed: willBeCompleted,
-      });
-
-      setSetInputs((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          logId: logged.id,
-          completed: willBeCompleted,
-        },
-      }));
-
+    markDirty(key);
+    if (activeLog) {
+      scheduleSync(300);
       // Automatically launch inter-set rest timer if prescribed rest duration exists
       if (willBeCompleted && ex.rest_seconds && Number(ex.rest_seconds) > 0) {
         startRestTimer(Number(ex.rest_seconds), ex.exercise_name || ex.name || 'Exercise');
       }
-    } catch (err) {
-      console.error('Failed to save set log:', err);
-      // revert optimistic update
-      setSetInputs((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          completed: !willBeCompleted,
-        },
-      }));
-    } finally {
-      setSavingSet((prev) => ({ ...prev, [key]: false }));
     }
   };
 
@@ -281,6 +518,8 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         [field]: val,
       },
     }));
+    markDirty(key);
+    if (activeLog) scheduleSync(700);
   };
 
   // Finish workout session
@@ -288,6 +527,18 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
     if (!activeLog) return;
     try {
       handleDismissRest();
+
+      // Push any pending set edits before finalizing the log so the history
+      // reflects the live values. If any write fails (offline), keep the
+      // session and its local state so nothing is lost.
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      await flushPendingSync();
+      if (dirtyKeysRef.current.size > 0) {
+        setSyncState('offline');
+        alert('Some workout data could not be saved yet. Please check your connection and try again.');
+        return;
+      }
+
       const completedSetsCount = Object.values(setInputs).filter((s) => s.completed).length;
       await WorkoutsService.completeWorkoutLog(activeLog.id, {
         duration_seconds: elapsedSeconds,
@@ -295,6 +546,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
         status: 'completed',
       });
 
+      clearWorkoutState();
       setCompletedSummary({
         sessionName: activeLog.session_name,
         duration: formatTimer(elapsedSeconds),
@@ -302,12 +554,19 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
       });
 
       setActiveLog(null);
+      activeLogRef.current = null;
       setFinishModalOpen(false);
       setSessionNotes('');
       setSetInputs({});
+      setInputsRef.current = {};
+      setSyncState('idle');
+
+      // Refresh history so the completed session appears immediately
+      if (activeTab === 'history') loadHistory();
     } catch (err) {
       console.error('Failed to complete workout session:', err);
       alert('Could not finish workout session. Please try again.');
+      setSyncState('offline');
     }
   };
 
@@ -396,10 +655,23 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 return (
                   <div
                     key={log.id}
-                    className="surface-card p-4 rounded-xl border border-border flex items-center justify-between"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openHistoryDetail(log)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openHistoryDetail(log);
+                      }
+                    }}
+                    aria-label={`View details for ${log.session_name} workout log`}
+                    className="surface-card p-4 rounded-xl border border-border flex items-center justify-between gap-3 cursor-pointer hover:border-primary/40 hover:bg-secondary/30 transition-colors"
                   >
-                    <div>
-                      <h4 className="text-sm font-semibold text-foreground">{log.session_name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        {log.session_name}
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+                      </h4>
                       <p className="text-xs text-muted-foreground mt-0.5">{dateStr}</p>
                       {log.notes && (
                         <p className="text-xs bg-secondary/40 p-2 rounded-md text-muted-foreground mt-2 max-w-md">
@@ -407,12 +679,15 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
                         {log.status || 'Completed'}
                       </span>
                       <div className="text-xs text-muted-foreground font-mono mt-1">
                         {durationMins ? `${durationMins}m · ` : ''}{completedSets} sets
+                      </div>
+                      <div className="text-[10px] text-primary/70 mt-1 font-medium flex items-center justify-end gap-0.5">
+                        View details
                       </div>
                     </div>
                   </div>
@@ -459,6 +734,18 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                   <div className="flex items-center gap-1.5 text-xs text-primary font-mono font-medium">
                     <Clock className="w-3 h-3" />
                     <span>{formatTimer(elapsedSeconds)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 min-h-[14px]">
+                    {syncState === 'syncing' && (
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Syncing…
+                      </span>
+                    )}
+                    {syncState === 'offline' && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400/90 font-mono">
+                        <Pause className="w-2.5 h-2.5" /> Saved locally
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -627,7 +914,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                     <th className="py-2 text-left font-medium">PRESCRIBED</th>
                                     <th className="py-2 text-center font-medium w-24">KG</th>
                                     <th className="py-2 text-center font-medium w-24">REPS</th>
-                                    <th className="py-2 text-center font-medium w-20">RPE</th>
+                                    <th className="py-2 text-center font-medium w-20">RIR</th>
                                     <th className="py-2 text-center font-medium w-14">✓</th>
                                   </tr>
                                 </thead>
@@ -638,6 +925,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                     const isCompleted = !!state.completed;
                                     const isWarmup = setNum <= warmupCount;
                                     const warmupNote = isWarmup ? getWarmupNote(ex, setNum) : null;
+                                    const prevW = activeLog ? prevWeightFor(ex, setNum) : undefined;
 
                                     return (
                                       <Fragment key={setNum}>
@@ -697,19 +985,33 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                             )}
                                           </td>
                                           <td className="py-2 px-1 text-center">
-                                            <input
-                                              type="number"
-                                              placeholder="—"
-                                              value={state.weight ?? ''}
-                                              onChange={(e) => handleInputChange(exIdx, setNum, 'weight', e.target.value)}
-                                              disabled={!activeLog}
-                                              className={cn(
-                                                'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
-                                                isCompleted
-                                                  ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
-                                                  : 'bg-secondary/50 border-border'
+                                            <div className="flex flex-col items-center gap-0.5">
+                                              <input
+                                                type="number"
+                                                placeholder="—"
+                                                value={state.weight ?? ''}
+                                                onChange={(e) => handleInputChange(exIdx, setNum, 'weight', e.target.value)}
+                                                disabled={!activeLog}
+                                                className={cn(
+                                                  'w-20 h-7 text-center rounded-md font-mono text-xs border transition-colors focus:outline-none focus:border-primary',
+                                                  isCompleted
+                                                    ? 'bg-background/40 border-emerald-500/30 text-emerald-400'
+                                                    : 'bg-secondary/50 border-border'
+                                                )}
+                                              />
+                                              {prevW != null && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleUsePrevWeight(exIdx, setNum, prevW)}
+                                                  tabIndex={-1}
+                                                  className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-mono leading-none"
+                                                  title={`Use previous weight ${prevW} kg`}
+                                                >
+                                                  <History className="inline-block w-2.5 h-2.5 mr-0.5 relative -top-px" />
+                                                  {prevW} kg
+                                                </button>
                                               )}
-                                            />
+                                            </div>
                                           </td>
                                           <td className="py-2 px-1 text-center">
                                             <input
@@ -729,9 +1031,9 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                           <td className="py-2 px-1 text-center">
                                             <input
                                               type="number"
-                                              step="0.5"
-                                              min="5"
-                                              max="10"
+                                              step="1"
+                                              min="1"
+                                              max="5"
                                               placeholder="—"
                                               value={state.rpe ?? ''}
                                               onChange={(e) => handleInputChange(exIdx, setNum, 'rpe', e.target.value)}
@@ -778,6 +1080,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                 const isCompleted = !!state.completed;
                                 const isWarmup = setNum <= warmupCount;
                                 const warmupNote = isWarmup ? getWarmupNote(ex, setNum) : null;
+                                const prevW = activeLog ? prevWeightFor(ex, setNum) : undefined;
 
                                 return (
                                   <div
@@ -857,6 +1160,16 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                             <Plus className="w-4 h-4" />
                                           </button>
                                         </div>
+                                        {prevW != null && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUsePrevWeight(exIdx, setNum, prevW)}
+                                            className="mt-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-mono flex items-center gap-1"
+                                          >
+                                            <History className="w-2.5 h-2.5" />
+                                            Last time: {prevW} kg
+                                          </button>
+                                        )}
                                       </div>
 
                                       {/* Reps Stepper */}
@@ -898,27 +1211,27 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                         </div>
                                       </div>
 
-                                      {/* Optional RIR / RPE Stepper */}
+                                      {/* Optional RIR Stepper */}
                                       {ex.rpe && (
                                         <div className="col-span-2">
                                           <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
-                                            Target RIR / RPE
+                                            RIR (Reps in Reserve)
                                           </label>
                                           <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10 max-w-[220px]">
                                             <button
                                               type="button"
                                               disabled={!activeLog}
-                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', -0.5, 5, 10)}
+                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', -1, 1, 5)}
                                               className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
-                                              aria-label={`Decrease RPE for set ${setNum}`}
+                                              aria-label={`Decrease RIR for set ${setNum}`}
                                             >
                                               <Minus className="w-3.5 h-3.5" />
                                             </button>
                                             <input
                                               type="number"
-                                              step="0.5"
-                                              min="5"
-                                              max="10"
+                                              step="1"
+                                              min="1"
+                                              max="5"
                                               placeholder="—"
                                               value={state.rpe ?? ''}
                                               onChange={(e) => handleInputChange(exIdx, setNum, 'rpe', e.target.value)}
@@ -928,9 +1241,9 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                             <button
                                               type="button"
                                               disabled={!activeLog}
-                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', 0.5, 5, 10)}
+                                              onClick={() => handleStepValue(exIdx, setNum, 'rpe', 1, 1, 5)}
                                               className="w-10 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary active:scale-95 disabled:opacity-30 shrink-0"
-                                              aria-label={`Increase RPE for set ${setNum}`}
+                                              aria-label={`Increase RIR for set ${setNum}`}
                                             >
                                               <Plus className="w-3.5 h-3.5" />
                                             </button>
@@ -1108,6 +1421,84 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           instructions={videoModalExercise.notes}
         />
       )}
+
+      {/* Workout Log Detail Modal */}
+      <Modal
+        open={!!historyDetail}
+        onClose={() => setHistoryDetail(null)}
+        title={historyDetail?.session_name || 'Workout Details'}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {historyDetail?.performed_at
+                ? new Date(historyDetail.performed_at).toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : ''}
+            </span>
+            {historyDetail?.duration_seconds ? (
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-[10px] font-mono">
+                {Math.round(historyDetail.duration_seconds / 60)}m
+              </span>
+            ) : null}
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
+              {(historyDetail?.status || 'completed').replace(/_/g, ' ')}
+            </span>
+            {historyDetailLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+          </div>
+
+          {historyDetail?.notes && (
+            <p className="text-xs bg-secondary/40 p-3 rounded-lg text-muted-foreground border border-border/40">
+              "{historyDetail.notes}"
+            </p>
+          )}
+
+          {historyDetailGroups.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">No logged sets for this session.</p>
+          ) : (
+            <div className="space-y-4">
+              {historyDetailGroups.map((group) => (
+                <div key={group.name} className="rounded-xl border border-border/60 overflow-hidden">
+                  <div className="px-3 py-2 bg-secondary/30 border-b border-border/40 flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-foreground">{group.name}</h4>
+                    <span className="text-[10px] text-muted-foreground font-mono">{group.sets.length} sets</span>
+                  </div>
+                  <div className="divide-y divide-border/20">
+                    {group.sets.map((s) => (
+                      <div key={s.id || `${group.name}-${s.set_number}`} className="px-3 py-2 flex items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {s.is_warmup ? (
+                            <span className="inline-flex items-center justify-center min-w-[54px] px-1.5 h-5 rounded-md text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-400">
+                              Warmup {s.set_number}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center min-w-[38px] px-1.5 h-5 rounded-md text-[10px] font-mono font-semibold bg-secondary text-muted-foreground">
+                              Set {s.set_number}
+                            </span>
+                          )}
+                          <span className="text-muted-foreground/60 text-[11px] truncate">
+                            {s.completed ? '' : 'Not completed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground shrink-0">
+                          <span>{s.weight_kg != null ? `${s.weight_kg} kg` : '—'}</span>
+                          <span>{s.reps_completed != null ? `${s.reps_completed} reps` : '—'}</span>
+                          <span className="text-primary/80">{effortLabel(s.rpe) || '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Finish Session Confirmation Modal */}
       <Modal

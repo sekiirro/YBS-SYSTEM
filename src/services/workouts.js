@@ -448,6 +448,85 @@ export const WorkoutsService = {
     return data;
   },
 
+  async updateSetLog(id, setPayload) {
+    const { data, error } = await supabase
+      .from('workout_set_logs')
+      .update({
+        weight_kg: setPayload.weight_kg ? Number(setPayload.weight_kg) : null,
+        reps_completed: setPayload.reps_completed ? Number(setPayload.reps_completed) : null,
+        rpe: setPayload.rpe ? Number(setPayload.rpe) : null,
+        completed: setPayload.completed !== undefined ? !!setPayload.completed : true,
+        notes: setPayload.notes || null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async findSetLogKey(workoutLogId, exerciseId, setNumber) {
+    let q = supabase
+      .from('workout_set_logs')
+      .select('id')
+      .eq('workout_log_id', workoutLogId)
+      .eq('set_number', Number(setNumber) || 1)
+      .limit(1);
+    if (exerciseId) {
+      q = q.eq('exercise_id', exerciseId);
+    } else {
+      q = q.is('exercise_id', null);
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    return data?.[0] || null;
+  },
+
+  /**
+   * Find-or-update a set log row so retried autosaves can never create
+   * duplicate set rows for the same (workout_log, exercise, set_number).
+   */
+  async upsertSetLog(setPayload) {
+    const existing = await this.findSetLogKey(
+      setPayload.workout_log_id,
+      setPayload.exercise_id || null,
+      setPayload.set_number
+    );
+    if (existing) {
+      return this.updateSetLog(existing.id, setPayload);
+    }
+    return this.logSet(setPayload);
+  },
+
+  /**
+   * @param {string} logId
+   */
+  async getLogDetail(logId) {
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .select('*, workout_set_logs(*)')
+      .eq('id', logId)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Most recent COMPLETED workout sessions with their logged sets, used to
+   * show the client's own previous weights inside the active workout.
+   */
+  async getPreviousWorkoutWeights(clientId, limit = 40) {
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .select('performed_at, workout_set_logs(exercise_id, exercise_name, set_number, weight_kg, completed, is_warmup)')
+      .eq('client_id', clientId)
+      .eq('status', 'completed')
+      .order('performed_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data || [];
+  },
+
   /**
    * @param {string} logId
    * @param {{ duration_seconds?: number | null, notes?: string | null, status?: string }} [details]

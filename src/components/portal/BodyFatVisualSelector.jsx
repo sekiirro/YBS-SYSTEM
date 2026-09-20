@@ -18,24 +18,28 @@ export default function BodyFatVisualSelector({
   const images = BODY_FAT_SLIDER_IMAGES[sex] || BODY_FAT_SLIDER_IMAGES.male;
 
   const index = value == null ? -1 : thresholds.indexOf(value);
-  const selectedImage = value != null && index >= 0 ? images[value] : null;
+  // Effective index mirrors the range-slider default position so the reference
+  // photo loads immediately on first render — even before the user interacts.
+  const effectiveIndex = index >= 0 ? index : Math.max(0, Math.round((thresholds.length - 1) / 2));
+  const effectiveValue = thresholds[effectiveIndex];
+  const selectedImage = images[effectiveValue] || null;
 
   const handleSelect = (idx) => {
     if (idx >= 0 && idx < thresholds.length) onChange(thresholds[idx]);
   };
 
-  const stepNext = () => handleSelect(index + 1);
-  const stepPrev = () => handleSelect(index - 1);
+  const stepNext = () => handleSelect(index >= 0 ? index + 1 : effectiveIndex + 1);
+  const stepPrev = () => handleSelect(index >= 0 ? index - 1 : effectiveIndex - 1);
 
   const sliderProps = useMemo(() => {
     const max = thresholds.length - 1;
     return {
       min: 0,
       max,
-      value: index >= 0 ? index : Math.max(0, Math.round(max / 2)),
+      value: effectiveIndex,
       onChange: (e) => handleSelect(parseInt(e.target.value, 10)),
     };
-  }, [index, sex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [effectiveIndex, sex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={cn('w-full', className)}>
@@ -43,28 +47,28 @@ export default function BodyFatVisualSelector({
         <button
           type="button"
           onClick={stepPrev}
-          disabled={index <= 0}
+          disabled={effectiveIndex <= 0}
           aria-label="Previous body-fat photo"
           className="w-9 h-9 rounded-full border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none shrink-0"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="relative w-40 sm:w-48 aspect-[3/4] rounded-xl overflow-hidden border border-white/10 bg-black/40">
+        <div className="relative w-40 sm:w-48 aspect-[3/4] rounded-xl overflow-hidden border border-black/10 bg-white">
           {selectedImage ? (
             <img
               src={selectedImage}
-              alt={`${value}% body fat reference — ${SEX_LABEL[sex]}`}
-              className="w-full h-full object-cover"
+              alt={`${effectiveValue}% body fat reference — ${SEX_LABEL[sex]}`}
+              className="w-full h-full object-contain"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs px-4 text-center">
               Browse the photos to estimate body fat
             </div>
           )}
-          <div className="absolute inset-x-0 bottom-0 py-1.5 bg-gradient-to-t from-black/85 to-transparent text-center">
-            <span className="text-[13px] font-bold text-white font-mono">
-              {value != null ? `${value}%` : '—'}
+          <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2">
+            <span className="px-2 py-0.5 rounded-full bg-white/90 text-gray-900 border border-black/10 text-[12px] font-bold font-mono shadow-sm">
+              {index >= 0 ? `${value}%` : `${effectiveValue}%`}
             </span>
           </div>
         </div>
@@ -72,7 +76,7 @@ export default function BodyFatVisualSelector({
         <button
           type="button"
           onClick={stepNext}
-          disabled={index < 0 || index >= thresholds.length - 1}
+          disabled={effectiveIndex >= thresholds.length - 1}
           aria-label="Next body-fat photo"
           className="w-9 h-9 rounded-full border border-white/10 bg-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none shrink-0"
         >

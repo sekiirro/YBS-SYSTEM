@@ -14,6 +14,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getDisplayFoodUnit } from '@/lib/nutritionUnits';
 
 const OTHER_HELPER_TEXT = 'مش مناسبني أي بديل، اقترحوا لي بدائل أكتر في الشات.';
 
@@ -256,7 +257,7 @@ export default function MealReplacementRequestModal({
                             : 'border-border/70 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-primary/30'
                         )}
                       >
-                        {it.food_name || 'Food item'} · {fmtMacro(it.amount)} {it.unit || 'g'}
+                        {it.food_name || 'Food item'} · {fmtMacro(it.amount)} {getDisplayFoodUnit(it.unit)}
                       </button>
                     );
                   })}
@@ -277,7 +278,7 @@ export default function MealReplacementRequestModal({
                     {targetItem?.food_name || 'Food item'}
                   </h4>
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                    <MacroChip label="Portion" value={`${fmtMacro(targetItem.amount)} ${targetItem.unit || 'g'}`} className="col-span-2 sm:col-span-1" />
+                    <MacroChip label="Portion" value={`${fmtMacro(targetItem.amount)} ${getDisplayFoodUnit(targetItem.unit)}`} className="col-span-2 sm:col-span-1" />
                     <MacroChip label="Calories" value={`${Math.round(Number(targetItem.calories) || 0)}`} />
                     <MacroChip label="Protein" value={`${fmtMacro(targetItem.protein)}g`} />
                     <MacroChip label="Carbs" value={`${fmtMacro(targetItem.carbs)}g`} />

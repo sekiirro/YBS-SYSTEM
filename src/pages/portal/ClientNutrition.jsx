@@ -5,6 +5,7 @@ import { MealReplacementRequestsService } from '@/services/mealReplacementReques
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
 import MealReplacementRequestModal from '@/components/nutrition/MealReplacementRequestModal';
 import { LoadingState, Badge } from '@/components/ui';
+import { getDisplayFoodUnit } from '@/lib/nutritionUnits';
 import { Apple, Utensils, MessageSquare, ArrowLeftRight } from 'lucide-react';
 
 export default function ClientNutrition() {
@@ -290,7 +291,7 @@ export default function ClientNutrition() {
                       >
                         <span className="font-medium text-foreground">{it.food_name || 'Food Item'}</span>
                         <div className="flex items-center gap-4 font-mono text-muted-foreground">
-                          <span>{it.amount} {it.unit}</span>
+                          <span>{it.amount} {getDisplayFoodUnit(it.unit)}</span>
                           {it.calories != null && (
                             <span className="font-bold text-foreground min-w-[50px] text-right">
                               {Math.round(it.calories)} kcal

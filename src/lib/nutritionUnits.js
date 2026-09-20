@@ -471,6 +471,26 @@ export function convertQuantityBetweenUnits(fromUnitId, toUnitId, currentAmount,
 }
 
 /**
+ * Returns a client-facing display unit, hiding the legacy base-serving label.
+ *
+ * Older nutrition items stored the unit as the standard serving reference
+ * ('100g' / '100ml') while the `amount` is already expressed in grams/ml
+ * (e.g. amount=200 unit='100g' means 200g). Normalizing here is purely a
+ * presentation concern — the stored unit and all canonical calculations are
+ * left untouched. Real units (g, ml, medium, large, piece, slice, tbsp, …)
+ * pass through unchanged.
+ */
+export function getDisplayFoodUnit(unit) {
+  const normalized = String(unit || '')
+    .trim()
+    .toLowerCase();
+  if (normalized === '100g' || normalized === '100gm' || normalized === '100 grams' || normalized === '100grams') return 'g';
+  if (normalized === '100ml' || normalized === '100 ml') return 'ml';
+  if (!unit) return 'g';
+  return unit;
+}
+
+/**
  * Returns a clean display string for the gram equivalent if the unit is not grams.
  * e.g. "4 medium (~200g)" or "~200g"
  */
