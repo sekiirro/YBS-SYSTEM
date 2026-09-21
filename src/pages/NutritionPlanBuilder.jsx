@@ -33,6 +33,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronRight,
+  Copy,
   X,
   Apple,
   Clock,
@@ -55,6 +56,33 @@ const SUGGESTED_MEAL_NAMES = [
 function fmtAmount(value) {
   const n = Number(value);
   return Number.isFinite(n) ? String(Math.round(n * 10) / 10) : '0';
+}
+
+/**
+ * Deterministic duplicate-meal naming: strips a trailing numeric suffix so
+ * repeated duplication keeps auto-incrementing ("Breakfast" → "Breakfast 2" →
+ * "Breakfast 3"), regardless of the source meal's own suffix.
+ */
+function nextDuplicateMealName(sourceName, existingNames) {
+  const used = new Set(
+    (existingNames || [])
+      .filter(Boolean)
+      .map((n) => String(n).trim().toLowerCase())
+  );
+  let base = String(sourceName || 'Meal').trim();
+  if (!base) base = 'Meal';
+
+  const suffixMatch = base.match(/^(.*?)[\s]+(\d+)$/);
+  if (suffixMatch) base = suffixMatch[1].trim();
+  if (!base) base = 'Meal';
+
+  let n = 2;
+  let candidate = `${base} ${n}`;
+  while (used.has(candidate.toLowerCase())) {
+    n += 1;
+    candidate = `${base} ${n}`;
+  }
+  return candidate;
 }
 
 /**
@@ -382,6 +410,43 @@ export default function NutritionPlanBuilder(props = {}) {
     } else if (selectedMealIndex === target) {
       setSelectedMealIndex(index);
     }
+  };
+
+  const handleDuplicateMeal = (index) => {
+    // Name resolution + insertion happen inside the state updater so rapid
+    // repeated clicks always see the latest list and keep generating unique
+    // sequential names ("Breakfast" → "Breakfast 2" → "Breakfast 3").
+    setMeals((prev) => {
+      const source = prev[index];
+      if (!source) return prev;
+      const sourceItems = source.items || source.nutrition_items || [];
+      const now = Date.now();
+
+      const newMeal = {
+        id: `meal-${now}-${Math.random().toString(36).substring(2, 7)}`,
+        meal_name: nextDuplicateMealName(source.meal_name, prev.map((m) => m.meal_name)),
+        notes: source.notes || '',
+        day_number: source.day_number || 1,
+        sort_order: 0,
+        items: sourceItems.map((it, itemIdx) => ({
+          ...it,
+          meal_id: undefined,
+          id: `item-${now}-${itemIdx}-${Math.random().toString(36).substring(2, 7)}`,
+        })),
+      };
+
+      const next = [...prev];
+      next.splice(index + 1, 0, newMeal);
+      return next.map((m, idx) => ({ ...m, sort_order: idx }));
+    });
+
+    // Keep the deep editor focused on the freshly inserted duplicate.
+    setSelectedMealIndex(index + 1);
+    setMobileStep(3);
+    toast({
+      title: 'Meal duplicated',
+      description: 'A copy of the meal was added after the original.',
+    });
   };
 
   const handleRemoveMeal = (index) => {
@@ -1020,6 +1085,15 @@ export default function NutritionPlanBuilder(props = {}) {
                                   title="Move down"
                                 >
                                   <ChevronDown className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateMeal(mIdx)}
+                                  className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors ml-0.5"
+                                  title="Duplicate meal"
+                                  aria-label={`Duplicate ${m.meal_name || `Meal ${mIdx + 1}`}`}
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   type="button"
