@@ -14,10 +14,10 @@ import { formatDate } from '@/lib/ybs-utils';
 import { calculateDerived, toNumber } from '@/lib/body-progress';
 
 const METRICS = {
-  weight: { label: 'Weight', unit: 'kg', color: '#818cf8' },
-  body_fat: { label: 'Body Fat', unit: '%', color: '#f472b6' },
-  lean_mass: { label: 'Lean Mass', unit: 'kg', color: '#34d399' },
-  ffmi: { label: 'FFMI', unit: '', color: '#38bdf8' },
+  weight: { label: 'Weight', unit: 'kg', color: 'hsl(var(--chart-1))' },
+  body_fat: { label: 'Body Fat', unit: '%', color: 'hsl(var(--chart-3))' },
+  lean_mass: { label: 'Lean Mass', unit: 'kg', color: 'hsl(var(--chart-2))' },
+  ffmi: { label: 'FFMI', unit: '', color: 'hsl(var(--chart-4))' },
 };
 
 const PERIODS = [
@@ -34,14 +34,6 @@ function seriesValue(metric, row, heightSource) {
   if (metric === 'lean_mass') return derived.leanMass;
   if (metric === 'ffmi') return derived.ffmi;
   return null;
-}
-
-function seriesDelta(metric, rows, heightSource) {
-  const valid = rows.filter((r) => seriesValue(metric, r, heightSource) != null);
-  if (valid.length < 2) return null;
-  const first = seriesValue(metric, valid[0], heightSource);
-  const last = seriesValue(metric, valid[valid.length - 1], heightSource);
-  return { first, last, delta: Math.round((last - first) * 10) / 10 };
 }
 
 export default function ProgressCompositionChart({ metrics = [], client = null }) {
@@ -70,7 +62,12 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
 
   const meta = METRICS[metric];
 
-  const stats = useMemo(() => (chartData.length ? seriesDelta(metric, chartData, heightSource) : null), [chartData, metric, heightSource]);
+  const stats = useMemo(() => {
+    if (!chartData.length) return null;
+    const first = chartData[0].value;
+    const last = chartData[chartData.length - 1].value;
+    return { first, last, delta: chartData.length > 1 ? Math.round((last - first) * 10) / 10 : null };
+  }, [chartData]);
 
   const yDomain = useMemo(() => {
     if (!chartData.length) return [0, 1];
@@ -82,28 +79,26 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
     return [Math.max(0, min - pad), max + pad];
   }, [chartData, metric]);
 
-  const deltaDisplay = stats && stats.delta !== 0 ? { ...stats.delta > 0 ? { positive: true } : {}, delta: stats.delta } : null;
+  const deltaDisplay = stats && stats.delta != null ? { delta: stats.delta } : null;
 
   return (
     <div className="surface-card p-5 lg:p-6 rounded-xl border border-border/80 glow-subtle">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-primary" />
             Body Composition
           </span>
           {stats && (
             <div className="flex items-baseline gap-2.5 mt-1">
-              <span className="text-2xl lg:text-3xl font-bold font-display tracking-tight text-foreground tabular-nums">
+              <span className="ybs-number text-foreground">
                 {stats.last} <span className="text-sm font-normal text-muted-foreground">{meta.unit}</span>
               </span>
               {deltaDisplay && (
                 <span
                   className={cn(
                     'inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full border',
-                    deltaDisplay.positive
-                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                      : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                    'text-primary bg-primary/10 border-primary/20'
                   )}
                 >
                   {deltaDisplay.delta > 0 ? '+' : ''}
@@ -115,10 +110,11 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
+          <div className="flex flex-wrap items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
             {Object.entries(METRICS).map(([key, m]) => (
               <button
                 key={key}
+                aria-pressed={metric === key}
                 onClick={() => setMetric(key)}
                 className={cn(
                   'px-2.5 py-1 text-xs font-medium rounded-md transition-all',
@@ -129,10 +125,11 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
+          <div className="flex flex-wrap items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
             {PERIODS.map((p) => (
               <button
                 key={p.id}
+                aria-pressed={period === p.id}
                 onClick={() => setPeriod(p.id)}
                 className={cn(
                   'px-2.5 py-1 text-xs font-medium rounded-md transition-all',
@@ -151,7 +148,7 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
           <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
             <Calendar className="w-6 h-6 text-muted-foreground mb-2" />
             <p className="text-xs text-foreground font-medium">No {meta.label.toLowerCase()} data in this period</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               {metric === 'body_fat' || metric === 'lean_mass'
                 ? 'Body fat entries unlock lean mass and FFMI.'
                 : 'Add a measurement to see the trend.'}
@@ -161,8 +158,8 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 10, left: -18, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-              <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis domain={yDomain} stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis domain={yDomain} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
@@ -191,7 +188,7 @@ export default function ProgressCompositionChart({ metrics = [], client = null }
       </div>
 
       {metric === 'lean_mass' || metric === 'ffmi' ? (
-        <p className="text-[11px] text-muted-foreground mt-4">
+        <p className="text-[12px] text-muted-foreground mt-4">
           Calculated from your weight + body fat + height values.
         </p>
       ) : null}

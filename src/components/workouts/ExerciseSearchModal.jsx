@@ -126,7 +126,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
             placeholder="Search by exercise name, muscle, or equipment…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-xl bg-secondary/60 border border-border text-[13px] focus:outline-none focus:border-primary/50 text-foreground"
+            className="w-full h-10 pl-9 pr-4 rounded-xl bg-secondary/60 border border-border text-[14px] focus:outline-none focus:border-primary/50 text-foreground"
             autoFocus
           />
         </div>
@@ -156,7 +156,7 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
             <div className="py-8 text-center text-xs text-muted-foreground">Loading exercise library…</div>
           ) : filteredExercises.length === 0 ? (
             <div className="py-8 text-center space-y-2">
-              <Dumbbell className="w-8 h-8 mx-auto text-muted-foreground/50" />
+              <Dumbbell className="w-8 h-8 mx-auto text-muted-foreground" />
               <p className="text-xs text-muted-foreground">No exercises found matching your search.</p>
               {!showCustomForm && (
                 <button
@@ -186,20 +186,20 @@ export default function ExerciseSearchModal({ open, onClose, onSelectExercise, w
                     </span>
                     {isGlobalExercise(ex) && (
                       <span
-                        className="inline-flex items-center text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                        className="inline-flex items-center text-[12px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
                         title="YBS Global Library — available in every workspace"
                       >
                         YBS
                       </span>
                     )}
                     {ex.video_url && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                      <span className="inline-flex items-center gap-1 text-[12px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                         <Video className="w-2.5 h-2.5" /> Video
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge className="text-[10px] uppercase font-mono capitalize py-0 px-1.5">
+                    <Badge className="text-[12px] uppercase font-mono capitalize py-0 px-1.5">
                       {ex.category || 'general'}
                     </Badge>
                     {ex.equipment && <span>• {ex.equipment}</span>}

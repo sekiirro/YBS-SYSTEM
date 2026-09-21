@@ -130,7 +130,7 @@ export default function FoodQuantityInput({
           'inline-flex items-stretch rounded-lg border bg-background/90 text-foreground transition-all',
           'border-border/70 hover:border-border focus-within:border-primary/60 focus-within:ring-1 focus-within:ring-primary/25',
           disabled && 'opacity-60 pointer-events-none',
-          isSmall ? 'h-8 text-xs' : 'h-9 text-[13px]'
+          isSmall ? 'h-8 text-xs' : 'h-9 text-[14px]'
         )}
       >
         {/* Decrement Button */}
@@ -163,7 +163,7 @@ export default function FoodQuantityInput({
             className={cn(
               'h-full bg-transparent text-center font-mono font-medium focus:outline-none',
               '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
-              isSmall ? 'w-12 px-1 text-xs' : 'w-14 px-1.5 text-[13px]'
+              isSmall ? 'w-12 px-1 text-xs' : 'w-14 px-1.5 text-[14px]'
             )}
           />
         </div>
@@ -215,7 +215,7 @@ export default function FoodQuantityInput({
         <span
           className={cn(
             'inline-flex items-center font-mono text-muted-foreground/80 bg-secondary/40 border border-border/40 rounded px-1.5 py-0.5 whitespace-nowrap select-none',
-            isSmall ? 'text-[10px]' : 'text-[11px]'
+            isSmall ? 'text-[12px]' : 'text-[12px]'
           )}
           title={`Normalized equivalent: ${gramEquivalent} calculated from 100g base nutrition`}
         >
@@ -231,7 +231,7 @@ export default function FoodQuantityInput({
             'divide-y divide-border/30'
           )}
         >
-          <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-sans">
+          <div className="px-2.5 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground font-sans">
             Units for {food?.name ? food.name.split(' ')[0] : 'Food'}
           </div>
           <div className="py-1 max-h-48 overflow-y-auto space-y-0.5">
@@ -252,7 +252,7 @@ export default function FoodQuantityInput({
                   <div className="min-w-0 flex-1 pr-2">
                     <span className="capitalize">{u.label}</span>
                     {u.gramPerUnit > 1 && u.id !== 'g' && (
-                      <span className="text-[10px] text-muted-foreground block font-mono">
+                      <span className="text-[12px] text-muted-foreground block font-mono">
                         ≈ {u.gramPerUnit}g
                       </span>
                     )}

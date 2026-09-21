@@ -112,17 +112,17 @@ function DeltaText({ prev, curr }) {
   if (curr == null) return null;
   if (prev == null) {
     return (
-      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+      <span className="text-[12px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
         New
       </span>
     );
   }
   const d = round1(curr - prev);
   if (d == null || Math.abs(d) < 0.05) {
-    return <span className="text-[11px] text-muted-foreground/50">= 0</span>;
+    return <span className="text-[12px] text-muted-foreground">= 0</span>;
   }
   return (
-    <span className="inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+    <span className="inline-flex items-center gap-0.5 text-[12px] font-medium tabular-nums text-muted-foreground">
       {d > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
       {d > 0 ? '+' : ''}
       {d}
@@ -197,9 +197,9 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
 
   const renderHeader = (label, value, unit, chip) => (
     <div>
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       <div className="flex items-baseline gap-2.5 mt-1 flex-wrap">
-        <span className="text-2xl lg:text-3xl font-bold font-display tracking-tight text-foreground tabular-nums">
+        <span className="text-2xl lg:text-5xl font-bold font-display tracking-tight text-foreground tabular-nums">
           {value} <span className="text-sm font-normal text-muted-foreground">{unit}</span>
         </span>
         {chip}
@@ -271,21 +271,21 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
           {/* KPI summary */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <div className="p-4 rounded-xl border border-border/70 bg-secondary/[0.18]">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="text-[12px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="w-3 h-3 text-primary" /> Latest Check-in
               </span>
-              <p className="text-lg font-bold font-display tracking-tight mt-1.5 tabular-nums">
+              <p className="text-3xl font-bold font-display tracking-tight mt-1.5 tabular-nums">
                 {latest ? formatDate(latest.entry_date) : '—'}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[12px] text-muted-foreground mt-0.5">
                 {allRows.length} total {allRows.length === 1 ? 'entry' : 'entries'}
               </p>
             </div>
             <div className="p-4 rounded-xl border border-border/70 bg-secondary/[0.18]">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="text-[12px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Scale className="w-3 h-3 text-primary" /> Current Weight
               </span>
-              <p className="text-lg font-bold font-display tracking-tight mt-1.5 tabular-nums">
+              <p className="text-3xl font-bold font-display tracking-tight mt-1.5 tabular-nums">
                 {latestWeight != null ? `${fmtNum(latestWeight)} kg` : '—'}
               </p>
               <div className="mt-1">
@@ -293,10 +293,10 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
               </div>
             </div>
             <div className="p-4 rounded-xl border border-border/70 bg-secondary/[0.18]">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="text-[12px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Activity className="w-3 h-3 text-primary" /> Body Fat
               </span>
-              <p className="text-lg font-bold font-display tracking-tight mt-1.5 tabular-nums">
+              <p className="text-3xl font-bold font-display tracking-tight mt-1.5 tabular-nums">
                 {latestBodyFat != null ? `${fmtNum(latestBodyFat)}%` : '—'}
               </p>
               <div className="mt-1">
@@ -304,13 +304,13 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
               </div>
             </div>
             <div className="p-4 rounded-xl border border-border/70 bg-secondary/[0.18]">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="text-[12px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <TrendingUp className="w-3 h-3 text-primary" /> Change Since First
               </span>
-              <p className="text-lg font-bold font-display tracking-tight mt-1.5 tabular-nums">
+              <p className="text-3xl font-bold font-display tracking-tight mt-1.5 tabular-nums">
                 {weightPct != null ? `${weightPct > 0 ? '+' : ''}${weightPct}%` : '—'}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">of first recorded weight</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">of first recorded weight</p>
             </div>
           </div>
 
@@ -353,14 +353,14 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                         dataKey="date"
                         tickFormatter={(d) => formatDate(d)}
                         stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
+                        fontSize={12}
                         tickLine={false}
                         axisLine={false}
                       />
                       <YAxis
                         domain={weightDomain}
                         stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
+                        fontSize={12}
                         tickLine={false}
                         axisLine={false}
                       />
@@ -375,7 +375,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                                 {d.weight} kg
                               </p>
                               {d.body_fat != null && (
-                                <p className="text-muted-foreground text-[11px] mt-0.5">{d.body_fat}% Body Fat</p>
+                                <p className="text-muted-foreground text-[12px] mt-0.5">{d.body_fat}% Body Fat</p>
                               )}
                             </div>
                           );
@@ -434,13 +434,13 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                         dataKey="date"
                         tickFormatter={(d) => formatDate(d)}
                         stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
+                        fontSize={12}
                         tickLine={false}
                         axisLine={false}
                       />
                       <YAxis
                         stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
+                        fontSize={12}
                         tickLine={false}
                         axisLine={false}
                         domain={['auto', 'auto']}
@@ -472,7 +472,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                   </ResponsiveContainer>
                 </div>
               )}
-              <p className="text-[11px] text-muted-foreground mt-3">Body fat as a percentage of body weight.</p>
+              <p className="text-[12px] text-muted-foreground mt-3">Body fat as a percentage of body weight.</p>
             </div>
           </div>
 
@@ -517,13 +517,13 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                       dataKey="date"
                       tickFormatter={(d) => formatDate(d)}
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
+                      fontSize={12}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
                       stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
+                      fontSize={12}
                       tickLine={false}
                       axisLine={false}
                       domain={['auto', 'auto']}
@@ -559,14 +559,14 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
 
           {/* Measurement history */}
           <div className="surface-card p-5 rounded-xl border border-border/80">
-            <h4 className="text-[13px] font-display font-semibold mb-1 flex items-center gap-2">
+            <h4 className="text-[14px] font-display font-semibold mb-1 flex items-center gap-2">
               <Ruler className="w-4 h-4 text-primary" /> Measurement History
             </h4>
             <p className="text-[12px] text-muted-foreground mb-4">
               Every recorded entry in chronological order. Expand a check-in to see which values changed since the previous one.
             </p>
             {filteredRows.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground py-6 text-center">
+              <p className="text-[14px] text-muted-foreground py-6 text-center">
                 No entries in this period — switch to “All time” to see the full history.
               </p>
             ) : (
@@ -598,7 +598,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                             <Calendar className="w-3.5 h-3.5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[13px] font-medium">
+                            <p className="text-[14px] font-medium">
                               {formatDate(m.entry_date)}
                               <span className="text-muted-foreground font-normal"> · Check-in #{idx + 1}</span>
                             </p>
@@ -611,7 +611,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                                 return (
                                   <span
                                     key={key}
-                                    className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/40 border border-border/60 text-muted-foreground whitespace-nowrap"
+                                    className="inline-flex items-center gap-0.5 text-[12px] px-1.5 py-0.5 rounded-full bg-secondary/40 border border-border/60 text-muted-foreground whitespace-nowrap"
                                   >
                                     {label}
                                     {pv == null ? ' new' : `${d > 0 ? ' +' : ' '}${d} ${field?.unit || ''}`}
@@ -619,7 +619,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                                 );
                               })}
                               {changes.length > 3 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/40 text-muted-foreground">
+                                <span className="text-[12px] px-1.5 py-0.5 rounded-full bg-secondary/40 text-muted-foreground">
                                   +{changes.length - 3} more
                                 </span>
                               )}
@@ -661,12 +661,12 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                                   )}
                                 >
                                   <div className="flex items-center justify-between gap-1">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+                                    <span className="text-[12px] uppercase tracking-wider text-muted-foreground">{label}</span>
                                     <DeltaText prev={prevVal} curr={val} />
                                   </div>
-                                  <p className="text-[13px] font-medium tabular-nums mt-1" dir="auto">
+                                  <p className="text-[14px] font-medium tabular-nums mt-1" dir="auto">
                                     {val == null ? (
-                                      <span className="text-muted-foreground/40">—</span>
+                                      <span className="text-muted-foreground">—</span>
                                     ) : (
                                       `${fmtNum(val)} ${unit}`
                                     )}
@@ -683,7 +683,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
                           )}
                           {Array.isArray(m.progress_photos) && m.progress_photos.length > 0 && (
                             <div className="mt-4">
-                              <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                              <p className="text-[12px] uppercase tracking-wider text-muted-foreground mb-2">
                                 Progress photos ({m.progress_photos.length})
                               </p>
                               <div className="flex flex-wrap gap-2">
@@ -728,7 +728,7 @@ export default function ClientProgressPanel({ metrics, clientId, client, onUpdat
 function MiniStat({ label, value, accent = false }) {
   return (
     <div>
-      <span className="text-[10px] uppercase font-semibold text-muted-foreground block">{label}</span>
+      <span className="text-[12px] uppercase font-semibold text-muted-foreground block">{label}</span>
       <span className={cn('text-sm font-bold font-mono', accent ? 'text-primary' : 'text-foreground')}>{value}</span>
     </div>
   );
@@ -739,7 +739,7 @@ function NoChartData({ icon: Icon, title, hint }) {
     <div className="h-56 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
       <Icon className="w-6 h-6 text-muted-foreground mb-2" />
       <p className="text-xs text-foreground font-medium">{title}</p>
-      {hint && <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs">{hint}</p>}
+      {hint && <p className="text-[12px] text-muted-foreground mt-0.5 max-w-xs">{hint}</p>}
     </div>
   );
 }

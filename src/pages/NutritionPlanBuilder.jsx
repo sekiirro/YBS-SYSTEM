@@ -697,11 +697,11 @@ export default function NutritionPlanBuilder(props = {}) {
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
             Plan Configuration
           </h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Metadata & assignment</p>
+          <p className="text-[12px] text-muted-foreground mt-0.5">Metadata & assignment</p>
         </div>
         <Badge
           className={cn(
-            'text-[10px] font-mono capitalize shrink-0 border',
+            'text-[12px] font-mono capitalize shrink-0 border',
             isTemplate
               ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
               : status === 'draft'
@@ -715,7 +715,7 @@ export default function NutritionPlanBuilder(props = {}) {
 
       <div className="space-y-3">
         <div>
-          <label className="text-[11px] font-medium text-foreground block mb-1">Plan Name</label>
+          <label className="text-[12px] font-medium text-foreground block mb-1">Plan Name</label>
           <input
             type="text"
             value={name}
@@ -727,7 +727,7 @@ export default function NutritionPlanBuilder(props = {}) {
 
         {!isTemplate ? (
           <div>
-            <label className="text-[11px] font-medium text-foreground block mb-1">Assigned Client</label>
+            <label className="text-[12px] font-medium text-foreground block mb-1">Assigned Client</label>
             <button
               type="button"
               onClick={() => setClientPickerOpen(true)}
@@ -747,13 +747,13 @@ export default function NutritionPlanBuilder(props = {}) {
             </button>
           </div>
         ) : (
-          <div className="p-2.5 rounded-lg bg-secondary/20 border border-border/40 text-[11px] text-muted-foreground">
+          <div className="p-2.5 rounded-lg bg-secondary/20 border border-border/40 text-[12px] text-muted-foreground">
             Global template: deep-copied when assigned to clients.
           </div>
         )}
 
         <div>
-          <label className="text-[11px] font-medium text-foreground block mb-1">Coach Notes (optional)</label>
+          <label className="text-[12px] font-medium text-foreground block mb-1">Coach Notes (optional)</label>
           <textarea
             rows={3}
             value={notes}
@@ -781,11 +781,11 @@ export default function NutritionPlanBuilder(props = {}) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nutrition Plan Name"
-                className="text-base sm:text-lg font-display font-semibold text-foreground bg-transparent border-b border-transparent hover:border-white/[0.12] focus:border-primary/50 focus:outline-none transition-colors px-0 py-0.5 rounded-none placeholder:text-muted-foreground/50"
+                className="text-base sm:text-lg font-display font-semibold text-foreground bg-transparent border-b border-transparent hover:border-white/[0.12] focus:border-primary/50 focus:outline-none transition-colors px-0 py-0.5 rounded-none placeholder:text-muted-foreground"
               />
               <Badge
                 className={cn(
-                  'text-[10px] font-mono capitalize shrink-0 border',
+                  'text-[12px] font-mono capitalize shrink-0 border',
                   isTemplate
                     ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
                     : status === 'draft'
@@ -796,7 +796,7 @@ export default function NutritionPlanBuilder(props = {}) {
                 {isTemplate ? 'Template' : status === 'draft' ? 'Draft' : 'Active'}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
+            <div className="flex items-center gap-2 text-[12px] text-muted-foreground mt-0.5 flex-wrap">
               <span>{selectedClient?.full_name || clientName || 'Unassigned'}</span>
               <span>·</span>
               <span>{meals.length} meals</span>
@@ -829,7 +829,7 @@ export default function NutritionPlanBuilder(props = {}) {
                   setTemplateName(name.includes('Template') ? name : `${name} Template`);
                   setTemplateModalOpen(true);
                 }}
-                className="text-[11px] h-8"
+                className="text-[12px] h-8"
               >
                 <Bookmark className="w-3.5 h-3.5 text-purple-400" /> Template
               </Button>
@@ -840,14 +840,14 @@ export default function NutritionPlanBuilder(props = {}) {
                 size="sm"
                 onClick={handleActivate}
                 disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 text-[11px] h-8"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 text-[12px] h-8"
               >
                 <Check className="w-3.5 h-3.5" />
                 {saving ? 'Activating…' : 'Activate & Assign'}
               </Button>
             )}
 
-            <Button onClick={handleSave} disabled={saving} size="sm" className="text-[11px] h-8 shadow-sm">
+            <Button onClick={handleSave} disabled={saving} size="sm" className="text-[12px] h-8 shadow-sm">
               <Save className="w-3.5 h-3.5" />
               {saving ? 'Saving…' : planId ? 'Save Changes' : 'Save Draft'}
             </Button>
@@ -857,7 +857,7 @@ export default function NutritionPlanBuilder(props = {}) {
         {/* Collapsible Plan Notes Editor */}
         {showNotesEditor && (
           <div className="pt-2 border-t border-border/30">
-            <label className="text-[11px] font-medium text-foreground block mb-1">
+            <label className="text-[12px] font-medium text-foreground block mb-1">
               Instructions & Notes for Client
             </label>
             <textarea
@@ -878,7 +878,7 @@ export default function NutritionPlanBuilder(props = {}) {
       {(error || successMessage) && (
         <div className="px-4 py-2 shrink-0 space-y-1">
           {error && (
-            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400 flex items-center justify-between gap-2">
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 {error}
@@ -889,7 +889,7 @@ export default function NutritionPlanBuilder(props = {}) {
             </div>
           )}
           {successMessage && (
-            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-400 flex items-center gap-1.5">
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[12px] text-emerald-400 flex items-center gap-1.5">
               <Check className="w-3.5 h-3.5 shrink-0" />
               {successMessage}
             </div>
@@ -903,7 +903,7 @@ export default function NutritionPlanBuilder(props = {}) {
           <span className="text-xs font-semibold uppercase tracking-wider text-foreground font-mono">
             Meals ({meals.length})
           </span>
-          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+          <span className="text-[12px] text-muted-foreground hidden sm:inline">
             Click a meal to open deep editor
           </span>
         </div>
@@ -911,7 +911,7 @@ export default function NutritionPlanBuilder(props = {}) {
           size="sm"
           variant="outline"
           onClick={() => handleAddMeal()}
-          className="text-[11px] h-7 px-2.5 border-dashed hover:border-primary/50"
+          className="text-[12px] h-7 px-2.5 border-dashed hover:border-primary/50"
         >
           <Plus className="w-3 h-3" /> Add Meal
         </Button>
@@ -922,10 +922,10 @@ export default function NutritionPlanBuilder(props = {}) {
         {meals.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-52 text-center p-6 border border-dashed border-border/60 rounded-xl">
             <div className="w-10 h-10 rounded-xl bg-secondary/50 border border-border flex items-center justify-center mb-2">
-              <Utensils className="w-5 h-5 text-muted-foreground/40" />
+              <Utensils className="w-5 h-5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-foreground">No Meals in this Plan</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">
+            <p className="text-[12px] text-muted-foreground mt-0.5 mb-3">
               Add your first meal to configure food portions and nutrition values.
             </p>
             <Button size="sm" onClick={() => handleAddMeal()} className="text-xs h-8">
@@ -965,7 +965,7 @@ export default function NutritionPlanBuilder(props = {}) {
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <div
                                   {...dragProvided.dragHandleProps}
-                                  className="p-1 -ml-1 rounded text-muted-foreground/60 hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+                                  className="p-1 -ml-1 rounded text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
                                   onClick={(e) => e.stopPropagation()}
                                   title="Drag to reorder meal"
                                 >
@@ -973,19 +973,19 @@ export default function NutritionPlanBuilder(props = {}) {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-semibold text-foreground truncate">
+                                    <span className="text-[14px] font-semibold text-foreground truncate">
                                       {m.meal_name || `Meal ${mIdx + 1}`}
                                     </span>
                                     {m.notes && (
                                       <span
-                                        className="text-[10px] text-muted-foreground truncate max-w-[120px] italic hidden sm:inline"
+                                        className="text-[12px] text-muted-foreground truncate max-w-[120px] italic hidden sm:inline"
                                         title={m.notes}
                                       >
                                         · {m.notes}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground font-mono">
+                                  <div className="flex items-center gap-2 mt-1 text-[12px] text-muted-foreground font-mono">
                                     <span className="text-foreground/90 font-medium font-sans">
                                       {itemsCount} {itemsCount === 1 ? 'food' : 'foods'}
                                     </span>
@@ -1007,7 +1007,7 @@ export default function NutritionPlanBuilder(props = {}) {
                                   type="button"
                                   onClick={() => handleMoveMeal(mIdx, -1)}
                                   disabled={mIdx === 0}
-                                  className="p-1 rounded text-muted-foreground/60 hover:text-foreground disabled:opacity-20 transition-colors"
+                                  className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
                                   title="Move up"
                                 >
                                   <ChevronUp className="w-3 h-3" />
@@ -1016,7 +1016,7 @@ export default function NutritionPlanBuilder(props = {}) {
                                   type="button"
                                   onClick={() => handleMoveMeal(mIdx, 1)}
                                   disabled={mIdx === meals.length - 1}
-                                  className="p-1 rounded text-muted-foreground/60 hover:text-foreground disabled:opacity-20 transition-colors"
+                                  className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
                                   title="Move down"
                                 >
                                   <ChevronDown className="w-3 h-3" />
@@ -1024,14 +1024,14 @@ export default function NutritionPlanBuilder(props = {}) {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveMeal(mIdx)}
-                                  className="p-1 rounded text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-0.5"
+                                  className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors ml-0.5"
                                   title="Delete meal"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                                 <ChevronRight
                                   className={cn(
-                                    'w-4 h-4 text-muted-foreground/40 transition-transform duration-150 ml-1',
+                                    'w-4 h-4 text-muted-foreground transition-transform duration-150 ml-1',
                                     isSelected && 'text-primary rotate-90 sm:rotate-0'
                                   )}
                                 />
@@ -1094,7 +1094,7 @@ export default function NutritionPlanBuilder(props = {}) {
                     type="button"
                     onClick={() => handleRenameMeal(selectedMealIndex, s)}
                     className={cn(
-                      'text-[10px] px-2 py-0.5 rounded transition-colors',
+                      'text-[12px] px-2 py-0.5 rounded transition-colors',
                       activeMeal.meal_name === s
                         ? 'bg-primary/20 text-primary border border-primary/30 font-medium'
                         : 'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
@@ -1109,7 +1109,7 @@ export default function NutritionPlanBuilder(props = {}) {
 
           <div className="flex items-center gap-2 shrink-0">
             {/* Meal Macro Badge */}
-            <div className="px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 font-mono text-[11px] text-foreground">
+            <div className="px-2.5 py-1 rounded-lg bg-secondary/60 border border-border/60 font-mono text-[12px] text-foreground">
               <span className="font-semibold text-primary">{activeMealTotals.calories} kcal</span>
               <span className="text-muted-foreground mx-1.5">·</span>
               <span>{activeMealTotals.protein}P</span>
@@ -1137,7 +1137,7 @@ export default function NutritionPlanBuilder(props = {}) {
         {/* Meal Notes / Timing */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+            <span className="text-[12px] font-medium text-foreground flex items-center gap-1">
               <StickyNote className="w-3 h-3 text-primary" />
               Meal Notes &amp; Timing (optional)
             </span>
@@ -1163,7 +1163,7 @@ export default function NutritionPlanBuilder(props = {}) {
           <Button
             size="sm"
             onClick={() => setBulkPickerOpen(true)}
-            className="text-[11px] h-7 px-2.5 shadow-sm"
+            className="text-[12px] h-7 px-2.5 shadow-sm"
           >
             <Plus className="w-3 h-3" /> Add Foods
           </Button>
@@ -1175,10 +1175,10 @@ export default function NutritionPlanBuilder(props = {}) {
         {activeMealItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center p-6 border border-dashed border-border/60 rounded-xl">
             <div className="w-10 h-10 rounded-xl bg-secondary/50 border border-border flex items-center justify-center mb-2">
-              <Apple className="w-5 h-5 text-muted-foreground/40" />
+              <Apple className="w-5 h-5 text-muted-foreground" />
             </div>
             <p className="text-xs font-semibold text-foreground">No Foods in {activeMeal.meal_name}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">
+            <p className="text-[12px] text-muted-foreground mt-0.5 mb-3">
               Search the food database to add foods with automatic macro calculations.
             </p>
             <Button size="sm" onClick={() => setBulkPickerOpen(true)} className="text-xs h-8">
@@ -1279,12 +1279,12 @@ export default function NutritionPlanBuilder(props = {}) {
       className={cn(
         embedded
           ? 'flex flex-col h-full overflow-hidden'
-          : 'flex flex-col h-[calc(100vh-56px)] overflow-hidden'
+          : 'ybs-planner flex flex-col h-[calc(100dvh-156px)] min-h-[580px] overflow-hidden'
       )}
     >
       {/* Standalone-only: top bar with back navigation */}
       {!embedded && (
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60 bg-card/80 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border/60 bg-card/80 shrink-0">
           <button
             type="button"
             onClick={async () => {
@@ -1296,7 +1296,7 @@ export default function NutritionPlanBuilder(props = {}) {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-primary font-mono">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-primary font-mono">
             {isTemplate ? 'Nutrition Template Builder' : 'Nutrition Plan Builder'}
           </span>
           <div className="flex items-center gap-2">
@@ -1307,11 +1307,11 @@ export default function NutritionPlanBuilder(props = {}) {
                 setTemplateName(name ? `${name} (Template)` : 'New Nutrition Template');
                 setTemplateModalOpen(true);
               }}
-              className="text-[11px] h-8"
+              className="text-[12px] h-8"
             >
               <Bookmark className="w-3.5 h-3.5 text-purple-400" /> Template
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="text-[11px] h-8">
+            <Button onClick={handleSave} disabled={saving} className="text-[12px] h-8">
               <Save className="w-3.5 h-3.5" /> {saving ? 'Saving…' : planId ? 'Save Changes' : 'Save Draft'}
             </Button>
           </div>
@@ -1320,7 +1320,7 @@ export default function NutritionPlanBuilder(props = {}) {
 
       {/* 3-Column Resizable Layout (Desktop) */}
       <div className="flex-1 overflow-hidden">
-        <div className="hidden md:flex h-full">
+        <div className="hidden 2xl:flex h-full">
           <PanelGroup
             direction="horizontal"
             autoSaveId={sidebarSlot ? 'ybs-client-nutrition-3col' : 'ybs-standalone-nutrition-3col'}
@@ -1374,22 +1374,23 @@ export default function NutritionPlanBuilder(props = {}) {
         </div>
 
         {/* Mobile Progressive Navigation (Single Panel with back navigation) */}
-        <div className="md:hidden h-full overflow-y-auto">
+        <div className="2xl:hidden h-full overflow-y-auto">
           {mobileStep === 1 && (
             <div className="h-full">
               {sidebarSlot || standaloneConfigSidebar}
+              <Button className="m-4" onClick={() => setMobileStep(2)}>Continue to meal plan</Button>
             </div>
           )}
 
           {mobileStep === 2 && (
             <div className="h-full flex flex-col">
-              {sidebarSlot && (
+              {(sidebarSlot || !embedded) && (
                 <button
                   type="button"
                   onClick={() => setMobileStep(1)}
                   className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 border-b border-border/40 shrink-0 text-left bg-card/40"
                 >
-                  ← Plans
+                  ← Plan settings
                 </button>
               )}
               <div className="flex-1 overflow-y-auto">
@@ -1451,7 +1452,7 @@ export default function NutritionPlanBuilder(props = {}) {
                   >
                     <div>
                       <span className="font-semibold text-foreground block">{c.full_name}</span>
-                      <span className="text-[11px] text-muted-foreground font-mono">
+                      <span className="text-[12px] text-muted-foreground font-mono">
                         {c.client_code} · {c.email || c.phone || 'No contact'}
                       </span>
                     </div>

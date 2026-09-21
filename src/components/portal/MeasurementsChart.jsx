@@ -42,7 +42,7 @@ export default function MeasurementsChart({ metrics = [] }) {
     <div className="surface-card p-5 lg:p-6 rounded-xl border border-border/80 glow-subtle">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <Ruler className="w-3.5 h-3.5 text-primary" />
             Circumference Trends
           </span>
@@ -72,7 +72,7 @@ export default function MeasurementsChart({ metrics = [] }) {
           <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
             <Calendar className="w-6 h-6 text-muted-foreground mb-2" />
             <p className="text-xs text-foreground font-medium">No {meta.label.toLowerCase()} entries yet</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               Add this measurement during a check-in to start the trend.
             </p>
           </div>
@@ -80,8 +80,8 @@ export default function MeasurementsChart({ metrics = [] }) {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 10, left: -18, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-              <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="date" tickFormatter={(d) => formatDate(d)} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;

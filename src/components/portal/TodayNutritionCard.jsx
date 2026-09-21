@@ -34,7 +34,7 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
       <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Apple className="w-3.5 h-3.5 text-primary" />
               Today&apos;s Nutrition
             </span>
@@ -62,28 +62,28 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
     <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full glow-subtle transition-all">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <Apple className="w-3.5 h-3.5 text-primary" />
             Today&apos;s Nutrition
           </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/80 text-foreground border border-border/80">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-secondary/80 text-foreground border border-border/80">
             {calories > 0 ? `${calories} kcal / day` : 'Active'}
           </span>
         </div>
 
         {/* Macro targets mini grid */}
-        <div className="grid grid-cols-3 gap-2 py-2 mb-3 bg-secondary/30 rounded-lg p-2 border border-border/40 text-center">
+        <div className="grid grid-cols-3 gap-2 py-4 mb-4 border-y border-border/60">
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Protein</span>
-            <span className="text-xs font-bold text-foreground font-mono">{protein}</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Protein</span>
+            <span className="text-xl font-bold text-foreground tabular-nums">{protein}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Carbs</span>
-            <span className="text-xs font-bold text-foreground font-mono">{carbs}</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Carbs</span>
+            <span className="text-xl font-bold text-foreground tabular-nums">{carbs}</span>
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Fat</span>
-            <span className="text-xs font-bold text-foreground font-mono">{fat}</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Fat</span>
+            <span className="text-xl font-bold text-foreground tabular-nums">{fat}</span>
           </div>
         </div>
 
@@ -94,7 +94,7 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>Meals logged for today</span>
             </div>
-            <p className="text-[11px] text-emerald-300/80 leading-tight">
+            <p className="text-[12px] text-emerald-300/80 leading-tight">
               Great job! You&apos;re staying on track with your nutritional discipline.
             </p>
           </div>
@@ -112,7 +112,7 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                   <span>Meals could not be logged</span>
                 </div>
-                <p className="text-[11px] text-red-300/80 leading-tight break-words">{error}</p>
+                <p className="text-[12px] text-red-300/80 leading-tight break-words">{error}</p>
               </div>
             )}
             <Button

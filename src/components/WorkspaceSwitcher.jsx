@@ -82,7 +82,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
     return pill(
       <>
         <Loader2 className="w-4 h-4 text-primary shrink-0 animate-spin" />
-        {!collapsed && <span className="text-[11px] text-muted-foreground">Loading workspaces…</span>}
+        {!collapsed && <span className="text-[12px] text-muted-foreground">Loading workspaces…</span>}
       </>
     );
   }
@@ -90,7 +90,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
   if (error) {
     return pill(
       <>
-        <span className="text-[11px] text-destructive truncate flex-1">{error}</span>
+        <span className="text-[12px] text-destructive truncate flex-1">{error}</span>
         <button type="button" onClick={load} title="Retry" className="text-muted-foreground hover:text-primary shrink-0">
           <RefreshCcw className="w-3.5 h-3.5" />
         </button>
@@ -102,7 +102,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
     return pill(
       <>
         <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-        {!collapsed && <span className="text-[11px] text-muted-foreground">No workspaces assigned yet.</span>}
+        {!collapsed && <span className="text-[12px] text-muted-foreground">No workspaces assigned yet.</span>}
       </>
     );
   }
@@ -112,7 +112,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
     return pill(
       <>
         <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
-          <span className="text-[10px] font-semibold text-primary">{active?.name?.[0] || 'W'}</span>
+          <span className="text-[12px] font-semibold text-primary">{active?.name?.[0] || 'W'}</span>
         </div>
         {!collapsed && <span className="text-[12px] font-medium truncate flex-1">{active?.name || 'Workspace'}</span>}
       </>
@@ -126,7 +126,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
         className={cn('w-full flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/40 border border-border hover:border-primary/40 transition-colors', collapsed && 'justify-center')}
       >
         <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
-          <span className="text-[10px] font-semibold text-primary">{active?.name?.[0] || 'W'}</span>
+          <span className="text-[12px] font-semibold text-primary">{active?.name?.[0] || 'W'}</span>
         </div>
         {!collapsed && (
           <>
@@ -137,7 +137,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
       </button>
       {open && !collapsed && (
         <div className="absolute z-50 mt-1 w-[220px] left-2 right-2 rounded-md bg-popover border border-border shadow-xl overflow-hidden">
-          <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">Switch Workspace</p>
+          <p className="px-3 py-1.5 text-[12px] uppercase tracking-wider text-muted-foreground border-b border-border">Switch Workspace</p>
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -145,10 +145,10 @@ export default function WorkspaceSwitcher({ collapsed }) {
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/60 transition-colors text-left"
             >
               <div className="w-5 h-5 rounded bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-semibold text-primary">{w.name?.[0]}</span>
+                <span className="text-[12px] font-semibold text-primary">{w.name?.[0]}</span>
               </div>
               <span className="text-[12px] font-medium truncate flex-1">{w.name}</span>
-              <span className="text-[10px] text-muted-foreground">{w.client_count || 0}</span>
+              <span className="text-[12px] text-muted-foreground">{w.client_count || 0}</span>
               {w.id === activeId && <Check className="w-3.5 h-3.5 text-primary" />}
             </button>
           ))}

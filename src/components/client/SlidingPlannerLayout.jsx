@@ -20,9 +20,9 @@ export default function SlidingPlannerLayout({
   onBack,
 }) {
   return (
-    <div className="relative w-full overflow-hidden">
+    <div className="ybs-planner relative w-full overflow-hidden">
       {/* ─── Desktop layout ─── */}
-      <div className="hidden md:flex gap-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
+      <div className="hidden xl:flex gap-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
         {/* Column 1 — Plan List */}
         <div
           className={cn(
@@ -41,7 +41,7 @@ export default function SlidingPlannerLayout({
           className={cn(
             'shrink-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
             step < 2 && 'w-0 opacity-0 overflow-hidden',
-            step === 2 && 'flex-1 opacity-100',
+            step === 2 && 'flex-1 min-w-0 opacity-100',
             step === 3 && 'w-[332px] min-w-[296px] border-r border-nutri-border-strong opacity-100',
           )}
           style={{ maxHeight: 'calc(100vh - 220px)' }}
@@ -54,7 +54,7 @@ export default function SlidingPlannerLayout({
           className={cn(
             'shrink-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-y-auto',
             step < 3 && 'w-0 opacity-0 overflow-hidden',
-            step === 3 && 'flex-1 opacity-100',
+            step === 3 && 'flex-1 min-w-0 opacity-100',
           )}
           style={{ maxHeight: 'calc(100vh - 220px)' }}
         >
@@ -63,7 +63,7 @@ export default function SlidingPlannerLayout({
       </div>
 
       {/* ─── Mobile layout — single panel ─── */}
-      <div className="md:hidden">
+      <div className="xl:hidden">
         {step === 1 && column1}
         {step === 2 && (
           <div>

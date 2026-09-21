@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { SubscriptionsService } from '@/services/subscriptions';
 import { ClientsService } from '@/services/clients';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { LoadingState, Badge } from '@/components/ui';
+import { ErrorState, LoadingState, Badge } from '@/components/ui';
 import { formatDate, daysUntil, getSubscriptionStatusColor } from '@/lib/ybs-utils';
 import { CreditCard, ShieldCheck, Check, Calendar, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 export default function ClientPackage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [client, setClient] = useState(null);
   const [subscriptions, setSubscriptions] = useState([]);
 
@@ -21,6 +22,7 @@ export default function ClientPackage() {
     }
     try {
       setLoading(true);
+      setLoadError(false);
       const [c, subs] = await Promise.all([
         ClientsService.getById(user.self_client_id),
         SubscriptionsService.list({ client_id: user.self_client_id }),
@@ -28,6 +30,7 @@ export default function ClientPackage() {
       setClient(c);
       setSubscriptions(subs || []);
     } catch (err) {
+      setLoadError(true);
       console.error('Error loading package information:', err);
     } finally {
       setLoading(false);
@@ -39,6 +42,7 @@ export default function ClientPackage() {
   }, [loadData]);
 
   if (loading) return <LoadingState label="Loading your package information…" />;
+  if (loadError) return <ErrorState onRetry={loadData} />;
 
   const activeSub = subscriptions.find((s) => s.status === 'active') || subscriptions[0] || null;
   const historySubs = subscriptions.filter((s) => s.id !== activeSub?.id);
@@ -57,7 +61,7 @@ export default function ClientPackage() {
             My Package & Subscription
           </h1>
         </div>
-        <p className="text-[13px] text-muted-foreground mt-1">
+        <p className="text-[14px] text-muted-foreground mt-1">
           Review your coaching tier, active coverage duration, and historical enrollment records.
         </p>
       </div>
@@ -70,14 +74,14 @@ export default function ClientPackage() {
           description="You do not have an active package assigned at this time. Contact your coach to activate your subscription."
         />
       ) : (
-        <div className="surface-card p-6 lg:p-8 rounded-2xl border border-border/80 glow-primary space-y-6 relative overflow-hidden">
+        <div className="ybs-package-hero space-y-8 relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary glow-primary">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-primary block">
+                <span className="text-[12px] font-bold uppercase tracking-wider text-primary block">
                   Current Active Package
                 </span>
                 <h2 className="text-2xl font-bold font-display text-foreground mt-0.5">
@@ -99,14 +103,14 @@ export default function ClientPackage() {
           {/* Key metrics grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-4 border-y border-border/50 text-xs">
             <div className="p-3 rounded-xl bg-secondary/30 border border-border/40">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Duration Window</span>
+              <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Duration Window</span>
               <span className="text-sm font-semibold text-foreground mt-1 block">
                 {formatDate(activeSub.start_date)} → {formatDate(activeSub.end_date)}
               </span>
             </div>
 
             <div className="p-3 rounded-xl bg-secondary/30 border border-border/40">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Days Remaining</span>
+              <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Days Remaining</span>
               <span
                 className={cn(
                   'text-base font-bold font-mono mt-1 block',
@@ -118,7 +122,7 @@ export default function ClientPackage() {
             </div>
 
             <div className="p-3 rounded-xl bg-secondary/30 border border-border/40">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Assigned Coach</span>
+              <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Assigned Coach</span>
               <span className="text-sm font-semibold text-foreground mt-1 block">
                 {client?.assigned_ybs_coach_name || 'YBS Coaching Team'}
               </span>
@@ -179,7 +183,7 @@ export default function ClientPackage() {
                     {formatDate(s.start_date)} → {formatDate(s.end_date)}
                   </p>
                 </div>
-                <Badge className={cn('capitalize text-[11px]', getSubscriptionStatusColor(s.status))}>
+                <Badge className={cn('capitalize text-[12px]', getSubscriptionStatusColor(s.status))}>
                   {s.status}
                 </Badge>
               </div>

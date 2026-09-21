@@ -17,10 +17,11 @@ const GLOBAL_TAB = 'global';
  * One canonical exercise = one logical movement. This modal maps concrete
  * exercise rows (per workspace + the YBS Global library) onto a canonical.
  * Workspace tabs appear automatically (new workspaces show "Not Linked").
- * Every persistence action goes through link_exercise_versions, which
- * validates each mapped exercise actually belongs to the workspace tab it
- * is linked under — so a KENDO video can never be linked as Drbahaa's
- * version, and vice versa.
+ * Every persistence action goes through link_exercise_versions. Link scope:
+ * a workspace-owned exercise may only be linked under its OWN workspace tab
+ * (a KENDO video can never be linked as Drbahaa's version, and vice versa),
+ * while a YBS Global exercise — the shared cross-workspace pool — may be
+ * linked as the version for any workspace tab.
  */
 export default function ExerciseVersionLinkModal({ open, onClose, initialSourceExerciseId }) {
   const [loading, setLoading] = useState(false);
@@ -227,7 +228,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
   return (
     <Modal open={open} onClose={onClose} title="Link Exercise Versions" size="lg">
       <div className="space-y-4">
-        <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-secondary/30 border border-border/60 rounded-xl px-3 py-2.5">
+        <div className="flex items-start gap-2 text-[12px] text-muted-foreground bg-secondary/30 border border-border/60 rounded-xl px-3 py-2.5">
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary" />
           <p>
             Link concrete exercise rows onto one canonical movement. Every workspace tab (plus the YBS Global
@@ -257,7 +258,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
                   <div className="flex items-center justify-between gap-2 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-xs">
                     <span className="truncate font-medium text-foreground">{sourceExercise.name}</span>
                     {isGlobalExercise(sourceExercise) && (
-                      <span className="text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30 shrink-0">YBS</span>
+                      <span className="text-[12px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30 shrink-0">YBS</span>
                     )}
                     <button
                       type="button"
@@ -291,7 +292,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
                           className="w-full text-left px-3 py-2 hover:bg-secondary/50 flex items-center justify-between gap-2"
                         >
                           <span className="text-xs text-foreground font-medium">{e.name}</span>
-                          <span className="text-[11px] text-muted-foreground uppercase font-mono shrink-0">
+                          <span className="text-[12px] text-muted-foreground uppercase font-mono shrink-0">
                             {isGlobalExercise(e) ? 'YBS Global' : e.workspace_id}
                           </span>
                         </button>
@@ -339,7 +340,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
                         {tab.key === GLOBAL_TAB ? <Globe className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
                         {tab.label}
                         <span className={cn(
-                          'text-[9px] font-mono px-1 py-0.5 rounded',
+                          'text-[12px] font-mono px-1 py-0.5 rounded',
                           eff.linked
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                             : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
@@ -367,7 +368,7 @@ export default function ExerciseVersionLinkModal({ open, onClose, initialSourceE
                           <div className="min-w-0">
                             <p className="font-medium text-foreground truncate">{eff.name}</p>
                             {eff.videoUrl && (
-                              <span className="inline-flex items-center gap-1 text-[10px] text-blue-400 mt-0.5">
+                              <span className="inline-flex items-center gap-1 text-[12px] text-primary mt-0.5">
                                 <Video className="w-2.5 h-2.5" /> Video
                               </span>
                             )}

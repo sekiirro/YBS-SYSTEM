@@ -117,7 +117,7 @@ function AnswerValue({ question, val }) {
   if (type === 'date') {
     const formatted = formatDate(String(val));
     return (
-      <span className="inline-flex items-center gap-1.5 text-[13px] font-normal" dir="ltr">
+      <span className="inline-flex items-center gap-1.5 text-[14px] font-normal" dir="ltr">
         <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
         {formatted}
       </span>
@@ -140,12 +140,12 @@ function AnswerValue({ question, val }) {
   const txt = Array.isArray(val) ? val.join(', ') : String(val ?? '');
   if (type === 'long_answer' || txt.length > 50) {
     return (
-      <p dir="auto" className="whitespace-pre-line break-words text-[13px] font-normal leading-relaxed">
+      <p dir="auto" className="whitespace-pre-line break-words text-[14px] font-normal leading-relaxed">
         {txt}
       </p>
     );
   }
-  return <span dir="auto" className="text-[13px] font-normal">{txt}</span>;
+  return <span dir="auto" className="text-[14px] font-normal">{txt}</span>;
 }
 
 function SubmissionSkeleton() {
@@ -392,17 +392,17 @@ export default function ViewFormDrawer({
                     <h2 className="text-sm sm:text-base font-semibold text-foreground truncate print:text-black">
                       {client?.full_name}
                     </h2>
-                    <span className="text-[10px] sm:text-[11px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-muted-foreground border border-white/[0.08] print:text-black print:border-gray-300">
+                    <span className="text-[12px] sm:text-[12px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-muted-foreground border border-white/[0.08] print:text-black print:border-gray-300">
                       {client?.client_code}
                     </span>
                     {workspaceName && (
-                      <span className="text-[10px] sm:text-[11px] text-muted-foreground flex items-center gap-1 print:text-black">
+                      <span className="text-[12px] sm:text-[12px] text-muted-foreground flex items-center gap-1 print:text-black">
                         <Building2 className="w-3 h-3 text-primary/70" />
                         {workspaceName}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] sm:text-[12px] text-muted-foreground mt-0.5 truncate print:text-black">
+                  <p className="text-[12px] sm:text-[12px] text-muted-foreground mt-0.5 truncate print:text-black">
                     {client?.email || client?.phone || 'No direct contact'}
                   </p>
                 </div>
@@ -418,7 +418,7 @@ export default function ViewFormDrawer({
                 {/* Subtle secondary reviewed indicator */}
                 {isReviewed && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide bg-sky-500/10 text-sky-200/80 border border-sky-500/20 shadow-[0_0_10px_rgba(14,165,233,0.1)]"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-sky-500/10 text-sky-200/80 border border-sky-500/20 shadow-[0_0_10px_rgba(14,165,233,0.1)]"
                     title={`Reviewed on ${formatDate(activeData?.reviewed_at)}`}
                   >
                     <CheckCheck className="w-3 h-3 text-sky-400" />
@@ -449,7 +449,7 @@ export default function ViewFormDrawer({
                       {activeData?.name || 'Client Assessment Form'}
                     </h3>
                   </div>
-                  <p className="text-[11px] sm:text-[12px] text-muted-foreground mt-0.5 print:text-gray-600">
+                  <p className="text-[12px] sm:text-[12px] text-muted-foreground mt-0.5 print:text-gray-600">
                     Submitted on {formatDateTime(activeData?.submitted_at)}
                   </p>
                 </div>
@@ -457,10 +457,10 @@ export default function ViewFormDrawer({
                 {/* Completion Indicator */}
                 <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1.5 rounded-lg shrink-0 print:border-gray-300">
                   <div className="flex flex-col text-right">
-                    <span className="text-[11px] font-semibold text-emerald-400 print:text-black">
+                    <span className="text-[12px] font-semibold text-emerald-400 print:text-black">
                       {isFullyComplete ? '100% completed' : `${completionPct}% completed`}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[12px] text-muted-foreground">
                       {answeredCount} of {totalQuestions} answered
                     </span>
                   </div>
@@ -471,27 +471,27 @@ export default function ViewFormDrawer({
               </div>
 
               {/* Activity Timeline Bar */}
-              <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between text-[11px] text-muted-foreground overflow-x-auto pb-1 print:hidden">
+              <div className="mt-3 pt-3 border-t border-white/[0.04] flex items-center justify-between text-[12px] text-muted-foreground overflow-x-auto pb-1 print:hidden">
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   <span className="font-medium text-foreground">Form Sent</span>
-                  <span className="text-muted-foreground/60 text-[10px]">({formatDate(activeData?.created_at)})</span>
+                  <span className="text-muted-foreground text-[12px]">({formatDate(activeData?.created_at)})</span>
                 </div>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0 mx-1" />
+                <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0 mx-1" />
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-2 h-2 rounded-full bg-amber-400/80" />
                   <span>Reminder</span>
-                  <span className="text-muted-foreground/60 text-[10px]">Auto</span>
+                  <span className="text-muted-foreground text-[12px]">Auto</span>
                 </div>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0 mx-1" />
+                <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0 mx-1" />
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-2 h-2 rounded-full bg-emerald-400" />
                   <span className="font-semibold text-emerald-400">Submitted</span>
-                  <span className="text-emerald-400/70 text-[10px]">({formatDate(activeData?.submitted_at)})</span>
+                  <span className="text-emerald-400/70 text-[12px]">({formatDate(activeData?.submitted_at)})</span>
                 </div>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0 mx-1" />
+                <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0 mx-1" />
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className={cn('w-2 h-2 rounded-full', isReviewed ? 'bg-sky-400' : 'bg-muted-foreground/40')} />
@@ -548,14 +548,14 @@ export default function ViewFormDrawer({
                         )}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold border border-white/[0.05]", theme.headerBg, theme.text)}>
+                          <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold border border-white/[0.05]", theme.headerBg, theme.text)}>
                             {sIdx + 1}
                           </div>
-                          <span className={cn("text-[13px] font-semibold tracking-wide uppercase print:text-black", theme.text)} dir="auto">
+                          <span className={cn("text-[14px] font-semibold tracking-wide uppercase print:text-black", theme.text)} dir="auto">
                             {section.title}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground text-[11px] print:hidden">
+                        <div className="flex items-center gap-2 text-muted-foreground text-[12px] print:hidden">
                           <span>{section.items.length} questions</span>
                           {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
                         </div>
@@ -578,14 +578,14 @@ export default function ViewFormDrawer({
                               >
                                 <div className="flex items-baseline justify-between gap-2">
                                   <p className="text-[12px] font-medium text-muted-foreground flex items-center gap-1.5 print:text-gray-700" dir="auto">
-                                    <span className="text-primary/70 font-mono text-[11px]">#{index}</span>
+                                    <span className="text-primary/70 font-mono text-[12px]">#{index}</span>
                                     <span>{question.label}</span>
                                     {question.required && (
-                                      <span className="text-red-400 text-[10px]">*</span>
+                                      <span className="text-red-400 text-[12px]">*</span>
                                     )}
                                   </p>
                                   {question.description && (
-                                    <span className="text-[10px] text-muted-foreground/60 print:hidden truncate max-w-[200px]">
+                                    <span className="text-[12px] text-muted-foreground print:hidden truncate max-w-[200px]">
                                       {question.description}
                                     </span>
                                   )}
@@ -597,12 +597,12 @@ export default function ViewFormDrawer({
                                     <span dir="auto">No answer provided for this required question.</span>
                                   </div>
                                 ) : isEmptyOptional ? (
-                                  <div className="rounded-lg px-3.5 py-2.5 text-[12.5px] italic border border-dashed border-white/[0.05] bg-white/[0.02] text-muted-foreground/70 print:border-gray-300 print:text-gray-500">
+                                  <div className="rounded-lg px-3.5 py-2.5 text-[12.5px] italic border border-dashed border-white/[0.05] bg-white/[0.02] text-muted-foreground print:border-gray-300 print:text-gray-500">
                                     Not provided
                                   </div>
                                 ) : (
                                   <div className={cn(
-                                    'rounded-lg px-4 py-3 text-[13px] leading-relaxed transition-colors border',
+                                    'rounded-lg px-4 py-3 text-[14px] leading-relaxed transition-colors border',
                                     'bg-black/20 border-white/[0.04] text-foreground print:bg-gray-50 print:text-black print:border-gray-200'
                                   )}>
                                     <AnswerValue question={question} val={val} />

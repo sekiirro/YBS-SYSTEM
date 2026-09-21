@@ -187,17 +187,17 @@ export default function Dashboard() {
                   {workspaceStats.workspaceName}
                 </span>
                 {workspaceStats.partnershipType && (
-                  <Badge variant="outline" className="text-primary bg-primary/5 border-primary/20 text-[11px]">
+                  <Badge variant="outline" className="text-primary bg-primary/5 border-primary/20 text-[12px]">
                     <Handshake className="w-3 h-3 mr-1" />
                     {workspaceStats.partnershipType.name}
                   </Badge>
                 )}
                 {workspaceStats.isAtCapacity ? (
-                  <Badge variant="destructive" className="flex items-center gap-1 text-[11px]">
+                  <Badge variant="destructive" className="flex items-center gap-1 text-[12px]">
                     <ShieldAlert className="w-3 h-3" /> Capacity Reached (100%)
                   </Badge>
                 ) : workspaceStats.isWarning ? (
-                  <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1 text-[11px]">
+                  <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1 text-[12px]">
                     <AlertTriangle className="w-3 h-3" /> Approaching Limit ({workspaceStats.utilizationPct}%)
                   </Badge>
                 ) : null}
@@ -238,7 +238,7 @@ export default function Dashboard() {
         variants={cardGridVariants}
         initial="initial"
         animate="animate"
-        className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 mb-6"
+        className="ybs-operations-stats mb-8"
       >
         {isAdmin && (
           <>
@@ -274,26 +274,26 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Total Revenue</p>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Total Revenue</p>
                 <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.totalRevenue)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Active Sub Value</p>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Active Sub Value</p>
                 <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.activeSubValue)}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Renewals</p>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Renewals</p>
                 <p className="text-xl font-display font-semibold mt-1 tabular-nums">{revenueData.renewals}</p>
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Expired Subs</p>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Expired Subs</p>
                 <p className="text-xl font-display font-semibold mt-1 tabular-nums">{revenueData.expired}</p>
               </div>
             </div>
             {/* Revenue by package */}
             {Object.keys(revenueData.revByPkg).length > 0 && (
               <div className="mt-5 pt-4 border-t border-border">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-3">Revenue by Package</p>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider mb-3">Revenue by Package</p>
                 <div className="space-y-2">
                   {Object.entries(revenueData.revByPkg).map(([pkg, rev]) => {
                     const maxRev = Math.max(...Object.values(revenueData.revByPkg));
@@ -318,19 +318,19 @@ export default function Dashboard() {
             </div>
             <div className="space-y-2">
               <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">View Clients</span>
+                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">View Clients</span>
                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
               <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Manage Subscriptions</span>
+                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Manage Subscriptions</span>
                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
               <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Review Forms</span>
+                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Review Forms</span>
                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
               <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[13px] font-medium group-hover:text-primary transition-colors">Team Management</span>
+                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Team Management</span>
                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
             </div>
@@ -355,7 +355,7 @@ export default function Dashboard() {
             <Link to="/clients" className="text-[12px] text-primary hover:underline">View all</Link>
           </div>
           {expiringClients.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground py-6 text-center">No subscriptions expiring soon</p>
+            <p className="text-[14px] text-muted-foreground py-6 text-center">No subscriptions expiring soon</p>
           ) : (
             <div className="space-y-2">
               {expiringClients.map((c) => {
@@ -363,8 +363,8 @@ export default function Dashboard() {
                 return (
                   <Link key={c.id} to={`/clients/${c.id}`} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-amber-500/[0.05] border border-white/[0.04] hover:border-amber-500/20 transition-all duration-200 group">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium truncate">{c.full_name}</p>
-                      <p className="text-[11px] text-muted-foreground">{c.client_code} · {c.package_name || 'No package'}</p>
+                      <p className="text-[14px] font-medium truncate">{c.full_name}</p>
+                      <p className="text-[12px] text-muted-foreground">{c.client_code} · {c.package_name || 'No package'}</p>
                     </div>
                     <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'shrink-0')}>
                       {days} days left
@@ -383,15 +383,15 @@ export default function Dashboard() {
             <h3 className="text-[14px] font-display font-semibold">Recent Activity</h3>
           </div>
           {recentActivity.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground py-6 text-center">No recent activity</p>
+            <p className="text-[14px] text-muted-foreground py-6 text-center">No recent activity</p>
           ) : (
             <div className="space-y-3">
               {recentActivity.map((event) => (
                 <div key={event.id} className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(59,130,246,0.6)] mt-1.5 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium">{event.title}</p>
-                    <p className="text-[11px] text-muted-foreground">{event.client_name} · {formatDate(event.created_date, 'MMM d, h:mm a')}</p>
+                    <p className="text-[14px] font-medium">{event.title}</p>
+                    <p className="text-[12px] text-muted-foreground">{event.client_name} · {formatDate(event.created_date, 'MMM d, h:mm a')}</p>
                   </div>
                 </div>
               ))}
@@ -419,8 +419,8 @@ export default function Dashboard() {
             {pendingForms.map((f) => (
               <Link key={f.id} to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/60 hover:translate-x-1 transition-all duration-200">
                 <div>
-                  <p className="text-[13px] font-medium">{f.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{f.assigned_client_name} · Submitted {formatDate(f.submitted_date)}</p>
+                  <p className="text-[14px] font-medium">{f.name}</p>
+                  <p className="text-[12px] text-muted-foreground">{f.assigned_client_name} · Submitted {formatDate(f.submitted_date)}</p>
                 </div>
                 <Badge className="text-sky-400 bg-sky-500/10 border-sky-500/20">Review</Badge>
               </Link>

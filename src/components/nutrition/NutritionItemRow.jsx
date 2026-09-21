@@ -33,14 +33,14 @@ export default function NutritionItemRow({
             {item.food_name}
           </span>
           {item.brand && (
-            <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60 border border-border/40 font-medium">
+            <span className="text-[12px] text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60 border border-border/40 font-medium">
               {item.brand}
             </span>
           )}
         </div>
 
         {isInvalid && (
-          <div className="flex items-center gap-1 text-[11px] text-amber-400 mt-1">
+          <div className="flex items-center gap-1 text-[12px] text-amber-400 mt-1">
             <AlertCircle className="w-3.5 h-3.5" />
             <span>Enter an amount greater than 0</span>
           </div>
@@ -66,20 +66,20 @@ export default function NutritionItemRow({
         {/* Live Macro Breakdown */}
         <div className="flex items-center gap-1.5 shrink-0 bg-background/60 border border-border/40 rounded-lg px-2.5 py-1 font-mono text-xs">
           <div className="text-center px-1">
-            <span className="text-[9px] uppercase font-sans text-muted-foreground/80 block leading-tight">Cal</span>
+            <span className="text-[12px] uppercase font-sans text-muted-foreground/80 block leading-tight">Cal</span>
             <span className="font-semibold text-primary">{Math.round(item.calories || 0)}</span>
           </div>
           <div className="w-[1px] h-5 bg-border/40" />
           <div className="text-center px-1">
-            <span className="text-[9px] uppercase font-sans text-muted-foreground/80 block leading-tight">P</span>
+            <span className="text-[12px] uppercase font-sans text-muted-foreground/80 block leading-tight">P</span>
             <span className="text-foreground">{Math.round((item.protein || 0) * 10) / 10}g</span>
           </div>
           <div className="text-center px-1">
-            <span className="text-[9px] uppercase font-sans text-muted-foreground/80 block leading-tight">C</span>
+            <span className="text-[12px] uppercase font-sans text-muted-foreground/80 block leading-tight">C</span>
             <span className="text-foreground">{Math.round((item.carbs || 0) * 10) / 10}g</span>
           </div>
           <div className="text-center px-1">
-            <span className="text-[9px] uppercase font-sans text-muted-foreground/80 block leading-tight">F</span>
+            <span className="text-[12px] uppercase font-sans text-muted-foreground/80 block leading-tight">F</span>
             <span className="text-foreground">{Math.round((item.fat || 0) * 10) / 10}g</span>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function NutritionItemRow({
         <button
           type="button"
           onClick={onReplace}
-          className="p-1.5 rounded-lg text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           title="Find replacement foods"
           aria-label="Find replacement foods"
         >
@@ -99,7 +99,7 @@ export default function NutritionItemRow({
         <button
           type="button"
           onClick={onRemove}
-          className="p-1.5 rounded-lg text-muted-foreground/70 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
           title="Remove food from meal"
           aria-label="Remove food"
         >

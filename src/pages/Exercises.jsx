@@ -138,7 +138,7 @@ export default function Exercises() {
                 type="button"
                 onClick={() => setActiveWs(w)}
                 className={cn(
-                  'px-4 py-2 rounded-t-lg text-[13px] font-medium whitespace-nowrap transition-all border-b-2 -mb-px',
+                  'px-4 py-2 rounded-t-lg text-[14px] font-medium whitespace-nowrap transition-all border-b-2 -mb-px',
                   activeWs?.id === w.id
                     ? 'text-primary border-primary bg-primary/5 font-semibold'
                     : 'text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/40'
@@ -157,11 +157,11 @@ export default function Exercises() {
                 placeholder={`Search ${activeWs?.name || ''} exercises…`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
               />
             </div>
             <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40">
+              className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40">
               <option value="all">All Categories</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{categoryLabel(c)}</option>
@@ -177,7 +177,7 @@ export default function Exercises() {
               action={canManageActive && !search && catFilter === 'all' ? <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4" /> Add Exercise</Button> : null}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="ybs-exercise-library">
               {filtered.map((e) => {
                 const isGlobal = isGlobalExercise(e);
                 const canManageRow = canManageExercise(e);
@@ -185,22 +185,23 @@ export default function Exercises() {
                 <div key={e.id} className="surface-card p-4 hover:glow-subtle transition-all">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h3 className="text-[14px] font-medium truncate flex items-center gap-1.5">
-                        <span className="truncate">{e.name}</span>
+                      <h3 className="text-lg font-semibold flex flex-wrap items-center gap-2 leading-snug">
+                        <span>{e.name}</span>
                         {isGlobal && (
                           <span
-                            className="inline-flex items-center shrink-0 text-[10px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
+                            className="inline-flex items-center shrink-0 text-[12px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30"
                             title="YBS Global Library — available in every workspace"
                           >
                             YBS
                           </span>
                         )}
                       </h3>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{e.category?.replace('_', ' ')}</p>
+                      <p className="text-[12px] text-muted-foreground mt-0.5 capitalize">{e.category?.replace('_', ' ')}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {e.video_url && (
                         <a href={/^https?:\/\//i.test(e.video_url) ? e.video_url : `https://${e.video_url}`} target="_blank" rel="noopener noreferrer"
+                          aria-label={`Watch ${e.name} demonstration`}
                           className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                           <ExternalLink className="w-4 h-4" />
                         </a>
@@ -229,8 +230,8 @@ export default function Exercises() {
                     </div>
                   </div>
                   {e.muscle_group && <p className="text-[12px] text-muted-foreground mt-2">{e.muscle_group}</p>}
-                  {e.equipment && <p className="text-[11px] text-muted-foreground mt-1">Equipment: {e.equipment}</p>}
-                  {isGlobal && <p className="text-[10px] text-amber-300/80 mt-1">YBS Global • available in every workspace</p>}
+                  {e.equipment && <p className="text-[12px] text-muted-foreground mt-1">Equipment: {e.equipment}</p>}
+                  {isGlobal && <p className="text-[12px] text-amber-300/80 mt-1">YBS Global • available in every workspace</p>}
                 </div>
                 );
               })}
@@ -317,7 +318,7 @@ function CreateExerciseModal({ workspaceId, onClose, onCreated }) {
         </div>
         <Input label="Equipment" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })} placeholder="Barbell" />
         <TextArea label="Instructions" rows={3} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{error}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? 'Creating…' : 'Add Exercise'}</Button>
@@ -380,7 +381,7 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
         <Input label="Equipment" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })} placeholder="Barbell" />
         <div className="pt-1">
           <p className="text-[12px] font-medium text-muted-foreground">Default Programming</p>
-          <p className="text-[11px] text-muted-foreground/80">
+          <p className="text-[12px] text-muted-foreground/80">
             Applied when this exercise is added to a plan. Each plan can override these freely.
           </p>
         </div>
@@ -415,7 +416,7 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
           onChange={(e) => setForm({ ...form, default_warmup_sets: Number(e.target.value) || 0 })}
         />
         <TextArea label="Instructions" rows={3} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{error}</div>}
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>

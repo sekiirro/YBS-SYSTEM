@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/components/ui/responsive-table';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { supabase } from '@/utils/supabase';
@@ -32,7 +33,7 @@ const RECURRENCE_LABELS = {
 };
 
 const STATUS_STYLES = {
-  assigned: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  assigned: 'bg-primary/10 text-primary border-primary/20',
   submitted: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   reviewed: 'bg-green-500/10 text-green-400 border-green-500/20',
   skipped: 'bg-muted text-muted-foreground border-border/40',
@@ -263,7 +264,7 @@ export default function FormRules() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[14px] font-medium transition-all',
                 activeTab === tab.key
                   ? 'bg-card text-foreground shadow-sm border border-border/50'
                   : 'text-muted-foreground hover:text-foreground'
@@ -291,10 +292,10 @@ export default function FormRules() {
               const audience = audienceLabel(rule);
               const AudienceIcon = audience.icon;
               return (
-                <div key={rule.id} className="surface-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                <div key={rule.id} className="py-7 border-b border-border flex flex-col sm:flex-row sm:items-center gap-5">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[14px] font-semibold">{rule.name}</p>
+                      <p className="text-xl tracking-tight font-semibold">{rule.name}</p>
                       {!rule.is_enabled && <Badge className="bg-muted text-muted-foreground">Paused</Badge>}
                       {!rule.form_template_id && <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Template missing</Badge>}
                     </div>
@@ -340,26 +341,26 @@ export default function FormRules() {
         ) : (
           <div className="surface-card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <ResponsiveTable className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Rule</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Trigger</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Assigned</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Next Due</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Rule</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Trigger</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Assigned</th>
+                    <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Next Due</th>
+                    <th className="text-right px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {instances.map((inst) => (
                     <tr key={inst.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                      <td className="px-4 py-3 text-[13px] font-medium">{inst.form_name || '—'}</td>
+                      <td className="px-4 py-3 text-[14px] font-medium">{inst.form_name || '—'}</td>
                       <td className="px-4 py-3 text-[12px] text-muted-foreground">{ruleNameById[inst.rule_id] || 'Deleted rule'}</td>
                       <td className="px-4 py-3 text-[12px] text-muted-foreground">
                         {inst.client_name || '—'}
-                        {inst.client_code ? <span className="block text-[11px] opacity-70">{inst.client_code}</span> : null}
+                        {inst.client_code ? <span className="block text-[12px] opacity-70">{inst.client_code}</span> : null}
                       </td>
                       <td className="px-4 py-3 text-[12px] text-muted-foreground">{TRIGGER_LABELS[inst.trigger_type] || inst.trigger_type}</td>
                       <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDateTime(inst.assigned_at)}</td>
@@ -370,7 +371,7 @@ export default function FormRules() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           </div>
         )
@@ -423,7 +424,7 @@ export default function FormRules() {
                   type="button"
                   onClick={() => { setAudienceMode('all'); setForm((f) => ({ ...f, workspace_id: null })); }}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] transition-all',
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-[14px] transition-all',
                     audienceMode === 'all'
                       ? 'border-primary/50 bg-primary/10 text-foreground'
                       : 'border-white/10 text-muted-foreground hover:border-white/20'
@@ -435,7 +436,7 @@ export default function FormRules() {
                   type="button"
                   onClick={() => { setAudienceMode('specific'); }}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-[13px] transition-all',
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-[14px] transition-all',
                     audienceMode === 'specific'
                       ? 'border-primary/50 bg-primary/10 text-foreground'
                       : 'border-white/10 text-muted-foreground hover:border-white/20'
@@ -466,8 +467,8 @@ export default function FormRules() {
 
           <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
             <div>
-              <p className="text-[13px] font-medium">Enabled</p>
-              <p className="text-[11px] text-muted-foreground">Paused rules never assign forms.</p>
+              <p className="text-[14px] font-medium">Enabled</p>
+              <p className="text-[12px] text-muted-foreground">Paused rules never assign forms.</p>
             </div>
             <ToggleRule isOn={form.is_enabled} onClick={() => setForm((f) => ({ ...f, is_enabled: !f.is_enabled }))} />
           </div>

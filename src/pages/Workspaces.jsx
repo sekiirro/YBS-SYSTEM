@@ -54,13 +54,13 @@ function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = ''
         <span className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
           <Link2 className="w-3.5 h-3.5 text-muted-foreground" /> Client Registration Links
         </span>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-[12px] text-muted-foreground">
           {coachName ? `Coach: ${coachName}` : 'No coach assigned yet'} · {workspaceName || ''}
         </span>
       </div>
       {REG_LINK_TIERS.map((tier) => (
         <div key={tier} className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             {tierLabel(tier)}
           </p>
           {links
@@ -73,7 +73,7 @@ function RegistrationLinksBlock({ links = [], workspaceName = '', coachName = ''
                 <input
                   readOnly
                   value={RegistrationLinksService.buildUrl(link.token)}
-                  className="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-[11px] font-mono text-muted-foreground select-all"
+                  className="flex-1 min-w-0 h-8 px-2.5 rounded-md bg-secondary/50 border border-border text-[12px] font-mono text-muted-foreground select-all"
                 />
                 <Button variant="secondary" size="sm" onClick={() => handleCopy(link)}>
                   {copiedId === link.id ? (
@@ -154,7 +154,7 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
       <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5 text-primary" /> Assigned Trainers
-          <span className="text-[11px] font-normal text-muted-foreground">({assigned.length})</span>
+          <span className="text-[12px] font-normal text-muted-foreground">({assigned.length})</span>
         </span>
         <Button variant="secondary" size="sm" onClick={() => setOpen((v) => !v)}>
           {open ? <X className="w-3.5 h-3.5 mr-1" /> : <UserPlus className="w-3.5 h-3.5 mr-1" />}
@@ -163,7 +163,7 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
       </div>
 
       {assigned.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground mt-2">No trainers assigned yet.</p>
+        <p className="text-[12px] text-muted-foreground mt-2">No trainers assigned yet.</p>
       ) : (
         <div className="flex flex-wrap gap-2 mt-2">
           {assigned.map((t) => (
@@ -173,7 +173,7 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               <span className="text-foreground truncate max-w-[140px]">{t.full_name || t.email}</span>
-              <span className="text-[10px] text-muted-foreground font-mono uppercase shrink-0">Trainer</span>
+              <span className="text-[12px] text-muted-foreground font-mono uppercase shrink-0">Trainer</span>
               <button
                 type="button"
                 onClick={() => handleRemove(t.user_id, t.full_name || t.email)}
@@ -187,7 +187,7 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
         </div>
       )}
 
-      {error && <p className="text-[11px] text-red-400 mt-2">{error}</p>}
+      {error && <p className="text-[12px] text-red-400 mt-2">{error}</p>}
 
       {open && (
         <div className="mt-2 p-3 rounded-lg bg-secondary/30 border border-border">
@@ -223,7 +223,7 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
                     <span className="text-[12px] font-medium text-foreground flex-1 truncate">
                       {t.full_name || t.email}
                     </span>
-                    <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[180px]">{t.email}</span>
+                    <span className="text-[12px] text-muted-foreground font-mono truncate max-w-[180px]">{t.email}</span>
                   </label>
                 );
               })
@@ -507,13 +507,13 @@ export default function Workspaces() {
       />
 
       {openError && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {openError}
         </div>
       )}
 
       {/* KPI strip */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total Workspaces" value={workspaces.length} icon={Building2} />
         <StatCard label="Active Workspaces" value={activeWorkspaces} icon={CheckCircle2} sublabel="Operating normally" />
         <StatCard label="Total Active Clients" value={totalActiveClients} icon={Users} />
@@ -540,7 +540,7 @@ export default function Workspaces() {
         </div>
 
         {workspaces.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground text-[13px]">
+          <div className="p-12 text-center text-muted-foreground text-[14px]">
             No workspaces have been created yet. Click "Create Workspace" above.
           </div>
         ) : (
@@ -560,27 +560,27 @@ export default function Workspaces() {
               return (
                 <div
                   key={w.id}
-                  className="p-5 space-y-3 hover:bg-secondary/30 transition-colors"
+                  className="p-6 lg:p-8 space-y-5 hover:bg-secondary/20 transition-colors min-w-0"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-2 flex-1">
+                    <div className="space-y-4 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[16px] font-semibold text-foreground">{w.name}</span>
+                      <span className="text-2xl tracking-tight font-semibold text-foreground break-words">{w.name}</span>
                       <Badge variant={w.status === 'active' ? 'success' : 'destructive'} className="capitalize">
                         {w.status}
                       </Badge>
                       {pTypeName && (
-                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[11px] font-medium">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[12px] font-medium">
                           {pTypeName}
                         </Badge>
                       )}
                       {w.timezone && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border">
+                        <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border">
                           <Globe className="w-3 h-3" /> {w.timezone}
                         </span>
                       )}
                       {w.currency && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border">
+                        <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border">
                           <DollarSign className="w-3 h-3" /> {w.currency}
                         </span>
                       )}
@@ -595,7 +595,7 @@ export default function Workspaces() {
 
                     {/* Capacity Indicator */}
                     <div className="pt-1 max-w-md">
-                      <div className="flex items-center justify-between text-[11px] mb-1">
+                      <div className="flex items-center justify-between text-[12px] mb-1">
                         <span className="text-muted-foreground">
                           Active Clients: <strong className="text-foreground">{activeClients}</strong> / {isUnlimited ? 'Unlimited' : capacity}
                         </span>
@@ -641,7 +641,7 @@ export default function Workspaces() {
                         onRemove={(trainerId) => removeWorkspaceTrainer(w, trainerId)}
                       />
                       <div className="flex items-center gap-2 mt-3 max-w-xl">
-                        <span className="text-[11px] text-muted-foreground shrink-0 flex items-center gap-1" title="Primary coach used to scope the four client registration links">
+                        <span className="text-[12px] text-muted-foreground shrink-0 flex items-center gap-1" title="Primary coach used to scope the four client registration links">
                           <UserCheck className="w-3 h-3" /> Primary Coach
                         </span>
                         <select
@@ -705,7 +705,7 @@ export default function Workspaces() {
                             <Link2 className="w-3.5 h-3.5 text-muted-foreground" /> Workspace Owner Activation Link
                           </span>
                           {inviteLinks[w.id].url && (
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-[12px] text-muted-foreground">
                               Share with {inviteLinks[w.id].email} directly (WhatsApp, Telegram, SMS)
                             </span>
                           )}
@@ -743,19 +743,19 @@ export default function Workspaces() {
       </div>
 
       {inviteError && (
-        <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {inviteError}
         </div>
       )}
 
       {coachError && (
-        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {coachError}
         </div>
       )}
 
       {trainersError && (
-        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {trainersError}
         </div>
       )}
@@ -959,7 +959,7 @@ function CreateWorkspaceModal({
           <div className="surface-card p-4 space-y-2 border border-border">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium text-foreground">Activation / Invitation Fallback Link</span>
-              <span className="text-[11px] text-muted-foreground">Share securely with the brand owner</span>
+              <span className="text-[12px] text-muted-foreground">Share securely with the brand owner</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -976,7 +976,7 @@ function CreateWorkspaceModal({
                 {copied ? 'Copied' : 'Copy Link'}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               The owner can use this link to set their personal password and immediately access their isolated workspace portal.
             </p>
           </div>
@@ -1002,7 +1002,7 @@ function CreateWorkspaceModal({
   return (
     <Modal open onClose={onClose} title="Create Workspace" size="lg">
       {error && (
-        <div className="mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {error}
         </div>
       )}
@@ -1095,16 +1095,16 @@ function CreateWorkspaceModal({
             </option>
           ))}
         </Select>
-        <p className="text-[11px] text-muted-foreground -mt-2">
+        <p className="text-[12px] text-muted-foreground -mt-2">
           The generated registration links (Silver/Gold × 1/3 months, Platinum × 1/3 months) will be scoped to this coach.
           You can change the coach later from the workspace card.
         </p>
 
         {/* Client Capacity Configuration */}
         <div className="surface-card p-3 border border-border space-y-3">
-          <label className="text-[13px] font-medium text-foreground block">Client Capacity</label>
+          <label className="text-[14px] font-medium text-foreground block">Client Capacity</label>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+            <label className="flex items-center gap-2 text-[14px] cursor-pointer">
               <input
                 type="radio"
                 name="capacity_type"
@@ -1114,7 +1114,7 @@ function CreateWorkspaceModal({
               />
               <span>Unlimited Active Clients</span>
             </label>
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+            <label className="flex items-center gap-2 text-[14px] cursor-pointer">
               <input
                 type="radio"
                 name="capacity_type"
@@ -1137,7 +1137,7 @@ function CreateWorkspaceModal({
                 placeholder="50"
                 required
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[12px] text-muted-foreground mt-1">
                 A warning is displayed at 90% utilization. Adding clients beyond this limit requires Platform Owner override.
               </p>
             </div>

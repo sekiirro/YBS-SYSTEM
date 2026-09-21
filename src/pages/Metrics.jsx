@@ -20,10 +20,10 @@ const COLUMNS = [
 
 function MetricCell({ row, col }) {
   const value = row && row[col.key] != null && row[col.key] !== '' ? fmtNum(row[col.key]) : null;
-  if (value == null) return <span className="text-muted-foreground/40">—</span>;
+  if (value == null) return <span className="text-muted-foreground">—</span>;
   return (
     <span>
-      {value} <span className="text-muted-foreground/70 font-normal">{col.unit}</span>
+      {value} <span className="text-muted-foreground font-normal">{col.unit}</span>
     </span>
   );
 }
@@ -74,7 +74,7 @@ export default function Metrics() {
         <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input type="text" placeholder="Search by client…" value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40" />
+            className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40" />
         </div>
         {stats?.total != null && (
           <span className="text-[12px] text-muted-foreground">
@@ -90,10 +90,10 @@ export default function Metrics() {
             <table className="w-full min-w-[1000px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Date</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Date</th>
                   {COLUMNS.map((col) => (
-                    <th key={col.key} className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    <th key={col.key} className="text-right px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                       {col.label}
                     </th>
                   ))}
@@ -110,12 +110,12 @@ export default function Metrics() {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-semibold text-primary shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-[12px] font-semibold text-primary shrink-0">
                           {(m.client_name || '?').slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium truncate">{m.client_name}</p>
-                          {m.client_code && <p className="text-[10px] text-muted-foreground font-mono truncate">{m.client_code}</p>}
+                          <p className="text-[14px] font-medium truncate">{m.client_name}</p>
+                          {m.client_code && <p className="text-[12px] text-muted-foreground font-mono truncate">{m.client_code}</p>}
                         </div>
                       </div>
                     </td>
@@ -126,7 +126,7 @@ export default function Metrics() {
                       </td>
                     ))}
                     <td className="px-2 py-3 text-right">
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors inline-block" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors inline-block" />
                     </td>
                   </tr>
                 ))}

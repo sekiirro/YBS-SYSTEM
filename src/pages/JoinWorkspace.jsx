@@ -91,7 +91,7 @@ export default function JoinWorkspace() {
       <AuthLayout brand>
         <div className="flex flex-col items-center text-center py-10">
           <Loader2 className="w-7 h-7 animate-spin text-muted-foreground" />
-          <p className="text-[13px] text-muted-foreground mt-3">Resolving registration link…</p>
+          <p className="text-[14px] text-muted-foreground mt-3">Resolving registration link…</p>
         </div>
       </AuthLayout>
     );

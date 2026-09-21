@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { MetricsService } from '@/services/metrics';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { LoadingState, Button, Badge } from '@/components/ui';
+import { ErrorState, LoadingState, Button, Badge, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 import {
   TrendingUp,
@@ -30,9 +30,9 @@ import {
 function Delta({ current, previous, unit }) {
   if (current == null || previous == null) return null;
   const delta = Math.round((current - previous) * 10) / 10;
-  if (delta === 0) return <span className="text-[11px] text-muted-foreground/80 font-mono">No change</span>;
+  if (delta === 0) return <span className="text-[12px] text-muted-foreground/80 font-mono">No change</span>;
   return (
-    <span className={cn('text-[11px] font-semibold font-mono', delta < 0 ? 'text-emerald-400' : 'text-amber-400')}>
+    <span className={cn('text-[12px] font-semibold font-mono', delta < 0 ? 'text-emerald-400' : 'text-amber-400')}>
       {delta > 0 ? '+' : ''}
       {delta} {unit}
     </span>
@@ -41,18 +41,18 @@ function Delta({ current, previous, unit }) {
 
 function SummaryCard({ label, icon: Icon, value, unit, delta = null, note }) {
   return (
-    <div className="surface-card p-5 rounded-xl border border-border/80">
+    <div className="ybs-metric">
       <div className="flex items-start justify-between mb-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
           <Icon className="w-4 h-4 text-primary" />
         </div>
       </div>
-      <p className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground tabular-nums">
-        {value} {unit && <span className="text-sm font-normal text-muted-foreground">{unit}</span>}
+      <p className="ybs-number">
+        {value} {unit && <small>{unit}</small>}
       </p>
       <div className="mt-2 flex items-center gap-2">{delta}</div>
-      {note && <p className="text-[11px] text-muted-foreground mt-1">{note}</p>}
+      {note && <p className="text-[12px] text-muted-foreground mt-1">{note}</p>}
     </div>
   );
 }
@@ -60,6 +60,7 @@ function SummaryCard({ label, icon: Icon, value, unit, delta = null, note }) {
 export default function ClientMetrics() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [state, setState] = useState(null);
   const [metrics, setMetrics] = useState([]);
   const [showBaseline, setShowBaseline] = useState(false);
@@ -73,6 +74,7 @@ export default function ClientMetrics() {
     }
     try {
       setLoading(true);
+      setLoadError(false);
       const [s, list] = await Promise.all([
         MetricsService.getClientMetricsState(user.self_client_id),
         MetricsService.listByClient(user.self_client_id),
@@ -80,6 +82,7 @@ export default function ClientMetrics() {
       setState(s);
       setMetrics(list || []);
     } catch (err) {
+      setLoadError(true);
       console.error('Error loading client metrics:', err);
     } finally {
       setLoading(false);
@@ -91,6 +94,7 @@ export default function ClientMetrics() {
   }, [loadData]);
 
   if (loading) return <LoadingState label="Loading your body progress…" />;
+  if (loadError) return <ErrorState onRetry={loadData} />;
 
   if (!user?.self_client_id) {
     return (
@@ -142,21 +146,20 @@ export default function ClientMetrics() {
               My Metrics & Progress
             </h1>
           </div>
-          <p className="text-[13px] text-muted-foreground mt-1">
+          <p className="text-[14px] text-muted-foreground mt-1">
             Track body composition changes, circumference measurements, and physique transformation over time.
           </p>
         </div>
 
-        <div className="surface-card p-8 lg:p-10 rounded-2xl border border-primary/20 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-64 h-64 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="ybs-hero relative overflow-hidden">
           <div className="relative max-w-2xl">
             <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
-            <h2 className="text-lg sm:text-xl font-display font-semibold text-foreground leading-snug">
-              Let's set up your Body Progress Baseline
+            <h2 className="text-3xl sm:text-4xl font-display font-semibold text-foreground leading-tight tracking-tight">
+              Every transformation starts somewhere.
             </h2>
-            <p className="text-[13px] text-muted-foreground mt-2 leading-relaxed">
+            <p className="text-[14px] text-muted-foreground mt-2 leading-relaxed">
               A quick one-time setup so your progress photos and measurements have a clear starting
               point. You'll add your body info, estimate body fat from reference photos, and log
               circumference measurements — every step is skippable except the essentials.
@@ -174,7 +177,7 @@ export default function ClientMetrics() {
               <Button onClick={() => setShowBaseline(true)}>
                 <Sparkles className="w-4 h-4" /> Start Baseline Setup
               </Button>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[12px] text-muted-foreground">
                 Takes about 2 minutes
               </span>
             </div>
@@ -220,7 +223,7 @@ export default function ClientMetrics() {
             </h1>
             {baseline.hasBaseline && <Badge>Baseline set</Badge>}
           </div>
-          <p className="text-[13px] text-muted-foreground mt-1">
+          <p className="text-[14px] text-muted-foreground mt-1">
             Track body composition changes, circumference measurements, and physique transformation over time.
           </p>
         </div>
@@ -253,7 +256,7 @@ export default function ClientMetrics() {
 
       {/* Summary cards */}
       {latest && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="ybs-metric-strip">
           <SummaryCard
             label="Weight"
             icon={TrendingUp}
@@ -277,7 +280,7 @@ export default function ClientMetrics() {
             unit={derivedLatest?.leanMass != null ? 'kg' : null}
             delta={
               derivedLatest?.leanMass != null && leanDelta != null ? (
-                <span className={cn('text-[11px] font-semibold font-mono', leanDelta < 0 ? 'text-amber-400' : 'text-emerald-400')}>
+                <span className={cn('text-[12px] font-semibold font-mono', leanDelta < 0 ? 'text-amber-400' : 'text-emerald-400')}>
                   {leanDelta > 0 ? '+' : ''}
                   {leanDelta} kg
                 </span>
@@ -308,7 +311,7 @@ export default function ClientMetrics() {
             </h2>
             <span className="text-xs text-muted-foreground font-mono">Recorded {formatDate(latest.entry_date)}</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="ybs-measurements">
             {[
               { label: 'Body Fat', value: latest.body_fat != null ? `${fmtNum(latest.body_fat)}%` : null },
               { label: 'Waist', value: latest.waist != null ? `${fmtNum(latest.waist)} cm` : null },
@@ -323,8 +326,8 @@ export default function ClientMetrics() {
             ]
               .filter((item) => item.value != null)
               .map((item) => (
-                <div key={item.label} className="surface-card p-4 rounded-xl border border-border/80">
-                  <span className="text-[10px] uppercase font-semibold text-muted-foreground block">{item.label}</span>
+                <div key={item.label}>
+                  <span className="text-[12px] uppercase font-semibold text-muted-foreground block">{item.label}</span>
                   <p className="text-base font-bold text-foreground font-mono mt-1">{item.value}</p>
                 </div>
               ))}
@@ -348,8 +351,10 @@ export default function ClientMetrics() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {allPhotos.map((photo, idx) => (
-              <div
+              <button
+                type="button"
                 key={photo.id || idx}
+                aria-label={`Open ${photo.angle || 'progress'} photo from ${formatDate(photo.entry_date || photo.captured_at)}`}
                 onClick={() => setSelectedPhoto(photo)}
                 className="surface-card rounded-xl overflow-hidden border border-border/80 group cursor-pointer hover:border-primary/50 transition-all aspect-[3/4] relative bg-black/40"
               >
@@ -365,12 +370,12 @@ export default function ClientMetrics() {
                   </div>
                 )}
                 <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                  <span className="text-[10px] font-semibold text-white uppercase tracking-wider block capitalize">
+                  <span className="text-[12px] font-semibold text-white uppercase tracking-wider block capitalize">
                     {photo.angle || 'Photo'}
                   </span>
-                  <span className="text-[10px] text-gray-300 font-mono">{formatDate(photo.entry_date || photo.captured_at)}</span>
+                  <span className="text-[12px] text-gray-300 font-mono">{formatDate(photo.entry_date || photo.captured_at)}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -395,12 +400,12 @@ export default function ClientMetrics() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-border/80 bg-secondary/30">
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Weight</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Body Fat</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Waist</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Method</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Notes</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Date</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Weight</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Body Fat</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Waist</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Method</th>
+                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[12px] text-muted-foreground">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 font-mono">
@@ -410,15 +415,15 @@ export default function ClientMetrics() {
                       <tr key={m.id} className="hover:bg-secondary/20 transition-colors">
                         <td className="px-4 py-3 font-medium text-foreground">
                           {formatDate(m.entry_date)}
-                          {m.is_baseline && <span className="ml-2 text-[10px] text-primary font-semibold uppercase">Baseline</span>}
+                          {m.is_baseline && <span className="ml-2 text-[12px] text-primary font-semibold uppercase">Baseline</span>}
                         </td>
                         <td className="px-4 py-3 text-primary font-bold">{m.weight != null ? `${fmtNum(m.weight)} kg` : '—'}</td>
                         <td className="px-4 py-3 text-foreground">{m.body_fat != null ? `${fmtNum(m.body_fat)}%` : '—'}</td>
                         <td className="px-4 py-3 text-foreground">{m.waist != null ? `${fmtNum(m.waist)} cm` : '—'}</td>
-                        <td className="px-4 py-3 text-muted-foreground font-sans text-[11px]">
+                        <td className="px-4 py-3 text-muted-foreground font-sans text-[12px]">
                           {getBodyFatMethodLabel(m.body_fat_method) || '—'}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground font-sans text-[11px] max-w-xs truncate">
+                        <td className="px-4 py-3 text-muted-foreground font-sans text-[12px] max-w-xs truncate">
                           {m.notes || '—'}
                         </td>
                       </tr>
@@ -432,11 +437,8 @@ export default function ClientMetrics() {
 
       {/* Lightbox photo modal */}
       {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <div className="max-w-md w-full surface-card p-3 rounded-2xl border border-border" onClick={(e) => e.stopPropagation()}>
+        <Modal open={!!selectedPhoto} onClose={() => setSelectedPhoto(null)} title="Progress photo" size="lg">
+          <div>
             {selectedPhoto.signed_url && (
               <img src={selectedPhoto.signed_url} alt="Progress Photo" className="w-full rounded-xl max-h-[75vh] object-contain mx-auto" />
             )}
@@ -449,7 +451,7 @@ export default function ClientMetrics() {
               </span>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modals */}

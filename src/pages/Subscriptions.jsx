@@ -49,10 +49,10 @@ export default function Subscriptions() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input type="text" placeholder="Search by client name or code…" value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] placeholder:text-muted-foreground/60 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
           </div>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors">
+            className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors">
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
             <option value="expiring_soon">Expiring Soon</option>
@@ -71,21 +71,21 @@ export default function Subscriptions() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Client</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Package</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Start</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">End</th>
-                  {canViewFinancials(user) && <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Price</th>}
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Payment</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Status</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Client</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Package</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Start</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">End</th>
+                  {canViewFinancials(user) && <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Price</th>}
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Payment</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((s) => (
                   <tr key={s.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] hover:shadow-[inset_2px_0_0_hsl(var(--primary))] transition-all duration-300">
                     <td className="px-4 py-3">
-                      <p className="text-[13px] font-medium">{s.client_name || '—'}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">{s.client_code || ''}</p>
+                      <p className="text-[14px] font-medium">{s.client_name || '—'}</p>
+                      <p className="text-[12px] text-muted-foreground font-mono">{s.client_code || ''}</p>
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">{s.package_name || '—'}</td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">{formatDate(s.start_date)}</td>
@@ -113,8 +113,8 @@ export default function Subscriptions() {
               <div key={s.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[13px] font-medium">{s.client_name}</p>
-                    <p className="text-[11px] text-muted-foreground">{s.package_name} · {formatDate(s.start_date)} → {formatDate(s.end_date)}</p>
+                    <p className="text-[14px] font-medium">{s.client_name}</p>
+                    <p className="text-[12px] text-muted-foreground">{s.package_name} · {formatDate(s.start_date)} → {formatDate(s.end_date)}</p>
                   </div>
                   <Badge className={cn(getSubscriptionStatusColor(s.status), 'capitalize shrink-0')}>{s.status.replace('_', ' ')}</Badge>
                 </div>

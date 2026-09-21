@@ -160,7 +160,7 @@ export default function MealSection({
                     key={s}
                     type="button"
                     onClick={() => { onRename(s); setIsEditingName(false); }}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-[12px] px-1.5 py-0.5 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {s}
                   </button>
@@ -175,7 +175,7 @@ export default function MealSection({
               title="Click to rename meal"
             >
               <span>{meal.meal_name || `Meal ${index + 1}`}</span>
-              <span className="text-[10px] text-muted-foreground font-normal">(rename)</span>
+              <span className="text-[12px] text-muted-foreground font-normal">(rename)</span>
             </button>
           )}
         </div>
@@ -225,7 +225,7 @@ export default function MealSection({
           type="button"
           onClick={() => setIsEditingNotes((v) => !v)}
           className={cn(
-            'text-[11px] font-medium flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors',
+            'text-[12px] font-medium flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors',
             meal.notes
               ? 'text-primary bg-primary/10 border border-primary/20'
               : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 border border-transparent'
@@ -245,11 +245,11 @@ export default function MealSection({
             placeholder="Optional note for this meal — shown to your client on their plan (e.g. 'Swap to a lighter dinner on training days')."
             className="w-full min-h-[64px] px-3 py-2 rounded-lg bg-secondary/40 border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 resize-y"
           />
-          <p className="text-[10px] text-muted-foreground">Saved when you hit "Save Plan".</p>
+          <p className="text-[12px] text-muted-foreground">Saved when you hit "Save Plan".</p>
         </div>
       ) : (
         meal.notes && (
-          <p className="text-[11px] text-muted-foreground italic bg-secondary/30 px-3 py-1.5 rounded-lg border border-border/30 flex items-start gap-1.5">
+          <p className="text-[12px] text-muted-foreground italic bg-secondary/30 px-3 py-1.5 rounded-lg border border-border/30 flex items-start gap-1.5">
             <StickyNote className="w-3 h-3 shrink-0 mt-0.5 text-primary" />
             {meal.notes}
           </p>

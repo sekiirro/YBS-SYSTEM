@@ -1128,7 +1128,7 @@ export default function WorkoutPlanBuilder(props = {}) {
         'w-full bg-background select-none',
         embedded
           ? 'flex flex-col h-full overflow-hidden'
-          : 'flex flex-col h-[calc(100vh-56px)] overflow-hidden'
+          : 'ybs-planner flex flex-col h-[calc(100dvh-156px)] min-h-[580px] overflow-hidden'
       )}>
         {/* Top bar skeleton */}
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/40 bg-card/60 shrink-0">
@@ -1232,16 +1232,16 @@ export default function WorkoutPlanBuilder(props = {}) {
       {/* Sticky header */}
       <div className="px-4 pt-4 pb-3 border-b border-border/60 shrink-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-primary font-mono">Plan Builder</span>
-          <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-secondary text-muted-foreground border-border')}>
+          <span className="text-[12px] font-semibold uppercase tracking-widest text-primary font-mono">Plan Builder</span>
+          <Badge className={cn('text-[12px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-secondary text-muted-foreground border-border')}>
             {isTemplate ? 'Template' : 'Client Plan'}
           </Badge>
         </div>
-        <h1 className="text-[13px] font-bold text-foreground truncate" title={name || 'Untitled'}>
+        <h1 className="text-[14px] font-bold text-foreground truncate" title={name || 'Untitled'}>
           {name || <span className="text-muted-foreground italic">Untitled</span>}
         </h1>
         {selectedClient && (
-          <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{selectedClient.full_name}</p>
+          <p className="text-[12px] text-primary font-medium mt-0.5 truncate">{selectedClient.full_name}</p>
         )}
       </div>
 
@@ -1249,7 +1249,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Plan Name */}
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Plan Name</label>
+          <label className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Plan Name</label>
           <input
             type="text"
             placeholder="e.g. 4-Day Hypertrophy Block"
@@ -1261,7 +1261,7 @@ export default function WorkoutPlanBuilder(props = {}) {
 
         {/* Split Type */}
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Split Type</label>
+          <label className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Split Type</label>
           <select
             value={splitType}
             onChange={(e) => {
@@ -1283,7 +1283,7 @@ export default function WorkoutPlanBuilder(props = {}) {
         {/* Custom Split Name */}
         {splitType === 'custom' && (
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Split Title</label>
+            <label className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Custom Split Title</label>
             <input
               type="text"
               placeholder="e.g. Chest & Back Specialization"
@@ -1299,7 +1299,7 @@ export default function WorkoutPlanBuilder(props = {}) {
 
         {/* Coaching Notes */}
         <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Coaching Notes</label>
+          <label className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Coaching Notes</label>
           <textarea
             rows={3}
             placeholder="e.g. 6-week progressive overload…"
@@ -1312,19 +1312,19 @@ export default function WorkoutPlanBuilder(props = {}) {
         {/* Exercise Library Source */}
         <div className="rounded-lg bg-secondary/20 border border-border/60 p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Exercise Library</label>
+            <label className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Exercise Library</label>
             {canChooseLibrarySource ? (
-              <button type="button" onClick={() => setLibrarySourceOpen(true)} className="text-[10px] text-primary hover:underline">
+              <button type="button" onClick={() => setLibrarySourceOpen(true)} className="text-[12px] text-primary hover:underline">
                 Change
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[12px] text-muted-foreground">
                 <Lock className="w-2.5 h-2.5" /> Locked
               </span>
             )}
           </div>
           {libraryWorkspace && (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               Source: <span className="font-semibold text-foreground">{libraryWorkspace.name}</span>
             </p>
           )}
@@ -1333,15 +1333,15 @@ export default function WorkoutPlanBuilder(props = {}) {
         {/* Volume Summary */}
         <div className="space-y-2 pt-1">
           <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
               <Flame className="w-3 h-3 text-orange-400" /> Volume
             </h3>
-            <span className="text-[10px] font-mono font-semibold text-primary">{volumeData.totalWorkingSets} sets/wk</span>
+            <span className="text-[12px] font-mono font-semibold text-primary">{volumeData.totalWorkingSets} sets/wk</span>
           </div>
           <div className="space-y-1">
             {volumeData.muscleDistribution.slice(0, 5).map((m) => (
               <div key={m.muscle} className="space-y-0.5">
-                <div className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center justify-between text-[12px]">
                   <span className="capitalize text-foreground">{m.muscle}</span>
                   <span className="font-mono text-muted-foreground">{m.sets}s ({m.percentage}%)</span>
                 </div>
@@ -1351,7 +1351,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               </div>
             ))}
             {volumeData.muscleDistribution.length === 0 && (
-              <p className="text-[10px] text-muted-foreground text-center py-2">Add exercises to see muscle distribution</p>
+              <p className="text-[12px] text-muted-foreground text-center py-2">Add exercises to see muscle distribution</p>
             )}
           </div>
         </div>
@@ -1360,13 +1360,13 @@ export default function WorkoutPlanBuilder(props = {}) {
       {/* Bottom actions */}
       <div className="shrink-0 px-4 py-3 border-t border-border/60 space-y-2">
         {error && (
-          <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] text-red-400 flex items-center justify-between gap-1">
+          <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 flex items-center justify-between gap-1">
             <span className="truncate">{error}</span>
             <button type="button" onClick={() => setError('')} className="shrink-0 text-red-400 hover:text-red-300">×</button>
           </div>
         )}
         {successMessage && (
-          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 flex items-center gap-1">
+          <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[12px] text-emerald-400 flex items-center gap-1">
             <Check className="w-3 h-3 shrink-0" />
             <span className="truncate">{successMessage}</span>
           </div>
@@ -1375,14 +1375,14 @@ export default function WorkoutPlanBuilder(props = {}) {
           <Button
             variant="secondary"
             onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
-            className="w-full text-[11px] h-8"
+            className="w-full text-[12px] h-8"
           >
             <Bookmark className="w-3 h-3 text-purple-400" /> Save as Template
           </Button>
           <Button
             onClick={planId ? handleSaveChanges : handleSaveAndAssign}
             disabled={saving}
-            className="w-full text-[11px] h-8"
+            className="w-full text-[12px] h-8"
           >
             <Users className="w-3 h-3" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
           </Button>
@@ -1400,11 +1400,11 @@ export default function WorkoutPlanBuilder(props = {}) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <Badge className={cn('text-[9px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-white/[0.04] text-muted-foreground border-white/[0.08]')}>
+            <Badge className={cn('text-[12px] font-mono capitalize shrink-0', isTemplate ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-white/[0.04] text-muted-foreground border-white/[0.08]')}>
               {isTemplate ? 'Template' : 'Client Plan'}
             </Badge>
             {selectedClient && (
-              <Badge className="text-[9px] font-mono bg-primary/10 text-primary border-primary/20 shrink-0 truncate max-w-[100px]">
+              <Badge className="text-[12px] font-mono bg-primary/10 text-primary border-primary/20 shrink-0 truncate max-w-[100px]">
                 {selectedClient.full_name}
               </Badge>
             )}
@@ -1415,7 +1415,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Plan Name"
-              className="text-[13px] font-bold text-foreground bg-transparent border-b border-transparent focus:border-primary/50 focus:outline-none px-0 py-0.5 min-w-0 flex-1 placeholder:text-muted-foreground/50 transition-colors"
+              className="text-[14px] font-bold text-foreground bg-transparent border-b border-transparent focus:border-primary/50 focus:outline-none px-0 py-0.5 min-w-0 flex-1 placeholder:text-muted-foreground transition-colors"
             />
           </div>
           <div className="flex items-center gap-2 mt-0.5">
@@ -1429,7 +1429,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setDays((prev) => prev.map((d, idx) => ({ ...d, day_name: idx === 0 ? customName : d.day_name })));
                 }
               }}
-              className="h-6 px-1.5 rounded-md bg-[#0d1322] border border-white/[0.08] text-[10px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-6 px-1.5 rounded-md bg-[#0d1322] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               {SPLIT_TYPES.map((st) => (
                 <option key={st.id} value={st.id}>{st.label}</option>
@@ -1444,7 +1444,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setCustomSplitName(e.target.value);
                   if (days.length === 1) handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
                 }}
-                className="h-6 px-2 rounded-md bg-[#0d1322] border border-white/[0.08] text-[10px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 min-w-0 flex-1 transition-colors"
+                className="h-6 px-2 rounded-md bg-[#0d1322] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 min-w-0 flex-1 transition-colors"
               />
             )}
           </div>
@@ -1454,14 +1454,14 @@ export default function WorkoutPlanBuilder(props = {}) {
           <Button
             variant="secondary"
             onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
-            className="text-[10px] h-7 px-2"
+            className="text-[12px] h-7 px-2"
           >
             <Bookmark className="w-3 h-3 text-purple-400" />
           </Button>
           <Button
             onClick={planId ? handleSaveChanges : handleSaveAndAssign}
             disabled={saving}
-            className="text-[10px] h-7 px-2.5"
+            className="text-[12px] h-7 px-2.5"
           >
             <Users className="w-3 h-3" /> {saving ? '…' : (planId ? 'Save' : 'Assign')}
           </Button>
@@ -1480,13 +1480,13 @@ export default function WorkoutPlanBuilder(props = {}) {
       {(error || successMessage) && (
         <div className="mt-2">
           {error && (
-            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[10px] text-red-400 flex items-center justify-between gap-1">
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 flex items-center justify-between gap-1">
               <span className="truncate">{error}</span>
               <button type="button" onClick={() => setError('')} className="shrink-0">×</button>
             </div>
           )}
           {successMessage && (
-            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-emerald-400 flex items-center gap-1">
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[12px] text-emerald-400 flex items-center gap-1">
               <Check className="w-3 h-3 shrink-0" />
               <span className="truncate">{successMessage}</span>
             </div>
@@ -1502,11 +1502,11 @@ export default function WorkoutPlanBuilder(props = {}) {
       {/* Day list header */}
       <div className="px-4 pt-4 pb-3 shrink-0">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Training Days</h2>
-          <span className="text-[10px] font-mono text-muted-foreground">{days.length} days</span>
+          <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Training Days</h2>
+          <span className="text-[12px] font-mono text-muted-foreground">{days.length} days</span>
         </div>
         {notes && (
-          <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{notes}</p>
+          <p className="text-[12px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">{notes}</p>
         )}
       </div>
 
@@ -1558,7 +1558,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                             <div className="flex items-start gap-2.5">
                               {/* Day number */}
                               <div className={cn(
-                                'flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold font-mono mt-0.5',
+                                'flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-bold font-mono mt-0.5',
                                 isActive
                                   ? isRest ? 'bg-amber-500/20 text-amber-300' : 'bg-primary/20 text-primary'
                                   : isRest ? 'bg-amber-500/10 text-amber-400/70' : 'bg-secondary/60 text-muted-foreground'
@@ -1569,7 +1569,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                 {/* Day name + type badge */}
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className={cn(
-                                    'text-[13px] font-semibold truncate',
+                                    'text-[14px] font-semibold truncate',
                                     isActive
                                       ? isRest ? 'text-amber-200' : 'text-foreground'
                                       : isRest ? 'text-amber-400/80' : 'text-foreground/85 group-hover:text-foreground'
@@ -1577,24 +1577,24 @@ export default function WorkoutPlanBuilder(props = {}) {
                                     {d.day_name || `Day ${dIdx + 1}`}
                                   </span>
                                   {isRest && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400/90 border border-amber-500/20">
+                                    <span className="inline-flex items-center gap-0.5 text-[12px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-400/90 border border-amber-500/20">
                                       <BedDouble className="w-2.5 h-2.5" /> REST
                                     </span>
                                   )}
                                 </div>
                                 {/* Summary line */}
                                 <p className={cn(
-                                  'text-[11px] mt-0.5 font-medium',
-                                  isActive ? 'text-muted-foreground' : 'text-muted-foreground/70'
+                                  'text-[12px] mt-0.5 font-medium',
+                                  isActive ? 'text-muted-foreground' : 'text-muted-foreground'
                                 )}>
                                   {isRest ? (
-                                    <span className="text-amber-500/70 font-mono text-[10px]">Recovery</span>
+                                    <span className="text-amber-500/70 font-mono text-[12px]">Recovery</span>
                                   ) : (
                                     <span>
                                       {exCount > 0 ? (
                                         <>{exCount} exercise{exCount !== 1 ? 's' : ''} · <span className={cn('font-mono', isActive ? 'text-primary' : 'text-primary/70')}>{workingSets} sets</span></>
                                       ) : (
-                                        <span className="text-muted-foreground/40 text-[10px]">No exercises</span>
+                                        <span className="text-muted-foreground text-[12px]">No exercises</span>
                                       )}
                                     </span>
                                   )}
@@ -1687,14 +1687,14 @@ export default function WorkoutPlanBuilder(props = {}) {
         <Button
           variant="secondary"
           onClick={handleAddDay}
-          className="flex-1 text-[11px] h-8"
+          className="flex-1 text-[12px] h-8"
         >
           <Plus className="w-3.5 h-3.5" /> Add Session
         </Button>
         <Button
           variant="secondary"
           onClick={handleOpenAddRestDay}
-          className="flex-1 text-[11px] h-8 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+          className="flex-1 text-[12px] h-8 text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
         >
           <BedDouble className="w-3.5 h-3.5" /> + Rest
         </Button>
@@ -1716,20 +1716,20 @@ export default function WorkoutPlanBuilder(props = {}) {
               <>
                 <div className="flex items-center gap-2 mb-1">
                   <BedDouble className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80 font-mono">Recovery Day</span>
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-amber-400/80 font-mono">Recovery Day</span>
                 </div>
                 <input
                   type="text"
                   value={activeDay.day_name || 'Rest Day'}
                   onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
-                  className="text-[13px] font-semibold text-amber-200 bg-transparent border-b border-transparent hover:border-amber-500/40 focus:border-amber-500 focus:outline-none px-0 py-0.5 w-full transition-colors"
+                  className="text-[14px] font-semibold text-amber-200 bg-transparent border-b border-transparent hover:border-amber-500/40 focus:border-amber-500 focus:outline-none px-0 py-0.5 w-full transition-colors"
                   placeholder="Rest Day Title"
                 />
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
                     Day {activeDayIndex + 1} · {volumeData.sessionVolumes[activeDayIndex]?.workingSets ?? 0} working sets
                   </span>
                 </div>
@@ -1737,7 +1737,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   type="text"
                   value={activeDay.day_name}
                   onChange={(e) => handleUpdateDay(activeDayIndex, { day_name: e.target.value })}
-                  className="text-[13px] font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary/80 focus:outline-none px-0 py-0.5 w-full transition-colors"
+                  className="text-[14px] font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border/60 focus:border-primary/80 focus:outline-none px-0 py-0.5 w-full transition-colors"
                   placeholder="Session Name"
                 />
               </>
@@ -1748,7 +1748,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               variant="secondary"
               size="sm"
               onClick={() => handleDuplicateDay(activeDayIndex)}
-              className="text-[10px] h-7 px-2 rounded-lg"
+              className="text-[12px] h-7 px-2 rounded-lg"
               title="Duplicate day"
             >
               <Copy className="w-3 h-3" />
@@ -1785,7 +1785,7 @@ export default function WorkoutPlanBuilder(props = {}) {
             placeholder={(activeDay.day_type === 'rest_day' || !!activeDay.rest_day) ? 'Recovery instructions…' : 'Session coaching notes…'}
             value={activeDay.notes || ''}
             onChange={(e) => handleUpdateDay(activeDayIndex, { notes: e.target.value })}
-            className="w-full h-8 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[11px] text-muted-foreground placeholder:text-muted-foreground/40 focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
+            className="w-full h-8 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[12px] text-muted-foreground placeholder:text-muted-foreground focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors"
           />
         </div>
       </div>
@@ -1800,7 +1800,7 @@ export default function WorkoutPlanBuilder(props = {}) {
             </div>
             <div>
               <p className="text-sm font-semibold text-amber-200">{activeDay.day_name || 'Rest Day'}</p>
-              <p className="text-[11px] text-amber-400/70 mt-1">Scheduled recovery — no exercises</p>
+              <p className="text-[12px] text-amber-400/70 mt-1">Scheduled recovery — no exercises</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -1819,7 +1819,7 @@ export default function WorkoutPlanBuilder(props = {}) {
             <div className="font-semibold text-foreground flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5 text-amber-400" /> Scheduled Recovery Item
             </div>
-            <p className="text-[11px] leading-relaxed">
+            <p className="text-[12px] leading-relaxed">
               Rest days are positioned in your training split sequence. Recovery instructions are shown directly to the client.
             </p>
           </div>
@@ -1833,7 +1833,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                 <Dumbbell className="w-8 h-8 mx-auto text-muted-foreground/30" />
                 <div>
                   <p className="text-xs font-semibold text-foreground">No exercises yet</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Add exercises from the library or create custom movements.</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">Add exercises from the library or create custom movements.</p>
                 </div>
                 <Button onClick={() => setSearchModalOpen(true)} className="text-xs shadow-sm">
                   <Plus className="w-3.5 h-3.5" /> Add First Exercise
@@ -1876,23 +1876,23 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   {/* Exercise identity */}
                                   <div className="space-y-0.5 min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-[10px] font-mono text-muted-foreground font-semibold">#{exIdx + 1}</span>
-                                      <h4 className="text-[13px] font-semibold text-foreground truncate">{ex.exercise_name}</h4>
+                                      <span className="text-[12px] font-mono text-muted-foreground font-semibold">#{exIdx + 1}</span>
+                                      <h4 className="text-[14px] font-semibold text-foreground truncate">{ex.exercise_name}</h4>
                                       {ex._versionInfo && ex._versionInfo.linked === false && (
-                                        <span className="inline-flex items-center text-[9px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                        <span className="inline-flex items-center text-[12px] font-semibold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
                                           Not Linked
                                         </span>
                                       )}
-                                      <Badge variant="outline" className="text-[9px] uppercase font-mono py-0 px-1.5 rounded-md bg-secondary/60 text-muted-foreground border-border/40">
+                                      <Badge variant="outline" className="text-[12px] uppercase font-mono py-0 px-1.5 rounded-md bg-secondary/60 text-muted-foreground border-border/40">
                                         {ex.category || 'general'}
                                       </Badge>
                                       {/* Computed Total Badge */}
-                                      <Badge variant="outline" className="text-[10px] font-mono py-0 px-1.5 rounded-md bg-secondary/40 text-muted-foreground border-border/40">
+                                      <Badge variant="outline" className="text-[12px] font-mono py-0 px-1.5 rounded-md bg-secondary/40 text-muted-foreground border-border/40">
                                         {(Number(ex.warmup_sets) || 0) + (Number(ex.working_sets) || 0)} total sets
                                       </Badge>
                                     </div>
                                     {ex.equipment && (
-                                      <span className="text-[11px] text-muted-foreground font-medium">{ex.equipment}</span>
+                                      <span className="text-[12px] text-muted-foreground font-medium">{ex.equipment}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1972,7 +1972,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                               {/* 5-Column Prescription Grid */}
                               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 px-3.5 pb-2 pt-1">
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground block">Warm-up Sets</label>
+                                  <label className="text-[12px] font-medium text-muted-foreground block">Warm-up Sets</label>
                                   <input
                                     type="number" min="0" max="10"
                                     value={ex.warmup_sets ?? 0}
@@ -1981,7 +1981,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground block">Work Sets</label>
+                                  <label className="text-[12px] font-medium text-muted-foreground block">Work Sets</label>
                                   <input
                                     type="number" min="0" max="30"
                                     value={ex.working_sets ?? 3}
@@ -1990,7 +1990,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground block">Reps</label>
+                                  <label className="text-[12px] font-medium text-muted-foreground block">Reps</label>
                                   <input
                                     type="text"
                                     placeholder="8-12"
@@ -2000,7 +2000,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground block">RIR</label>
+                                  <label className="text-[12px] font-medium text-muted-foreground block">RIR</label>
                                   <input
                                     type="number" min="0" max="10" step="0.5"
                                     value={ex.rpe || ''}
@@ -2010,7 +2010,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   />
                                 </div>
                                 <div className="space-y-1 col-span-2 sm:col-span-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground block">Rest (s)</label>
+                                  <label className="text-[12px] font-medium text-muted-foreground block">Rest (s)</label>
                                   <input
                                     type="number" step="15" min="0"
                                     value={ex.rest_seconds || 60}
@@ -2027,7 +2027,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   placeholder="Technique note (e.g. Slow 3s eccentric, full stretch)…"
                                   value={ex.notes || ''}
                                   onChange={(e) => handleUpdateExercise(exIdx, { notes: e.target.value })}
-                                  className="w-full min-h-[42px] py-1.5 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[11px] text-muted-foreground placeholder:text-muted-foreground/40 focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors resize-none"
+                                  className="w-full min-h-[42px] py-1.5 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[12px] text-muted-foreground placeholder:text-muted-foreground focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors resize-none"
                                 />
                               </div>
                             </div>
@@ -2050,7 +2050,7 @@ export default function WorkoutPlanBuilder(props = {}) {
           <Button
             variant="secondary"
             onClick={() => { setReplaceIndex(null); setSearchModalOpen(true); }}
-            className="w-full text-[11px] h-8 border border-dashed border-border hover:border-primary/50"
+            className="w-full text-[12px] h-8 border border-dashed border-border hover:border-primary/50"
           >
             <Plus className="w-3.5 h-3.5" /> Add Exercise to {activeDay.day_name || `Day ${activeDayIndex + 1}`}
           </Button>
@@ -2061,7 +2061,7 @@ export default function WorkoutPlanBuilder(props = {}) {
     /* No day selected empty state */
     <div className="flex flex-col items-center justify-center h-full text-center px-8 py-16 space-y-4">
       <div className="w-14 h-14 rounded-2xl bg-secondary/60 border border-border/60 flex items-center justify-center">
-        <Dumbbell className="w-6 h-6 text-muted-foreground/40" />
+        <Dumbbell className="w-6 h-6 text-muted-foreground" />
       </div>
       <div>
         <p className="text-sm font-semibold text-foreground">Select a Training Day</p>
@@ -2075,11 +2075,11 @@ export default function WorkoutPlanBuilder(props = {}) {
     <div className={cn(
       embedded
         ? 'flex flex-col h-full overflow-hidden'
-        : 'flex flex-col h-[calc(100vh-56px)] overflow-hidden'
+        : 'ybs-planner flex flex-col h-[calc(100dvh-156px)] min-h-[580px] overflow-hidden'
     )}>
       {/* Standalone-only: back button + top bar */}
       {!embedded && (
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60 bg-card/80 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border/60 bg-card/80 shrink-0">
           <button
             type="button"
             onClick={async () => { await autosave.flush(); navigate(returnTo || '/workouts'); }}
@@ -2088,7 +2088,7 @@ export default function WorkoutPlanBuilder(props = {}) {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-primary font-mono">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-primary font-mono">
             {isTemplate ? 'Template Builder' : 'Workout Plan Builder'}
           </span>
           <div className="flex items-center gap-2">
@@ -2096,14 +2096,14 @@ export default function WorkoutPlanBuilder(props = {}) {
             <Button
               variant="secondary"
               onClick={() => { setTemplateName(name ? `${name} (Template)` : 'New Workout Template'); setTemplateModalOpen(true); }}
-              className="text-[11px] h-8"
+              className="text-[12px] h-8"
             >
               <Bookmark className="w-3.5 h-3.5 text-purple-400" /> Template
             </Button>
             <Button
               onClick={planId ? handleSaveChanges : handleSaveAndAssign}
               disabled={saving}
-              className="text-[11px] h-8"
+              className="text-[12px] h-8"
             >
               <Users className="w-3.5 h-3.5" /> {saving ? 'Saving…' : (planId ? 'Save Changes' : 'Save & Assign')}
             </Button>
@@ -2115,13 +2115,13 @@ export default function WorkoutPlanBuilder(props = {}) {
       {!embedded && (error || successMessage) && (
         <div className="px-4 py-2 shrink-0 space-y-1">
           {error && (
-            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400 flex items-center justify-between gap-2">
+            <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 flex items-center justify-between gap-2">
               <span>{error}</span>
               <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-300">×</button>
             </div>
           )}
           {successMessage && (
-            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-400 flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[12px] text-emerald-400 flex items-center gap-2">
               <Check className="w-3.5 h-3.5" /> {successMessage}
             </div>
           )}
@@ -2131,7 +2131,7 @@ export default function WorkoutPlanBuilder(props = {}) {
       {/* 3-column layout (ONE unified top-level PanelGroup) */}
       <div className="flex-1 overflow-hidden">
         {/* Desktop: 3 resizable panels */}
-        <div className="hidden md:flex h-full">
+        <div className="hidden 2xl:flex h-full">
           <PanelGroup
             direction="horizontal"
             autoSaveId={sidebarSlot ? "ybs-client-3col-planner" : "ybs-standalone-planner"}
@@ -2190,22 +2190,23 @@ export default function WorkoutPlanBuilder(props = {}) {
         </div>
 
         {/* Mobile: 3-step progressive navigation */}
-        <div className="md:hidden h-full overflow-y-auto">
+        <div className="2xl:hidden h-full overflow-y-auto">
           {mobileStep === 1 && (
             <div className="h-full">
               {sidebarSlot || configSidebarContent}
+              <Button className="m-4" onClick={() => setMobileStep(2)}>Continue to training days</Button>
             </div>
           )}
 
           {mobileStep === 2 && (
             <div className="h-full flex flex-col">
-              {sidebarSlot && (
+              {(sidebarSlot || !embedded) && (
                 <button
                   type="button"
                   onClick={() => setMobileStep(1)}
                   className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-3 border-b border-border/40 shrink-0 text-left bg-card/40"
                 >
-                  ← Programs
+                  ← Program settings
                 </button>
               )}
               <div className="flex-1 overflow-y-auto">
@@ -2327,7 +2328,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                 >
                   <div>
                     <span className="font-semibold text-foreground block group-hover:text-primary transition-colors">{c.full_name}</span>
-                    {c.client_code && <span className="text-[10px] font-mono text-muted-foreground">Code: {c.client_code}</span>}
+                    {c.client_code && <span className="text-[12px] font-mono text-muted-foreground">Code: {c.client_code}</span>}
                   </div>
                   <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">Assign →</span>
                 </button>
@@ -2365,7 +2366,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                     <span className="font-semibold">{w.name}</span>
                     {exerciseLibraryWorkspaceId === w.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{w.id}</span>
+                  <span className="text-[12px] text-muted-foreground">{w.id}</span>
                 </button>
               ))}
             </div>

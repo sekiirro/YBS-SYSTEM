@@ -123,13 +123,13 @@ export default function PendingApproval() {
         {application && (
           <div className="w-full mt-5 p-4 rounded-md bg-secondary/40 border border-border text-left">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Registration Status</span>
-              <span className={`text-[11px] font-medium capitalize ${c.color}`}>
+              <span className="text-[12px] uppercase tracking-wider text-muted-foreground">Registration Status</span>
+              <span className={`text-[12px] font-medium capitalize ${c.color}`}>
                 {application.status.replace(/_/g, " ")}
               </span>
             </div>
-            <p className="text-[13px] font-medium mt-1">{application.applicant_name}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[14px] font-medium mt-1">{application.applicant_name}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               Submitted on {new Date(application.submitted_at || application.created_at).toLocaleDateString()}
             </p>
           </div>
@@ -138,8 +138,8 @@ export default function PendingApproval() {
         {needsMoreInfo && (
           <div className="w-full mt-4 text-left">
             <div className="p-3 rounded-md bg-warning/10 border border-warning/20 mb-3">
-              <p className="text-[11px] uppercase tracking-wider text-warning mb-1">Additional Information Requested</p>
-              <p className="text-[13px] text-foreground">{application.more_info_request}</p>
+              <p className="text-[12px] uppercase tracking-wider text-warning mb-1">Additional Information Requested</p>
+              <p className="text-[14px] text-foreground">{application.more_info_request}</p>
             </div>
             <label className="text-[12px] font-medium text-muted-foreground">Your Response</label>
             <TextArea

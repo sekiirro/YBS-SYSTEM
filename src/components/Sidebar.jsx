@@ -122,18 +122,18 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
       <motion.aside
         className={cn(
-          'fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col',
+          'ybs-sidebar fixed lg:sticky top-0 left-0 z-50 h-dvh flex flex-col',
           'bg-sidebar border-r border-sidebar-border',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
-        animate={{ width: collapsed ? 64 : 220 }}
+        animate={{ width: collapsed ? 76 : 248 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
+        <div className="h-20 flex items-center justify-between px-5 border-b border-sidebar-border shrink-0">
           <div className={cn('flex items-center gap-2.5', collapsed && 'justify-center w-full')}>
             <motion.div
-              className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_hsl(var(--primary)/0.7)]"
+              className="ybs-monogram shrink-0"
               whileHover={{ scale: 1.08, rotate: 3 }}
               transition={{ duration: 0.2 }}
             >
@@ -149,12 +149,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
                   <span className="font-bold text-[15px] tracking-tight text-foreground whitespace-nowrap">YBS</span>
-                  <span className="text-[10px] text-muted-foreground tracking-wider uppercase mt-0.5 whitespace-nowrap">Coaching OS</span>
+                  <span className="text-[12px] text-muted-foreground tracking-wider uppercase mt-0.5 whitespace-nowrap">Coaching OS</span>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-          <button className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
+          <button aria-label="Close navigation" className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setMobileOpen(false)}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -164,13 +164,13 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         {collapsed && <div className="pt-3"><WorkspaceSwitcher collapsed /></div>}
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
+        <nav aria-label="Workspace navigation" className="flex-1 overflow-y-auto py-5 px-3 space-y-6">
           {visibleSections.map((section, si) => (
             <div key={section.label}>
               <AnimatePresence>
                 {!collapsed && (
                   <motion.p
-                    className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50"
+                    className="px-3 mb-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -182,8 +182,10 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
               </AnimatePresence>
               <div className="space-y-0.5">
                 {section.items.map((item, ii) => {
-                  const isActive = location.pathname === item.path ||
-                    (item.path !== '/' && item.path !== '/admin/dashboard' && item.path !== '/coach/dashboard' && !item.path.endsWith('/dashboard') && location.pathname.startsWith(item.path));
+                  const candidates = visibleSections.flatMap((section) => section.items)
+                    .filter((entry) => location.pathname === entry.path || location.pathname.startsWith(`${entry.path}/`));
+                  const currentPath = candidates.sort((a, b) => b.path.length - a.path.length)[0]?.path;
+                  const isActive = currentPath === item.path;
                   const Icon = item.icon;
                   return (
                     <Link
@@ -191,10 +193,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                       to={item.path}
                       onClick={() => setMobileOpen(false)}
                       title={collapsed ? item.label : undefined}
+                      aria-label={collapsed ? item.label : undefined}
+                      aria-current={isActive ? 'page' : undefined}
                     >
                       <motion.div
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium',
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-medium',
                           collapsed && 'justify-center',
                           isActive
                             ? 'bg-primary/15 text-primary'

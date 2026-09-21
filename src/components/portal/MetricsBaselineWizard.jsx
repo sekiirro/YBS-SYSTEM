@@ -183,7 +183,7 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
           <div key={s.id} className="flex items-center gap-2">
             <div
               className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors',
+                'flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors',
                 i === step
                   ? 'bg-primary/15 text-primary border-primary/25'
                   : i < step
@@ -218,12 +218,12 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
                   )}
                 >
                   <Users className={cn('w-4 h-4', form.sex === sx ? 'text-primary' : 'text-muted-foreground')} />
-                  <p className="mt-2 text-[13px] font-medium capitalize text-foreground">{sx}</p>
-                  <p className="text-[11px] text-muted-foreground">Used for body-fat reference photos</p>
+                  <p className="mt-2 text-[14px] font-medium capitalize text-foreground">{sx}</p>
+                  <p className="text-[12px] text-muted-foreground">Used for body-fat reference photos</p>
                 </button>
               ))}
             </div>
-            {errors.sex && <p className="text-[11px] text-red-400 mt-1.5">{errors.sex}</p>}
+            {errors.sex && <p className="text-[12px] text-red-400 mt-1.5">{errors.sex}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -289,8 +289,8 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
                 )}
               >
                 <Camera className={cn('w-4 h-4', fatMode === mode.id ? 'text-primary' : 'text-muted-foreground')} />
-                <p className="mt-2 text-[13px] font-medium text-foreground">{mode.label}</p>
-                <p className="text-[11px] text-muted-foreground">{mode.desc}</p>
+                <p className="mt-2 text-[14px] font-medium text-foreground">{mode.label}</p>
+                <p className="text-[12px] text-muted-foreground">{mode.desc}</p>
               </button>
             ))}
           </div>
@@ -341,7 +341,7 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
                 <option value="dexa">DEXA scan</option>
                 <option value="other">Other / clinical</option>
               </Select>
-              {errors.body_fat && <p className="text-[11px] text-red-400">{errors.body_fat}</p>}
+              {errors.body_fat && <p className="text-[12px] text-red-400">{errors.body_fat}</p>}
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, body_fat: '', body_fat_method: 'manual_entry' }))}
@@ -351,7 +351,7 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
               </button>
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             Visual estimates are stored separately from measured values — they're always shown as
             &quot;visual estimate&quot; and never presented as a scan or caliper reading.
           </p>

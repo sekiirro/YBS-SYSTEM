@@ -15,7 +15,7 @@ export default function Forbidden() {
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 mt-6 px-4 h-10 rounded-md bg-secondary border border-border text-[13px] font-medium hover:bg-secondary/80 transition-colors"
+          className="inline-flex items-center gap-2 mt-6 px-4 h-10 rounded-md bg-secondary border border-border text-[14px] font-medium hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>

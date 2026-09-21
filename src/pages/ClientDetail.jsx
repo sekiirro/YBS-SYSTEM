@@ -102,7 +102,7 @@ export default function ClientDetail() {
   return (
     <div>
       {/* Back nav */}
-      <button onClick={() => navigate('/clients')} className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground mb-4 transition-colors">
+      <button onClick={() => navigate('/clients')} className="flex items-center gap-2 text-[14px] text-muted-foreground hover:text-foreground mb-4 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Clients
       </button>
 
@@ -168,7 +168,7 @@ export default function ClientDetail() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'relative flex items-center gap-2 px-3.5 py-2.5 rounded-t-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200',
+                'relative flex items-center gap-2 px-3.5 py-2.5 rounded-t-lg text-[14px] font-medium whitespace-nowrap transition-all duration-200',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
@@ -214,7 +214,7 @@ export default function ClientDetail() {
       {dangerAction && (
         <Modal open onClose={() => setDangerAction(null)} title={dangerAction === 'remove' ? 'Remove Client from Workspace' : 'Delete Client Permanently'} size="md">
           <div className="space-y-4">
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-[14px] text-muted-foreground">
               {dangerAction === 'remove'
                 ? <>This will archive <strong className="text-foreground">{client.full_name}</strong>, cancel open subscriptions, and end coach allocations. The record can be restored later.</>
                 : <>This will permanently delete <strong className="text-foreground">{client.full_name}</strong> and all associated records (subscriptions, metrics, assessments, plans, timeline). This cannot be undone.</>}
@@ -276,34 +276,34 @@ function OverviewTab({ client, summary }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
         {info.map((item) => (
           <div key={item.label} className="flex flex-col">
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wider">{item.label}</span>
-            <span className="text-[13px] font-medium mt-1">{item.value}</span>
+            <span className="text-[12px] text-muted-foreground uppercase tracking-wider">{item.label}</span>
+            <span className="text-[14px] font-medium mt-1">{item.value}</span>
           </div>
         ))}
       </div>
 
       <div className="mt-6 pt-4 border-t border-border">
-        <h4 className="text-[11px] text-muted-foreground uppercase tracking-wider mb-3">Subscription</h4>
+        <h4 className="text-[12px] text-muted-foreground uppercase tracking-wider mb-3">Subscription</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <div className="flex flex-col">
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Duration</span>
-            <span className="text-[13px] font-medium mt-1">{computeDurationLabel()}</span>
+            <span className="text-[12px] text-muted-foreground uppercase tracking-wider">Duration</span>
+            <span className="text-[14px] font-medium mt-1">{computeDurationLabel()}</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Days Remaining</span>
-            <span className="text-[13px] font-medium mt-1">{computeDaysRemainingLabel()}</span>
+            <span className="text-[12px] text-muted-foreground uppercase tracking-wider">Days Remaining</span>
+            <span className="text-[14px] font-medium mt-1">{computeDaysRemainingLabel()}</span>
           </div>
           {canViewFinancials && sub?.start_date && (
             <>
               <div className="flex flex-col">
-                <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Price</span>
-                <span className="text-[13px] font-medium mt-1">
+                <span className="text-[12px] text-muted-foreground uppercase tracking-wider">Price</span>
+                <span className="text-[14px] font-medium mt-1">
                   {formatCurrency(summary?.financials?.price, summary?.financials?.currency)}
                 </span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Payment</span>
-                <span className="text-[13px] font-medium mt-1 capitalize">{summary?.financials?.payment_status || '—'}</span>
+                <span className="text-[12px] text-muted-foreground uppercase tracking-wider">Payment</span>
+                <span className="text-[14px] font-medium mt-1 capitalize">{summary?.financials?.payment_status || '—'}</span>
               </div>
             </>
           )}
@@ -312,8 +312,8 @@ function OverviewTab({ client, summary }) {
 
       {client.notes && (
         <div className="mt-6 pt-4 border-t border-border">
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wider">Notes</span>
-          <p className="text-[13px] mt-1.5 text-muted-foreground">{client.notes}</p>
+          <span className="text-[12px] text-muted-foreground uppercase tracking-wider">Notes</span>
+          <p className="text-[14px] mt-1.5 text-muted-foreground">{client.notes}</p>
         </div>
       )}
     </div>
@@ -403,15 +403,15 @@ function SubscriptionTab({ summary, subscriptions, user, onUpdated }) {
       </div>
 
       {subscriptions.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground py-8 text-center">No subscription history</p>
+        <p className="text-[14px] text-muted-foreground py-8 text-center">No subscription history</p>
       ) : (
         <div className="space-y-3">
           {subscriptions.map((s) => (
             <div key={s.id} className="p-4 rounded-lg bg-secondary/30 border border-border">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[13px] font-medium">{s.package_name || 'Package'}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{formatDate(s.start_date)} → {formatDate(s.end_date)}</p>
+                  <p className="text-[14px] font-medium">{s.package_name || 'Package'}</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">{formatDate(s.start_date)} → {formatDate(s.end_date)}</p>
                 </div>
                 <Badge className={cn(getSubscriptionStatusColor(s.status), 'capitalize')}>{s.status.replace('_', ' ')}</Badge>
               </div>
@@ -489,12 +489,12 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
   return (
     <div className="space-y-4">
       {error && (
-        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{error}</div>
+        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">{error}</div>
       )}
 
       {type === 'freeze' && (
         <>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-[14px] text-muted-foreground">
             Freezing pauses the subscription countdown for the specified number of days.
             The end date is extended by the freeze duration. Days Remaining stays constant during the freeze.
           </p>
@@ -506,10 +506,10 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
               max="365"
               value={freezeDays}
               onChange={(e) => setFreezeDays(Math.max(1, Math.min(365, parseInt(e.target.value) || 7)))}
-              className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             Current Days Remaining: <strong>{summary?.subscription?.remaining_days ?? '—'}</strong>
             {sub?.end_date && <> · Current End Date: <strong>{formatDate(sub.end_date)}</strong></>}
           </p>
@@ -518,18 +518,18 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
 
       {type === 'renew' && (
         <>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-[14px] text-muted-foreground">
             Create a new subscription cycle. The current cycle is marked as renewed (historical); the new cycle becomes active.
           </p>
           {packagesLoading ? (
-            <p className="text-[13px] text-muted-foreground">Loading packages…</p>
+            <p className="text-[14px] text-muted-foreground">Loading packages…</p>
           ) : (
             <div className="space-y-2">
               <label className="text-[12px] font-medium">Select Package</label>
               <select
                 value={selectedPackage}
                 onChange={(e) => setSelectedPackage(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
               >
                 <option value="">Same package ({sub?.package_name_snapshot || '—'})</option>
                 {packages.map((p) => (
@@ -545,7 +545,7 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
 
       {type === 'override' && (
         <>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-[14px] text-muted-foreground">
             Override the subscription start/end dates. Leave a field blank to preserve the existing value
             (start only → end recomputed from package duration).
           </p>
@@ -556,7 +556,7 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
                 type="date"
                 value={startDate || (sub?.start_date || '').split('T')[0]}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
               />
             </div>
             <div>
@@ -565,7 +565,7 @@ function LifecycleModal({ type, sub, summary, loading, error, onCancel, onSubmit
                 type="date"
                 value={endDate || (sub?.end_date || '').split('T')[0]}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                className="w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
               />
             </div>
           </div>
@@ -603,7 +603,7 @@ function FormsTab({ forms }) {
     <div>
       <h3 className="text-[14px] font-display font-semibold mb-4">Assigned Forms</h3>
       {forms.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground py-8 text-center">No forms assigned</p>
+        <p className="text-[14px] text-muted-foreground py-8 text-center">No forms assigned</p>
       ) : (
         <div className="space-y-2">
           {forms.map((f) => {
@@ -611,8 +611,8 @@ function FormsTab({ forms }) {
             return (
               <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
                 <div>
-                  <p className="text-[13px] font-medium">{f.name}</p>
-                  <p className="text-[11px] text-muted-foreground">Due {formatDate(f.due_date)}</p>
+                  <p className="text-[14px] font-medium">{f.name}</p>
+                  <p className="text-[12px] text-muted-foreground">Due {formatDate(f.due_date)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {isSubmitted && (
@@ -639,8 +639,8 @@ function ViewResponsesModal({ form, onClose }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
           <div>
-            <p className="text-[13px] font-medium">{form.name}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {formatDate(form.submitted_at)}</p>
+            <p className="text-[14px] font-medium">{form.name}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">Submitted {formatDate(form.submitted_at)}</p>
           </div>
           <Badge className={cn(getFormStatusColor(form.submission_status), 'capitalize')}>
             {getFormStatusLabel(form.submission_status)}
@@ -666,7 +666,7 @@ function ViewResponsesModal({ form, onClose }) {
               )}
               <div className="space-y-1 py-1">
                 <p className="text-[12px] font-medium text-muted-foreground" dir="auto">Q{idx + 1}. {q.label}</p>
-                <p className="text-[13px] text-foreground pl-4" dir="auto">
+                <p className="text-[14px] text-foreground pl-4" dir="auto">
                   {(q.question_type === 'file_upload' || q.question_type === 'image_upload')
                     ? (displayVal && displayVal !== '—' && displayVal !== '""' ? displayVal : 'يتم الإرسال على رقم المتابعة')
                     : (displayVal || '—')}
@@ -685,16 +685,16 @@ function TimelineTab({ timeline }) {
     <div>
       <h3 className="text-[14px] font-display font-semibold mb-4">Client Timeline</h3>
       {timeline.length === 0 ? (
-        <p className="text-[13px] text-muted-foreground py-8 text-center">No activity recorded yet</p>
+        <p className="text-[14px] text-muted-foreground py-8 text-center">No activity recorded yet</p>
       ) : (
         <div className="relative space-y-4 pl-6">
           <div className="absolute left-2 top-2 bottom-2 w-px bg-border" />
           {timeline.map((event) => (
             <div key={event.id} className="relative">
               <div className="absolute -left-[18px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-background" />
-              <p className="text-[13px] font-medium">{event.title}</p>
+              <p className="text-[14px] font-medium">{event.title}</p>
               {event.description && <p className="text-[12px] text-muted-foreground mt-0.5">{event.description}</p>}
-              <p className="text-[11px] text-muted-foreground mt-1">{formatDate(event.created_date, 'MMM d, yyyy · h:mm a')} · {event.actor_name || 'System'}</p>
+              <p className="text-[12px] text-muted-foreground mt-1">{formatDate(event.created_date, 'MMM d, yyyy · h:mm a')} · {event.actor_name || 'System'}</p>
             </div>
           ))}
         </div>
@@ -763,15 +763,15 @@ function ActivateClientButton({ clientId, canOverride, onUpdated }) {
       <Modal open={open} onClose={() => setOpen(false)} title={needsOverride ? 'Activate Client (Manual Override)' : 'Activate Client Package'} size="md">
         <div className="space-y-4">
           {err && (
-            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">{err}</div>
+            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">{err}</div>
           )}
           {needsOverride ? (
             <>
-              <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/25 text-[13px] text-amber-300">
+              <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/25 text-[14px] text-amber-300">
                 Required plans are not fully delivered yet — Nutrition: {readiness.nutrition_delivered ? 'delivered' : 'pending'} · Workout: {readiness.workout_delivered ? 'delivered' : 'pending'}. Automatic activation waits until BOTH are delivered; a manual override bypasses that rule and requires Platform/Workspace Owner authorization.
               </div>
               {canOverride ? (
-                <label className="flex items-start gap-2 text-[13px] cursor-pointer">
+                <label className="flex items-start gap-2 text-[14px] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={overrideConfirmed}
@@ -781,18 +781,18 @@ function ActivateClientButton({ clientId, canOverride, onUpdated }) {
                   <span>I authorize a manual activation override. The client will be marked as an intentional override and this action will be audited and excluded from automatic reconciliation.</span>
                 </label>
               ) : (
-                <p className="text-[13px] text-muted-foreground">Only a Platform Owner or the Workspace Owner can authorize a manual activation override.</p>
+                <p className="text-[14px] text-muted-foreground">Only a Platform Owner or the Workspace Owner can authorize a manual activation override.</p>
               )}
             </>
           ) : (
             <>
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-[14px] text-muted-foreground">
                 Activation requires both a delivered Nutrition plan and a delivered Workout plan.
                 Clients are activated automatically the moment the second plan is delivered — this
                 button re-checks the same rule server-side.
               </p>
               {subscriptions.length === 0 ? (
-                <div className="p-3 rounded-md bg-primary/5 border border-primary/15 text-[13px] text-muted-foreground">
+                <div className="p-3 rounded-md bg-primary/5 border border-primary/15 text-[14px] text-muted-foreground">
                   No subscriptions found. Assign a package to this client first.
                 </div>
               ) : (

@@ -40,7 +40,7 @@ function fmtMacro(value) {
 function MacroChip({ label, value, className }) {
   return (
     <div className={cn('rounded-lg bg-background/60 border border-white/[0.06] px-2 py-1.5 text-center', className)}>
-      <p className="text-[9px] uppercase tracking-wide text-muted-foreground/80 font-medium leading-tight">{label}</p>
+      <p className="text-[12px] uppercase tracking-wide text-muted-foreground/80 font-medium leading-tight">{label}</p>
       <p className="text-[12px] font-semibold text-foreground font-mono mt-0.5">{value}</p>
     </div>
   );
@@ -117,9 +117,9 @@ export default function ReplaceFoodModal({ open, onClose, item, workspaceId, onA
         {/* Current item summary */}
         <div className="rounded-xl border border-white/[0.08] bg-card p-4">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Current Item</span>
+            <span className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">Current Item</span>
             {item?.brand && (
-              <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+              <Badge variant="outline" className="text-[12px] font-normal text-muted-foreground">
                 {item.brand}
               </Badge>
             )}
@@ -139,7 +139,7 @@ export default function ReplaceFoodModal({ open, onClose, item, workspaceId, onA
         </div>
 
         {status === 'ok' && results.length > 0 && (
-          <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground/80 font-semibold">
+          <div className="flex items-center gap-3 text-[12px] uppercase tracking-widest text-muted-foreground/80 font-semibold">
             <span className="h-px flex-1 bg-white/[0.08]" />
             <ArrowLeftRight className="w-3.5 h-3.5 text-primary" />
             Replace with
@@ -231,21 +231,21 @@ export default function ReplaceFoodModal({ open, onClose, item, workspaceId, onA
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[13px] font-semibold text-foreground truncate">{r.name}</span>
+                            <span className="text-[14px] font-semibold text-foreground truncate">{r.name}</span>
                             {r.name_ar && (
-                              <span dir="rtl" className="text-[11px] text-muted-foreground">
+                              <span dir="rtl" className="text-[12px] text-muted-foreground">
                                 ({r.name_ar})
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                             {r.food_role && (
-                              <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              <Badge variant="outline" className="text-[12px] uppercase tracking-wide text-muted-foreground">
                                 {roleLabel(r.food_role)}
                               </Badge>
                             )}
                             {r.substitution_group && (
-                              <Badge className="text-[10px] text-primary bg-primary/10 border-transparent">
+                              <Badge className="text-[12px] text-primary bg-primary/10 border-transparent">
                                 {humanize(r.substitution_group)}
                               </Badge>
                             )}
@@ -274,7 +274,7 @@ export default function ReplaceFoodModal({ open, onClose, item, workspaceId, onA
                       </div>
 
                       {r.explanation && (
-                        <p className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                        <p className="mt-2.5 flex items-start gap-1.5 text-[12px] text-muted-foreground leading-relaxed">
                           <Info className="w-3.5 h-3.5 shrink-0 text-primary/70 mt-0.5" />
                           <span>{r.explanation}</span>
                         </p>

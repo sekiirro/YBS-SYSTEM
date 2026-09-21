@@ -311,19 +311,20 @@ export default function Settings() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Navigation Sidebar */}
         <div className="lg:w-60 shrink-0">
-          <div className="surface-card p-2 space-y-1 border border-white/[0.08]">
+          <div className="ybs-settings-nav" aria-label="Settings sections">
             {sections.map((s) => {
               const Icon = s.icon;
               const isActive = section === s.id;
               return (
                 <button
                   key={s.id}
+                  aria-pressed={isActive}
                   onClick={() => {
                     setSection(s.id);
                     setFeedback({ error: '', success: '' });
                   }}
                   className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 text-left',
+                    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all duration-200 text-left',
                     isActive
                       ? 'bg-primary/10 text-primary border border-primary/20 shadow-[inset_2px_0_0_hsl(var(--primary))]'
                       : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04] border border-transparent'
@@ -338,19 +339,16 @@ export default function Settings() {
         </div>
 
         {/* Content Pane */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="surface-card overflow-hidden border border-white/[0.08]">
-            <div className="px-6 py-5 border-b border-white/[0.06] bg-gradient-to-br from-[#0d1322] to-[#0b0f19]">
-              {/* Section heading rendered inside content pane */}
-            </div>
             <div className="p-6">
             {feedback.error && (
-              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+              <div role="alert" className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
                 {feedback.error}
               </div>
             )}
             {feedback.success && (
-              <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[13px] flex items-center gap-2">
+              <div role="status" className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[14px] flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{feedback.success}</span>
               </div>
@@ -432,7 +430,7 @@ export default function Settings() {
                 </div>
 
                 <div className="p-3 rounded-lg bg-secondary/30 border border-border space-y-2">
-                  <div className="flex items-center justify-between text-[13px]">
+                  <div className="flex items-center justify-between text-[14px]">
                     <span className="text-muted-foreground flex items-center gap-1.5">
                       <Link2 className="w-3.5 h-3.5 text-primary" /> Registration Status
                     </span>
@@ -444,7 +442,7 @@ export default function Settings() {
                       {registrationForm.registration_enabled ? 'Enabled' : 'Disabled'}
                     </Badge>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[12px] text-muted-foreground">
                     {registrationForm.registration_enabled
                       ? 'New trainees using this link can submit an application for approval.'
                       : 'Registration is closed. The link shows a "registration closed" page and server-side sign-ups are rejected.'}
@@ -453,7 +451,7 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+                    <label className="flex items-center gap-2 text-[14px] cursor-pointer">
                       <input
                         type="radio"
                         name="reg_status"
@@ -463,7 +461,7 @@ export default function Settings() {
                       />
                       <span>Registration Open</span>
                     </label>
-                    <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+                    <label className="flex items-center gap-2 text-[14px] cursor-pointer">
                       <input
                         type="radio"
                         name="reg_status"
@@ -477,7 +475,7 @@ export default function Settings() {
                 </div>
 
                 <div className="p-3 rounded-lg border border-border/50 bg-secondary/20 space-y-2">
-                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Registration Link</span>
+                  <span className="text-[12px] uppercase tracking-wider text-muted-foreground">Registration Link</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -526,10 +524,10 @@ export default function Settings() {
                   <label className="text-[12px] font-medium text-muted-foreground flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-primary" /> Owner Email
                   </label>
-                  <p className="mt-1.5 text-[13px] text-foreground font-mono px-3 py-2.5 rounded-lg bg-secondary/50 border border-border">
+                  <p className="mt-1.5 text-[14px] text-foreground font-mono px-3 py-2.5 rounded-lg bg-secondary/50 border border-border">
                     {contactForm.owner_email || '—'}
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1">
+                  <p className="text-[12px] text-muted-foreground mt-1">
                     Email is derived from the workspace owner profile and cannot be changed here.
                   </p>
                 </div>
@@ -574,7 +572,7 @@ export default function Settings() {
                     </Select>
 
                     {currentPt && (
-                      <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[13px]">
+                      <div className="p-3 rounded-lg bg-secondary/50 border border-border text-[14px]">
                         <p className="font-medium text-foreground">{currentPt.name}</p>
                         <p className="text-muted-foreground text-[12px] mt-1">{currentPt.description}</p>
                       </div>
@@ -589,7 +587,7 @@ export default function Settings() {
                 ) : (
                   <div className="space-y-3">
                     <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-1">
-                      <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Current Partnership</span>
+                      <span className="text-[12px] uppercase tracking-wider text-muted-foreground">Current Partnership</span>
                       <p className="text-[15px] font-semibold text-foreground">{currentPt?.name || 'Standard Partnership'}</p>
                       <p className="text-[12px] text-muted-foreground">{currentPt?.description || 'Core coaching platform.'}</p>
                     </div>
@@ -614,7 +612,7 @@ export default function Settings() {
                 {/* Live Utilization Card */}
                 {capacityStats && (
                   <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-2">
-                    <div className="flex items-center justify-between text-[13px]">
+                    <div className="flex items-center justify-between text-[14px]">
                       <span className="text-muted-foreground">Live Utilization:</span>
                       <span className="font-semibold text-foreground">
                         {capacityStats.activeCount} / {capacityStats.isUnlimited ? 'Unlimited' : capacityStats.capacity} Active Clients
@@ -638,7 +636,7 @@ export default function Settings() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                    <div className="flex items-center justify-between text-[12px] text-muted-foreground pt-1">
                       <span>Threshold warning triggers at 90%</span>
                       <span>{capacityStats.totalCount} total historical clients</span>
                     </div>
@@ -648,9 +646,9 @@ export default function Settings() {
                 {isAdmin ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[13px] font-medium text-foreground block">Capacity Configuration</label>
+                      <label className="text-[14px] font-medium text-foreground block">Capacity Configuration</label>
                       <div className="flex items-center gap-6">
-                        <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+                        <label className="flex items-center gap-2 text-[14px] cursor-pointer">
                           <input
                             type="radio"
                             name="cap_type"
@@ -660,7 +658,7 @@ export default function Settings() {
                           />
                           <span>Unlimited Capacity</span>
                         </label>
-                        <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+                        <label className="flex items-center gap-2 text-[14px] cursor-pointer">
                           <input
                             type="radio"
                             name="cap_type"
@@ -724,7 +722,7 @@ export default function Settings() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[13px] font-medium text-foreground block mb-1.5">Primary Theme Color</label>
+                    <label className="text-[14px] font-medium text-foreground block mb-1.5">Primary Theme Color</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -742,7 +740,7 @@ export default function Settings() {
                   </div>
 
                   <div>
-                    <label className="text-[13px] font-medium text-foreground block mb-1.5">Accent Color</label>
+                    <label className="text-[14px] font-medium text-foreground block mb-1.5">Accent Color</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
@@ -785,8 +783,8 @@ export default function Settings() {
                   ].map((r) => (
                     <div key={r.role} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
                       <div>
-                        <span className="text-[13px] font-medium text-foreground">{r.role}</span>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{r.desc}</p>
+                        <span className="text-[14px] font-medium text-foreground">{r.role}</span>
+                        <p className="text-[12px] text-muted-foreground mt-0.5">{r.desc}</p>
                       </div>
                       <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5">
                         Active
@@ -814,7 +812,7 @@ export default function Settings() {
                     'Workout and Nutrition plan assignments',
                   ].map((n) => (
                     <div key={n} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
-                      <span className="text-[13px] text-foreground">{n}</span>
+                      <span className="text-[14px] text-foreground">{n}</span>
                       <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Enabled</Badge>
                     </div>
                   ))}

@@ -111,23 +111,24 @@ export default function PortalLayout() {
   const isSecondaryActive = secondaryNavItems.some((item) => item.active);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col selection:bg-primary/20 selection:text-primary">
+    <div className="ybs-portal min-h-screen flex flex-col selection:bg-primary/20 selection:text-primary">
+      <a className="ybs-skip" href="#portal-content">Skip to content</a>
       {/* Top bar */}
-      <header className="h-16 border-b border-border/80 flex items-center justify-between px-4 lg:px-6 sticky top-0 bg-background/95 backdrop-blur z-30">
+      <header className="ybs-portal-header border-b border-border/80 flex items-center justify-between sticky top-0 backdrop-blur z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center glow-primary shadow-sm">
+          <div className="ybs-monogram shrink-0">
             <span className="text-primary-foreground font-bold text-sm font-display">Y</span>
           </div>
           <div className="flex flex-col leading-none">
             <span className="font-display font-semibold text-[14px] tracking-tight text-foreground flex items-center gap-1.5">
-              YBS <span className="text-[10px] font-normal text-muted-foreground uppercase tracking-wider">Coaching Portal</span>
+              YBS <span className="hidden sm:inline text-[12px] font-normal text-muted-foreground uppercase tracking-wider">Coaching Portal</span>
             </span>
             {workspaceName ? (
-              <span className="text-[11px] font-medium text-primary tracking-wide uppercase mt-0.5 truncate max-w-[200px] sm:max-w-xs">
+              <span className="text-[12px] font-medium text-primary tracking-wide uppercase mt-0.5 truncate max-w-[120px] sm:max-w-xs">
                 {workspaceName}
               </span>
             ) : (
-              <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+              <span className="text-[12px] text-muted-foreground font-mono mt-0.5">
                 {user?.client_code || 'Client Workspace'}
               </span>
             )}
@@ -137,14 +138,15 @@ export default function PortalLayout() {
         <div className="flex items-center gap-3">
           <Link
             to="/portal/profile"
-            className="flex items-center gap-2.5 px-2.5 py-1 rounded-full bg-secondary/50 border border-border/60 hover:border-primary/40 hover:bg-secondary/80 transition-all text-left"
+            aria-label={`Profile for ${clientName}`}
+            className="flex min-h-11 items-center gap-2.5 px-2.5 py-1 rounded-full bg-secondary/50 border border-border/60 hover:border-primary/40 hover:bg-secondary/80 transition-all text-left"
           >
-            <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-semibold">
+            <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[12px] font-semibold">
               {initials}
             </div>
             <div className="hidden sm:flex flex-col leading-tight pr-1">
               <span className="text-[12px] font-medium text-foreground max-w-[120px] truncate">{clientName}</span>
-              <span className="text-[9px] text-muted-foreground font-mono">{user?.client_code || 'Active Client'}</span>
+              <span className="text-[12px] text-muted-foreground font-mono">{user?.client_code || 'Active Client'}</span>
             </div>
           </Link>
 
@@ -152,6 +154,7 @@ export default function PortalLayout() {
             onClick={() => { logout(); }}
             className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-red-400 px-2.5 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"
             title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Sign out</span>
@@ -161,13 +164,13 @@ export default function PortalLayout() {
 
       <div className="flex flex-1">
         {/* Desktop side nav */}
-        <aside className="hidden md:flex flex-col w-[230px] border-r border-border/80 p-3.5 sticky top-16 h-[calc(100vh-4rem)] shrink-0 justify-between bg-sidebar/50">
+        <aside className="ybs-portal-sidebar hidden md:flex flex-col border-r border-border/80 sticky shrink-0 justify-between bg-sidebar/50">
           <div>
-            <div className="px-3 py-1.5 mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1">
+            <div className="px-3 py-1.5 mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-primary/70" />
               <span>Personal Portal</span>
             </div>
-            <nav className="space-y-0.5">
+            <nav className="space-y-0.5" aria-label="Client portal">
               {DESKTOP_NAV.map((item) => {
                 const isActive = location.pathname === item.path ||
                   (item.path === '/portal/forms' && location.pathname === '/portal/assessments') ||
@@ -179,8 +182,9 @@ export default function PortalLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all',
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-all',
                       isActive
                         ? 'nav-item-active text-foreground font-semibold bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
@@ -195,14 +199,14 @@ export default function PortalLayout() {
           </div>
 
           {/* Sidebar footer badge */}
-          <div className="p-3 rounded-lg bg-secondary/30 border border-border/40 text-center">
-            <p className="text-[11px] font-medium text-foreground">YBS System v1.0</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Continuous Improvement</p>
+          <div className="px-3 pt-6 border-t border-border/60">
+            <p className="text-sm font-semibold text-foreground">Built around you.</p>
+            <p className="text-xs text-muted-foreground mt-1">Your coaching. Your progress.</p>
           </div>
         </aside>
 
         {/* Main content container with mobile bottom safe area clearance */}
-        <main className="flex-1 p-4 lg:p-6 overflow-x-hidden pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pb-8 max-w-7xl mx-auto w-full">
+        <main id="portal-content" className="ybs-portal-main flex-1 mx-auto w-full">
           <Outlet />
         </main>
       </div>
@@ -210,7 +214,7 @@ export default function PortalLayout() {
       {/* Mobile 5-Tab Bottom Navigation Bar */}
       <nav
         style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
-        className="md:hidden fixed bottom-0 inset-x-0 border-t border-border/80 bg-background/95 backdrop-blur-md z-30 flex items-center justify-around px-2 pt-1.5 shadow-2xl"
+        className="ybs-bottom-nav md:hidden fixed bottom-0 inset-x-0 border-t border-border/80 backdrop-blur-md z-30 flex items-center justify-around px-2 pt-1.5"
         aria-label="Mobile Bottom Navigation"
       >
         {/* 1. Today (Dashboard) */}
@@ -224,7 +228,7 @@ export default function PortalLayout() {
           <div className={cn('p-1 rounded-lg transition-colors', isTodayActive && 'bg-primary/15')}>
             <LayoutDashboard className="w-5 h-5" />
           </div>
-          <span className="text-[10px] tracking-tight mt-0.5">Today</span>
+          <span className="text-[12px] tracking-tight mt-0.5">Today</span>
         </Link>
 
         {/* 2. Workout */}
@@ -238,7 +242,7 @@ export default function PortalLayout() {
           <div className={cn('p-1 rounded-lg transition-colors', isWorkoutActive && 'bg-primary/15')}>
             <Dumbbell className="w-5 h-5" />
           </div>
-          <span className="text-[10px] tracking-tight mt-0.5">Workout</span>
+          <span className="text-[12px] tracking-tight mt-0.5">Workout</span>
         </Link>
 
         {/* 3. Nutrition */}
@@ -252,7 +256,7 @@ export default function PortalLayout() {
           <div className={cn('p-1 rounded-lg transition-colors', isNutritionActive && 'bg-primary/15')}>
             <Apple className="w-5 h-5" />
           </div>
-          <span className="text-[10px] tracking-tight mt-0.5">Nutrition</span>
+          <span className="text-[12px] tracking-tight mt-0.5">Nutrition</span>
         </Link>
 
         {/* 4. Progress (Metrics) */}
@@ -266,7 +270,7 @@ export default function PortalLayout() {
           <div className={cn('p-1 rounded-lg transition-colors', isProgressActive && 'bg-primary/15')}>
             <TrendingUp className="w-5 h-5" />
           </div>
-          <span className="text-[10px] tracking-tight mt-0.5">Progress</span>
+          <span className="text-[12px] tracking-tight mt-0.5">Progress</span>
         </Link>
 
         {/* 5. More (Bottom Sheet Trigger) */}
@@ -285,7 +289,7 @@ export default function PortalLayout() {
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary" />
             )}
           </div>
-          <span className="text-[10px] tracking-tight mt-0.5">More</span>
+          <span className="text-[12px] tracking-tight mt-0.5">More</span>
         </button>
       </nav>
 
@@ -299,7 +303,7 @@ export default function PortalLayout() {
           <SheetHeader className="px-5 pt-1 pb-3 text-left border-b border-border/60">
             <SheetTitle className="text-base font-semibold font-display text-foreground flex items-center justify-between">
               <span>Client Portal Menu</span>
-              <span className="text-[11px] font-mono font-normal text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded">
+              <span className="text-[12px] font-mono font-normal text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded">
                 {user?.client_code || 'Athlete'}
               </span>
             </SheetTitle>
@@ -331,7 +335,7 @@ export default function PortalLayout() {
                       <p className={cn('text-sm font-medium', item.active && 'text-primary font-semibold')}>
                         {item.label}
                       </p>
-                      <p className="text-[11px] text-muted-foreground line-clamp-1">{item.desc}</p>
+                      <p className="text-[12px] text-muted-foreground line-clamp-1">{item.desc}</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -347,7 +351,7 @@ export default function PortalLayout() {
               </div>
               <div className="flex flex-col text-left">
                 <span className="text-xs font-semibold text-foreground">{clientName}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">{user?.email}</span>
+                <span className="text-[12px] text-muted-foreground font-mono">{user?.email}</span>
               </div>
             </div>
 

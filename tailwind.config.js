@@ -4,6 +4,7 @@ module.exports = {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
+      fontSize: { xs: ['0.8125rem', { lineHeight: '1.5' }] },
   		opacity: Object.fromEntries(Array.from({ length: 101 }, (_, i) => [i, `${i / 100}`])),
   		borderRadius: {
   			lg: 'var(--radius)',

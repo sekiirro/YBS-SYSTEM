@@ -49,7 +49,7 @@ export default function ClientFormsPopover({
               <h4 className="text-xs font-semibold text-foreground">
                 All Forms ({forms.length})
               </h4>
-              <p className="text-[11px] text-muted-foreground truncate max-w-[220px]">
+              <p className="text-[12px] text-muted-foreground truncate max-w-[220px]">
                 {clientName}
               </p>
             </div>
@@ -88,7 +88,7 @@ export default function ClientFormsPopover({
                         {f.name || 'Assessment Form'}
                       </p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 pl-5">
+                    <p className="text-[12px] text-muted-foreground mt-0.5 pl-5">
                       {hasSubmitted
                         ? `Submitted ${formatDate(f.submitted_at)}`
                         : `Assigned ${formatDate(f.created_at)}`}
@@ -98,12 +98,12 @@ export default function ClientFormsPopover({
                   <div className="flex items-center gap-1.5 shrink-0">
                     {hasSubmitted ? (
                       <div className="flex items-center gap-1">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                           <CheckCircle2 className="w-3 h-3" /> Submitted
                         </span>
                         {isReviewed && (
                           <span
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-500/15 text-slate-300 border border-slate-500/25"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[12px] font-medium bg-slate-500/15 text-slate-300 border border-slate-500/25"
                             title="Reviewed"
                           >
                             <CheckCheck className="w-2.5 h-2.5 text-sky-400" />
@@ -111,11 +111,11 @@ export default function ClientFormsPopover({
                         )}
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                         <Clock className="w-3 h-3" /> Pending
                       </span>
                     )}
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-foreground transition-colors" />
+                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                 </button>
               );

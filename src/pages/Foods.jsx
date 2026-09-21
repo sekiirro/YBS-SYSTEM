@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/components/ui/responsive-table';
 import React, { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
@@ -14,7 +15,7 @@ const CATEGORY_STYLES = {
   vegetables: { badge: 'bg-teal-500/15 text-teal-400 border-teal-500/20',   label: 'Vegetables' },
   fruits:     { badge: 'bg-green-500/15 text-green-400 border-green-500/20', label: 'Fruits'  },
   dairy:      { badge: 'bg-sky-500/15 text-sky-400 border-sky-500/20',      label: 'Dairy'     },
-  beverages:  { badge: 'bg-blue-500/15 text-blue-400 border-blue-500/20',   label: 'Beverages' },
+  beverages:  { badge: 'bg-primary/15 text-primary border-primary/20',   label: 'Beverages' },
   other:      { badge: 'bg-slate-500/15 text-slate-400 border-slate-500/20', label: 'Other'   },
 };
 
@@ -22,7 +23,7 @@ function CategoryBadge({ category }) {
   const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.other;
   return (
     <span className={cn(
-      'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wide',
+      'inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-semibold border uppercase tracking-wide',
       style.badge
     )}>
       {style.label}
@@ -81,10 +82,10 @@ export default function Foods() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input type="text" placeholder="Search foods…" value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40" />
+            className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40" />
         </div>
         <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)}
-          className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40">
+          className="h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40">
           <option value="all">All Categories</option>
           {['protein','carbs','fats','vegetables','fruits','dairy','beverages','other'].map((c) => (
             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -96,16 +97,16 @@ export default function Foods() {
       ) : (
         <div className="surface-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <ResponsiveTable className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Food</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Serving</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Cal</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-red-400/80">Protein</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80">Carbs</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-purple-400/80">Fat</th>
-                  {canManage && <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground"></th>}
+                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Food</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Serving</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Cal</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-red-400/80">Protein</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-amber-400/80">Carbs</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-purple-400/80">Fat</th>
+                  {canManage && <th className="text-right px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -113,14 +114,14 @@ export default function Foods() {
                   <tr key={f.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <p className="text-[13px] font-medium leading-none">
+                        <p className="text-[14px] font-medium leading-none">
                           {f.name}
-                          {f.brand && <span className="ml-2 text-[11px] font-normal text-muted-foreground">{f.brand}</span>}
+                          {f.brand && <span className="ml-2 text-[12px] font-normal text-muted-foreground">{f.brand}</span>}
                         </p>
                         <CategoryBadge category={f.category} />
                       </div>
                       {f.name_ar && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5" dir="rtl">{f.name_ar}</p>
+                        <p className="text-[12px] text-muted-foreground mt-0.5" dir="rtl">{f.name_ar}</p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.serving_unit}</td>
@@ -142,7 +143,7 @@ export default function Foods() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         </div>
       )}
@@ -150,7 +151,7 @@ export default function Foods() {
       {archiveTarget && (
         <Modal open onClose={() => setArchiveTarget(null)} title="Remove Food" size="lg">
           <div className="space-y-4">
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-[14px] text-muted-foreground">
               Are you sure you want to remove <span className="font-medium text-foreground">{archiveTarget.name}</span>?
               It will be hidden from active lists, but existing nutrition plans that reference it will keep working.
             </p>

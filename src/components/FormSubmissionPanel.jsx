@@ -79,7 +79,7 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
         <div className="mx-auto w-12 h-12 rounded-2xl bg-secondary/60 border border-border/60 flex items-center justify-center mb-3">
           <ClipboardList className="w-5 h-5 text-muted-foreground" />
         </div>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground">
           Your client has not submitted the required form yet.
         </p>
       </div>
@@ -107,7 +107,7 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
             >
               <FileText className="w-3 h-3" />
               <span className="max-w-40 truncate">{f.name}</span>
-              <span className="text-[10px] opacity-80">{formatDate(f.submitted_at || f.updated_at)}</span>
+              <span className="text-[12px] opacity-80">{formatDate(f.submitted_at || f.updated_at)}</span>
             </button>
           ))}
         </div>
@@ -118,14 +118,14 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/60 bg-secondary/20">
           <div className="flex items-center gap-2 min-w-0">
             <ClipboardList className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-[13px] font-semibold text-foreground truncate">{selected.name}</span>
+            <span className="text-[14px] font-semibold text-foreground truncate">{selected.name}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <Badge className={cn('capitalize text-[10px]', getFormStatusColor(selected.submission_status))}>
+            <Badge className={cn('capitalize text-[12px]', getFormStatusColor(selected.submission_status))}>
               {selected.submission_status === 'submitted' ? 'Under Review' : 'Reviewed'}
             </Badge>
             {selected.submitted_at && (
-              <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
+              <span className="text-[12px] text-muted-foreground flex items-center gap-1 font-mono">
                 <Calendar className="w-3 h-3" /> {formatDate(selected.submitted_at)}
               </span>
             )}
@@ -181,7 +181,7 @@ function SubmissionAnswers({ assessment }) {
     const values = formatAnswerValue(q, raw);
     if (!values || values.length === 0) {
       return (
-        <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2 text-xs text-muted-foreground/70 italic">
+        <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2 text-xs text-muted-foreground italic">
           No answer
         </div>
       );
@@ -201,7 +201,7 @@ function SubmissionAnswers({ assessment }) {
       );
     }
     return (
-      <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2.5 text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap" dir="auto">
+      <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2.5 text-[14px] text-foreground/90 leading-relaxed whitespace-pre-wrap" dir="auto">
         {values.map((v, i) => (
           <span key={i}>{v}</span>
         ))}
@@ -224,12 +224,12 @@ function SubmissionAnswers({ assessment }) {
               const raw = responseByQuestion.get(q.id);
               return (
                 <div key={q.id} className="space-y-1.5">
-                  <p className="text-[13px] font-medium text-foreground" dir="auto">
+                  <p className="text-[14px] font-medium text-foreground" dir="auto">
                     {q.label}
                     {q.required && <span className="text-red-400 ml-1">*</span>}
                   </p>
                   {q.description && (
-                    <p className="text-[11px] text-muted-foreground" dir="auto">{q.description}</p>
+                    <p className="text-[12px] text-muted-foreground" dir="auto">{q.description}</p>
                   )}
                   {renderAnswer(q, raw)}
                 </div>

@@ -17,16 +17,16 @@ export default function TodayFocus({
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-display">
+          <h2 className="ybs-section-title">
             Today&apos;s Focus
           </h2>
           <p className="text-xs text-muted-foreground">
-            The core daily commitments required to achieve your goal.
+            A little consistency. Meaningful progress.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="ybs-focus-grid">
         <TodayWorkoutCard
           workout={workout}
           todayLog={todayWorkoutLog}

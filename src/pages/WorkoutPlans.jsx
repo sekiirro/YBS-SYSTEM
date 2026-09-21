@@ -151,7 +151,7 @@ export default function WorkoutPlans() {
           type="button"
           onClick={() => setWorkspaceFilter('all')}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
             workspaceFilter === 'all'
               ? 'bg-secondary text-foreground border border-border'
               : 'text-muted-foreground hover:text-foreground'
@@ -165,7 +165,7 @@ export default function WorkoutPlans() {
             type="button"
             onClick={() => setWorkspaceFilter(w.id)}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+              'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
               workspaceFilter === w.id
                 ? 'bg-secondary text-foreground border border-border'
                 : 'text-muted-foreground hover:text-foreground'
@@ -181,7 +181,7 @@ export default function WorkoutPlans() {
         <button
           onClick={() => { setView('client'); setSearch(''); }}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
             view === 'client'
               ? 'bg-secondary text-foreground border border-border'
               : 'text-muted-foreground hover:text-foreground'
@@ -192,7 +192,7 @@ export default function WorkoutPlans() {
         <button
           onClick={() => { setView('template'); setSearch(''); }}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
             view === 'template'
               ? 'bg-secondary text-foreground border border-border'
               : 'text-muted-foreground hover:text-foreground'
@@ -210,7 +210,7 @@ export default function WorkoutPlans() {
           placeholder={view === 'client' ? 'Search by program, split, or client…' : 'Search templates…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+          className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
         />
       </div>
 
@@ -233,7 +233,7 @@ export default function WorkoutPlans() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="ybs-program-library">
           {filtered.map((p) => {
             const splitDisplayName = p.split_type === 'custom' && p.custom_split_name
               ? p.custom_split_name
@@ -244,6 +244,10 @@ export default function WorkoutPlans() {
             return (
               <div
                 key={p.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`Open workout program: ${p.name}`}
+                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) navigate(`/workouts/builder/${p.id}`); }}
                 onClick={() => navigate(`/workouts/builder/${p.id}`)}
                 className="surface-card p-5 hover:glow-subtle transition-all cursor-pointer rounded-2xl border border-border flex flex-col justify-between group"
               >
@@ -252,13 +256,13 @@ export default function WorkoutPlans() {
                     <h3 className="text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                       {p.name}
                     </h3>
-                    <Badge className="text-[10px] font-mono capitalize shrink-0">
+                    <Badge className="text-[12px] font-mono capitalize shrink-0">
                       {p.is_template ? 'Template' : 'Active'}
                     </Badge>
                   </div>
 
                   {!p.is_template && p.client_name && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
+                    <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-3">
                       <User className="w-3 h-3 text-primary shrink-0" />
                       <span className="truncate">{p.client_name}</span>
                       {p.client_code && <span className="font-mono text-muted-foreground/80 shrink-0">({p.client_code})</span>}
@@ -267,22 +271,22 @@ export default function WorkoutPlans() {
 
                   {/* Split and Session Info */}
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 rounded-md bg-secondary text-[11px] font-medium text-foreground capitalize border border-border/50">
+                    <span className="px-2 py-0.5 rounded-md bg-secondary text-[12px] font-medium text-foreground capitalize border border-border/50">
                       {splitDisplayName}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-[12px] text-muted-foreground">
                       {p.days?.length || 0} {p.days?.length === 1 ? 'day' : 'days'}
                     </span>
                   </div>
 
                   {/* Volume Metric Pill */}
-                  <div className="p-3 rounded-xl bg-secondary/30 border border-border/40 mb-3">
+                  <div className="py-5 border-y border-border/50 mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <span className="text-[12px] text-muted-foreground flex items-center gap-1">
                         <Activity className="w-3 h-3 text-primary" /> Total Working Volume
                       </span>
-                      <span className="font-mono text-[13px] font-semibold text-primary">
-                        {p.total_working_sets || 0} <span className="text-[10px] font-normal text-muted-foreground font-sans">sets/wk</span>
+                      <span className="tabular-nums text-3xl font-semibold text-primary">
+                        {p.total_working_sets || 0} <span className="text-[12px] font-normal text-muted-foreground font-sans">sets/wk</span>
                       </span>
                     </div>
 
@@ -291,7 +295,7 @@ export default function WorkoutPlans() {
                         {topMuscles.map((m) => (
                           <span
                             key={m.muscle}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 text-muted-foreground capitalize"
+                            className="text-[12px] px-1.5 py-0.5 rounded bg-background/50 border border-border/30 text-muted-foreground capitalize"
                           >
                             {m.muscle}: <span className="font-mono text-foreground font-medium">{m.sets}</span>
                           </span>
@@ -315,7 +319,7 @@ export default function WorkoutPlans() {
                       <Copy className="w-3.5 h-3.5" /> Use as Template
                     </button>
                   ) : (
-                    <span className="text-[11px] group-hover:text-foreground transition-colors flex items-center gap-1">
+                    <span className="text-[12px] group-hover:text-foreground transition-colors flex items-center gap-1">
                       <Edit3 className="w-3 h-3" /> Edit Program
                     </span>
                   )}
@@ -436,7 +440,7 @@ export default function WorkoutPlans() {
                       >
                         <div>
                           <span className="font-medium text-foreground block">{t.name}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono">
+                          <span className="text-[12px] text-muted-foreground font-mono">
                             {(t.split_type || 'custom').replace(/_/g, ' ')} · {t.days_count ?? t.days?.length ?? 0} days · {t.working_sets ?? t.total_working_sets ?? 0} working sets
                           </span>
                         </div>

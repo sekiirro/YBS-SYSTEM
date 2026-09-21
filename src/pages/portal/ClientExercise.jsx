@@ -4,12 +4,13 @@ import { WorkoutsService } from '@/services/workouts';
 import { ClientsService } from '@/services/clients';
 import ClientWorkoutTracker from '@/components/workouts/ClientWorkoutTracker';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { LoadingState } from '@/components/ui';
+import { ErrorState, LoadingState } from '@/components/ui';
 import { Dumbbell } from 'lucide-react';
 
 export default function ClientExercise() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [client, setClient] = useState(null);
   const [workout, setWorkout] = useState(null);
 
@@ -20,6 +21,7 @@ export default function ClientExercise() {
     }
     try {
       setLoading(true);
+      setLoadError(false);
       const [c, wps] = await Promise.all([
         ClientsService.getById(user.self_client_id),
         WorkoutsService.list({ client_id: user.self_client_id }),
@@ -27,6 +29,7 @@ export default function ClientExercise() {
       setClient(c);
       setWorkout(wps?.[0] || null);
     } catch (err) {
+      setLoadError(true);
       console.error('Error loading client exercise plan:', err);
     } finally {
       setLoading(false);
@@ -39,6 +42,8 @@ export default function ClientExercise() {
 
   if (loading) return <LoadingState label="Loading your exercise plan…" />;
 
+  if (loadError) return <ErrorState onRetry={loadData} />;
+
   if (!workout) {
     return (
       <div className="space-y-6">
@@ -49,7 +54,7 @@ export default function ClientExercise() {
               My Exercise Plan
             </h1>
           </div>
-          <p className="text-[13px] text-muted-foreground mt-1">
+          <p className="text-[14px] text-muted-foreground mt-1">
             Periodized training routines, prescribed volume, and live workout logging.
           </p>
         </div>
@@ -64,7 +69,7 @@ export default function ClientExercise() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="ybs-tracker space-y-8 animate-in fade-in duration-300">
       <div className="pb-4 border-b border-border/60">
         <div className="flex items-center gap-2">
           <Dumbbell className="w-5 h-5 text-primary" />
@@ -72,7 +77,7 @@ export default function ClientExercise() {
             My Exercise Plan
           </h1>
         </div>
-        <p className="text-[13px] text-muted-foreground mt-1">
+        <p className="text-[14px] text-muted-foreground mt-1">
           Perform your scheduled training, log sets with weights and reps, and build progressive overload.
         </p>
       </div>

@@ -1,64 +1,62 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* YBS — Tech-Forward SaaS dark theme (reference-aligned) */
-    --background: 232 29% 5%;
-    --foreground: 210 40% 98%;
-    --card: 230 24% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 230 24% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 228 22% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 228 22% 12%;
-    --muted-foreground: 215 25% 60%;
-    --accent: 228 22% 14%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 228 20% 18%;
-    --input: 228 20% 18%;
-    --ring: 217 91% 60%;
-    --success: 160 84% 39%;
-    --warning: 38 91% 50%;
-    --danger: 0 84% 60%;
+    /* YBS — Tech-Forward SaaS dark theme (Capri/Sand/Terra/Mist palette) */
+    --background: 212 9% 8%;
+    --foreground: 51 32% 95%;
+    --card: 212 9% 11%;
+    --card-foreground: 51 32% 95%;
+    --popover: 212 9% 11%;
+    --popover-foreground: 51 32% 95%;
+    --primary: 80 18% 43%;
+    --primary-foreground: 51 32% 95%;
+    --secondary: 212 9% 16%;
+    --secondary-foreground: 51 32% 95%;
+    --muted: 212 9% 16%;
+    --muted-foreground: 212 9% 71%;
+    --accent: 10 45% 40%;
+    --accent-foreground: 51 32% 95%;
+    --destructive: 10 45% 40%;
+    --destructive-foreground: 51 32% 95%;
+    --border: 212 9% 22%;
+    --input: 212 9% 22%;
+    --ring: 80 18% 43%;
+    --success: 80 18% 43%;
+    --warning: 51 32% 77%;
+    --danger: 10 45% 40%;
     --radius: 0.75rem;
     --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     /* Sidebar tokens */
-    --sidebar-background: 232 29% 5%;
-    --sidebar-foreground: 215 25% 60%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 228 22% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 228 20% 18%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 212 9% 8%;
+    --sidebar-foreground: 212 9% 71%;
+    --sidebar-primary: 80 18% 43%;
+    --sidebar-primary-foreground: 51 32% 95%;
+    --sidebar-accent: 212 9% 14%;
+    --sidebar-accent-foreground: 51 32% 95%;
+    --sidebar-border: 212 9% 22%;
+    --sidebar-ring: 80 18% 43%;
     /* Nutrition workspace surface tokens */
-    --nutri-surface: 228 22% 11%;
-    --nutri-surface-2: 228 22% 14%;
-    --nutri-border-strong: 228 20% 22%;
-    --nutri-border-soft: 228 20% 14%;
-    --nutri-border-faint: 228 20% 10%;
-    --nutri-info: 203 86% 62%;      /* sky — informational / saving */
-    --nutri-macro-p: 199 91% 63%;    /* protein */
-    --nutri-macro-c: 43 91% 57%;     /* carbs */
-    --nutri-macro-f: 0 86% 63%;      /* fat */
+    --nutri-surface: 212 9% 10%;
+    --nutri-surface-2: 212 9% 13%;
+    --nutri-border-strong: 212 9% 20%;
+    --nutri-border-soft: 212 9% 15%;
+    --nutri-border-faint: 212 9% 11%;
+    --nutri-info: 212 9% 71%;
+    --nutri-macro-p: 80 18% 43%;
+    --nutri-macro-c: 51 32% 77%;
+    --nutri-macro-f: 10 45% 40%;
     /* Chart tokens */
-    --chart-1: 217 91% 60%;
-    --chart-2: 160 84% 39%;
-    --chart-3: 38 91% 50%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 215 25% 60%;
+    --chart-1: 80 18% 43%;
+    --chart-2: 51 32% 77%;
+    --chart-3: 10 45% 40%;
+    --chart-4: 212 9% 71%;
+    --chart-5: 80 18% 30%;
   }
 }
 
@@ -123,14 +121,14 @@
   }
 
   .gradient-text {
-    background: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(215 25% 75%) 100%);
+    background: linear-gradient(180deg, hsl(51 32% 95%) 0%, hsl(212 9% 71%) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .accent-gradient-text {
-    background: linear-gradient(135deg, hsl(199 95% 65%) 0%, hsl(217 91% 60%) 50%, hsl(245 80% 65%) 100%);
+    background: linear-gradient(135deg, hsl(80 18% 55%) 0%, hsl(80 18% 43%) 50%, hsl(10 45% 50%) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -174,7 +172,7 @@
 
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(210 40% 98%), hsl(215 25% 65%));
+    background-image: linear-gradient(135deg, hsl(51 32% 95%), hsl(212 9% 71%));
   }
 
   .pulse-dot {

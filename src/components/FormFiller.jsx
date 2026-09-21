@@ -208,7 +208,7 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
         {/* Questions Flow */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
           {validationErrors._form && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px] flex items-center gap-2">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" /> {validationErrors._form}
             </div>
           )}
@@ -230,7 +230,7 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
                 )}
                 <div className="surface-card p-3.5 sm:p-4 rounded-xl border border-border/70 space-y-2.5">
                   <div className="flex items-start gap-2.5">
-                    <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-0.5 shrink-0 font-mono">
+                    <span className="text-[12px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-0.5 shrink-0 font-mono">
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -282,7 +282,7 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
                 <SaveStatus status={autosave.status} dirty={autosave.dirty} onRetry={autosave.flush} />
               )}
               {saveMessage && (
-                <span className="text-[11px] text-emerald-400 font-medium hidden sm:inline">{saveMessage}</span>
+                <span className="text-[12px] text-emerald-400 font-medium hidden sm:inline">{saveMessage}</span>
               )}
             </div>
             <Button
@@ -301,7 +301,7 @@ export default function FormFiller({ assessment, onSave, onSubmit, onClose }) {
             style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
             className="px-4 sm:px-5 py-3.5 border-t border-border bg-card/95 shrink-0 text-center sticky bottom-0 z-10"
           >
-            <p className="text-[13px] text-muted-foreground">This form has been submitted. Your plan will be ready within 3–7 days.</p>
+            <p className="text-[14px] text-muted-foreground">This form has been submitted. Your plan will be ready within 3–7 days.</p>
           </div>
         )}
       </div>
@@ -363,7 +363,7 @@ function getUploadInstruction(question) {
  */
 function QuestionInput({ question, value, onChange, disabled, error }) {
   const { question_type, options } = question;
-  const baseInput = 'w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-colors disabled:opacity-60';
+  const baseInput = 'w-full h-10 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors disabled:opacity-60';
   const errorBorder = error ? 'border-red-500/40' : '';
 
   const renderInput = () => {
@@ -390,7 +390,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
             placeholder="Your answer…"
-            className={cn('w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/40 transition-colors resize-none disabled:opacity-60', errorBorder)}
+            className={cn('w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 transition-colors resize-none disabled:opacity-60', errorBorder)}
           />
         );
 
@@ -414,7 +414,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
                   disabled={disabled}
                   className="accent-primary shrink-0"
                 />
-                <span className="text-[13px]" dir="auto">{opt}</span>
+                <span className="text-[14px]" dir="auto">{opt}</span>
               </label>
             ))}
           </div>
@@ -443,7 +443,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
                   }}
                   className="accent-primary shrink-0"
                 />
-                <span className="text-[13px]" dir="auto">{opt}</span>
+                <span className="text-[14px]" dir="auto">{opt}</span>
               </label>
             ))}
           </div>
@@ -460,7 +460,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
                 disabled={disabled}
                 onClick={() => onChange(opt)}
                 className={cn(
-                  'flex-1 h-10 rounded-lg border text-[13px] font-medium transition-all',
+                  'flex-1 h-10 rounded-lg border text-[14px] font-medium transition-all',
                   value === opt ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-border hover:text-foreground',
                   disabled && 'opacity-60'
                 )}
@@ -554,7 +554,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
                   disabled={disabled}
                   onClick={() => onChange(n)}
                   className={cn(
-                    'min-w-9 h-9 px-2 rounded-lg border text-[13px] font-semibold transition-all',
+                    'min-w-9 h-9 px-2 rounded-lg border text-[14px] font-semibold transition-all',
                     isSelected ? 'border-amber-400/50 bg-amber-500/15 text-amber-400' : 'border-border text-muted-foreground hover:text-foreground',
                     disabled && 'opacity-60'
                   )}
@@ -573,7 +573,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
           <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 space-y-2 transition-all">
             <div className="flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-primary shrink-0" />
-              <p className="text-[13px] font-semibold text-primary" dir="auto">
+              <p className="text-[14px] font-semibold text-primary" dir="auto">
                 {title}
               </p>
             </div>
@@ -582,7 +582,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
               <strong className="text-foreground font-bold">رقم المتابعة الخاص بك</strong>.
             </p>
             <div className="pt-0.5">
-              <span className="inline-flex items-center text-[11px] text-muted-foreground bg-secondary/80 px-2.5 py-0.5 rounded-full border border-border/40" dir="auto">
+              <span className="inline-flex items-center text-[12px] text-muted-foreground bg-secondary/80 px-2.5 py-0.5 rounded-full border border-border/40" dir="auto">
                 يتم الإرسال عبر قنوات المتابعة المباشرة — لا يتطلب رفع ملف هنا
               </span>
             </div>
@@ -607,7 +607,7 @@ function QuestionInput({ question, value, onChange, disabled, error }) {
   return (
     <div>
       {renderInput()}
-      {error && <p className="text-[11px] text-red-400 mt-1">{error}</p>}
+      {error && <p className="text-[12px] text-red-400 mt-1">{error}</p>}
     </div>
   );
 }

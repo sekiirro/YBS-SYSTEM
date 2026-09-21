@@ -88,7 +88,7 @@ export default function PortalDashboard({ view = 'dashboard' }) {
               >
                 <h4 className="text-sm font-semibold text-foreground font-display">{n.title}</h4>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{n.message}</p>
-                <p className="text-[10px] text-muted-foreground/60 font-mono mt-2">{formatDate(n.created_at || n.created_date)}</p>
+                <p className="text-[12px] text-muted-foreground font-mono mt-2">{formatDate(n.created_at || n.created_date)}</p>
               </div>
             ))}
           </div>
@@ -119,31 +119,31 @@ export default function PortalDashboard({ view = 'dashboard' }) {
             My Profile
           </h1>
         </div>
-        <div className="surface-card p-6 rounded-2xl border border-border/80 space-y-6">
+        <div className="ybs-profile space-y-6">
           <div className="flex items-center gap-4 pb-5 border-b border-border/60">
             <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xl font-display">
               {client.full_name?.[0]?.toUpperCase() || 'C'}
             </div>
             <div>
-              <p className="text-lg font-bold text-foreground font-display">{client.full_name}</p>
+              <p className="text-3xl font-bold text-foreground tracking-tight">{client.full_name}</p>
               <p className="text-xs text-muted-foreground font-mono mt-0.5">{client.client_code}</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
-              <span className="text-muted-foreground text-[10px] uppercase font-semibold block">Phone</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-base">
+            <div className="py-5 border-b border-border min-w-0 break-words">
+              <span className="text-muted-foreground text-[12px] uppercase font-semibold block">Phone</span>
               <p className="font-mono text-foreground font-medium mt-1">{client.phone || '—'}</p>
             </div>
-            <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
-              <span className="text-muted-foreground text-[10px] uppercase font-semibold block">Email</span>
+            <div className="py-5 border-b border-border min-w-0 break-words">
+              <span className="text-muted-foreground text-[12px] uppercase font-semibold block">Email</span>
               <p className="font-mono text-foreground font-medium mt-1">{client.email || '—'}</p>
             </div>
-            <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
-              <span className="text-muted-foreground text-[10px] uppercase font-semibold block">Assigned Coach</span>
+            <div className="py-5 border-b border-border min-w-0 break-words">
+              <span className="text-muted-foreground text-[12px] uppercase font-semibold block">Assigned Coach</span>
               <p className="font-medium text-foreground mt-1">{client.assigned_ybs_coach_name || 'YBS Coaching Team'}</p>
             </div>
-            <div className="p-3 rounded-lg bg-secondary/30 border border-border/40">
-              <span className="text-muted-foreground text-[10px] uppercase font-semibold block">Follow-up Day</span>
+            <div className="py-5 border-b border-border min-w-0 break-words">
+              <span className="text-muted-foreground text-[12px] uppercase font-semibold block">Follow-up Day</span>
               <p className="font-medium text-foreground mt-1 capitalize">{client.follow_up_day || 'Saturday'}</p>
             </div>
           </div>

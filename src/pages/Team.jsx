@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/components/ui/responsive-table';
 import React, { useState, useEffect } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
@@ -75,15 +76,15 @@ export default function Team() {
       ) : (
         <div className="surface-card overflow-hidden border border-white/[0.08]">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <ResponsiveTable className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Member</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Role</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Phone</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Clients</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Status</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Actions</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Member</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Role</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Clients</th>
+                  <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th className="text-right px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -91,13 +92,13 @@ export default function Team() {
                   <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] hover:shadow-[inset_2px_0_0_hsl(var(--primary))] transition-all duration-300 group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.08)] flex items-center justify-center text-primary text-[11px] font-semibold shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.08)] flex items-center justify-center text-primary text-[12px] font-semibold shrink-0">
                           {getInitials(memberDisplayName(u))}
                         </div>
                         <div>
-                          <p className="text-[13px] font-medium">{memberDisplayName(u)}</p>
+                          <p className="text-[14px] font-medium">{memberDisplayName(u)}</p>
                           {u.email && memberDisplayName(u).toLowerCase() !== u.email.trim().toLowerCase() && (
-                            <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                            <p className="text-[12px] text-muted-foreground">{u.email}</p>
                           )}
                         </div>
                       </div>
@@ -126,7 +127,7 @@ export default function Team() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         </div>
       )}
@@ -194,7 +195,7 @@ function EditMemberModal({ user, onClose, onSaved }) {
   return (
     <Modal open onClose={onClose} title="Edit Member Name">
       <div className="space-y-4">
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[14px] text-red-400">{error}</div>}
         <p className="text-[12px] text-muted-foreground">
           Update the name for <span className="text-foreground font-medium">{email}</span>. Role, email and workspace access are not changed.
         </p>
@@ -266,18 +267,18 @@ function InviteModal({ workspaceId, onClose }) {
   return (
     <Modal open onClose={onClose} title="Invite Team Member">
       <div className="space-y-4">
-        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[13px] text-red-400">{error}</div>}
+        {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[14px] text-red-400">{error}</div>}
         {result ? (
           result.status === 'already_active' ? (
             <div className="space-y-4">
-              <p className="text-[13px] text-muted-foreground">{result.message}</p>
+              <p className="text-[14px] text-muted-foreground">{result.message}</p>
               <div className="flex justify-end gap-2 pt-2">
                 <Button onClick={onClose}>Done</Button>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-[14px] text-muted-foreground">
                 Invitation created for <span className="text-foreground font-medium">{result.email}</span>. No email is sent — share this link directly with the member (WhatsApp, Telegram, SMS). Opening it takes them to set their password with the selected role.
               </p>
               <Input label="Invitation Link" readOnly value={result.invite_url} />

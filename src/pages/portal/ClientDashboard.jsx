@@ -227,16 +227,16 @@ export default function ClientDashboard() {
             description="Your coach has not assigned your nutrition or training programs yet. They will appear here as soon as they are published to your account."
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="ybs-programs">
             {/* Active Nutrition Plan Card */}
             {nutrition && (
               <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between glow-subtle">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                       <Apple className="w-3.5 h-3.5 text-primary" /> Nutrition Plan
                     </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border capitalize ${planStatusStyle(nutrition.status)}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium border capitalize ${planStatusStyle(nutrition.status)}`}>
                       {(nutrition.status || 'active').replace(/_/g, ' ')}
                     </span>
                   </div>
@@ -264,10 +264,10 @@ export default function ClientDashboard() {
               <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between glow-subtle">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                       <Dumbbell className="w-3.5 h-3.5 text-primary" /> Workout Plan
                     </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border capitalize ${planStatusStyle(workout.status)}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium border capitalize ${planStatusStyle(workout.status)}`}>
                       {(workout.status || 'active').replace(/_/g, ' ')}
                     </span>
                   </div>

@@ -35,37 +35,37 @@ export default function NutritionMacroSummary({ totals, className }) {
         <div className="flex items-baseline gap-2">
           <div className="flex items-center gap-1.5 text-primary">
             <Flame className="w-4 h-4 shrink-0 fill-primary/20" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider font-mono">Total</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wider font-mono">Total</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold font-display tracking-tight text-foreground tabular-nums">
               {calories.toLocaleString()}
             </span>
-            <span className="text-[11px] text-muted-foreground font-mono">kcal</span>
+            <span className="text-[12px] text-muted-foreground font-mono">kcal</span>
           </div>
         </div>
 
         {/* Macro Pill Badges */}
-        <div className="flex items-center gap-2 font-mono text-[11px]">
+        <div className="flex items-center gap-2 font-mono text-[12px]">
           {/* Protein */}
           <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400">
             <Beef className="w-3 h-3 shrink-0" />
             <span className="font-semibold">{Math.round(protein)}g</span>
-            <span className="text-[10px] text-sky-400/70">P ({pPct}%)</span>
+            <span className="text-[12px] text-sky-400/70">P ({pPct}%)</span>
           </div>
 
           {/* Carbs */}
           <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400">
             <Wheat className="w-3 h-3 shrink-0" />
             <span className="font-semibold">{Math.round(carbs)}g</span>
-            <span className="text-[10px] text-amber-400/70">C ({cPct}%)</span>
+            <span className="text-[12px] text-amber-400/70">C ({cPct}%)</span>
           </div>
 
           {/* Fat */}
           <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400">
             <Droplets className="w-3 h-3 shrink-0" />
             <span className="font-semibold">{Math.round(fat)}g</span>
-            <span className="text-[10px] text-rose-400/70">F ({fPct}%)</span>
+            <span className="text-[12px] text-rose-400/70">F ({fPct}%)</span>
           </div>
         </div>
       </div>

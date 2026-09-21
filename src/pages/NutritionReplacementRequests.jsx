@@ -109,7 +109,7 @@ export default function NutritionReplacementRequests() {
             key={t.key}
             onClick={() => setFilter(t.key)}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+              'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
               filter === t.key
                 ? 'bg-secondary text-foreground border border-border'
                 : 'text-muted-foreground hover:text-foreground'
@@ -151,12 +151,12 @@ export default function NutritionReplacementRequests() {
                       {client.full_name || 'Client'}
                     </span>
                     {client.client_code && (
-                      <span className="text-[11px] font-mono text-muted-foreground">({client.client_code})</span>
+                      <span className="text-[12px] font-mono text-muted-foreground">({client.client_code})</span>
                     )}
                     <Badge className={meta.className}>{meta.label}</Badge>
                     <Badge
                       className={cn(
-                        'text-[10px]',
+                        'text-[12px]',
                         req.request_type === 'other'
                           ? 'text-purple-400 bg-purple-500/10 border-purple-500/25'
                           : 'text-primary bg-primary/10 border-primary/20'
@@ -165,7 +165,7 @@ export default function NutritionReplacementRequests() {
                       {req.request_type === 'other' ? 'Other' : 'Replacement'}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
                     <Clock className="w-3.5 h-3.5" />
                     <span title={formatDate(req.created_at)}>{timeAgo(req.created_at)}</span>
                   </div>
@@ -174,19 +174,19 @@ export default function NutritionReplacementRequests() {
                 {/* Body: current meal + requested replacement + reason */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
                   <div className="space-y-2 text-xs">
-                    <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    <div className="flex items-center gap-1.5 text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                       <Utensils className="w-3.5 h-3.5 text-primary" /> Current Meal
                     </div>
-                    <p className="font-semibold text-foreground text-[13px]">{req.meal_name}</p>
+                    <p className="font-semibold text-foreground text-[14px]">{req.meal_name}</p>
                     <p className="text-foreground/90">{req.current_food_name}</p>
-                    <p className="text-muted-foreground font-mono text-[11px]">
+                    <p className="text-muted-foreground font-mono text-[12px]">
                       {fmtMacro(macros.amount)} {macros.unit || 'g'} · {Math.round(Number(macros.calories) || 0)} kcal
                       {req.current_food_id && plan?.name ? ` · Plan: ${plan.name}` : ''}
                     </p>
                   </div>
 
                   <div className="space-y-2 text-xs">
-                    <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    <div className="flex items-center gap-1.5 text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                       <ArrowLeftRight className="w-3.5 h-3.5 text-primary" /> Requested Replacement
                     </div>
                     {req.request_type === 'other' ? (
@@ -195,9 +195,9 @@ export default function NutritionReplacementRequests() {
                       </p>
                     ) : (
                       <>
-                        <p className="font-semibold text-foreground text-[13px]">{req.requested_food_name || '—'}</p>
+                        <p className="font-semibold text-foreground text-[14px]">{req.requested_food_name || '—'}</p>
                         {req.requested_replacement && (
-                          <p className="text-muted-foreground font-mono text-[11px]">
+                          <p className="text-muted-foreground font-mono text-[12px]">
                             {fmtMacro(req.requested_replacement.recommended_amount)}{' '}
                             {req.requested_replacement.recommended_unit || 'g'} ·{' '}
                             {Math.round(Number(req.requested_replacement.estimated_calories) || 0)} kcal ·{' '}
@@ -216,7 +216,7 @@ export default function NutritionReplacementRequests() {
                   <div className="flex items-start gap-2 text-[12px] text-muted-foreground leading-relaxed bg-secondary/30 border border-border/40 p-3 rounded-xl">
                     <Quote className="w-3.5 h-3.5 shrink-0 text-primary mt-0.5" />
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-foreground/70 font-semibold block mb-0.5">
+                      <span className="text-[12px] uppercase tracking-wider text-foreground/70 font-semibold block mb-0.5">
                         Why would you like to replace this meal?
                       </span>
                       {req.reason}
@@ -226,7 +226,7 @@ export default function NutritionReplacementRequests() {
 
                 {/* Footer: reviewer meta + actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-border/40">
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-[12px] text-muted-foreground">
                     {req.status === 'pending'
                       ? `Requested by ${req.requester_name || 'Client'}`
                       : (
@@ -264,12 +264,12 @@ export default function NutritionReplacementRequests() {
                   )}
 
                   {req.status === 'approved' && (
-                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                       <Check className="w-3.5 h-3.5 text-emerald-400" /> Replacement applied
                     </span>
                   )}
                   {req.status === 'rejected' && (
-                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                       <X className="w-3.5 h-3.5 text-red-400" /> No changes made to the plan
                     </span>
                   )}

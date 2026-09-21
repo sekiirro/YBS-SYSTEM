@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { AssessmentsService } from '@/services/assessments';
 import FormFiller from '@/components/FormFiller';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { LoadingState, Button, Badge } from '@/components/ui';
+import { ErrorState, LoadingState, Button, Badge } from '@/components/ui';
 import { formatDate, getFormStatusColor, getFormStatusLabel } from '@/lib/ybs-utils';
 import { ClipboardList, Clock, CheckCircle2, Eye, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 export default function ClientForms() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState([]);
   const [statusTab, setStatusTab] = useState('all'); // 'all' | 'pending' | 'submitted' | 'reviewed'
   const [activeForm, setActiveForm] = useState(null);
@@ -22,9 +23,11 @@ export default function ClientForms() {
     }
     try {
       setLoading(true);
+      setLoadError(false);
       const list = await AssessmentsService.list({ client_id: user.self_client_id });
       setForms(list || []);
     } catch (err) {
+      setLoadError(true);
       console.error('Error loading client forms:', err);
     } finally {
       setLoading(false);
@@ -70,6 +73,7 @@ export default function ClientForms() {
   };
 
   if (loading) return <LoadingState label="Loading your check-ins and forms…" />;
+  if (loadError) return <ErrorState onRetry={loadForms} />;
 
   const pendingCount = forms.filter((f) => f.submission_status === 'pending').length;
 
@@ -84,13 +88,13 @@ export default function ClientForms() {
               My Forms & Check-ins
             </h1>
           </div>
-          <p className="text-[13px] text-muted-foreground mt-1">
+          <p className="text-[14px] text-muted-foreground mt-1">
             Complete scheduled check-ins so your coach can analyze your progress and calibrate your plans.
           </p>
         </div>
 
         {/* Status filter tabs */}
-        <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/60 self-start sm:self-auto">
+        <div className="ybs-forms-filter" aria-label="Filter forms">
           {[
             { id: 'all', label: 'All', count: forms.length },
             { id: 'pending', label: 'Awaiting Response', count: pendingCount },
@@ -100,6 +104,7 @@ export default function ClientForms() {
             <button
               key={tab.id}
               onClick={() => setStatusTab(tab.id)}
+              aria-pressed={statusTab === tab.id}
               className={cn(
                 'px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5',
                 statusTab === tab.id
@@ -108,7 +113,7 @@ export default function ClientForms() {
               )}
             >
               <span>{tab.label}</span>
-              <span className={cn('text-[10px] px-1 rounded-full', statusTab === tab.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
+              <span className={cn('text-[12px] px-1 rounded-full', statusTab === tab.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
                 {tab.count}
               </span>
             </button>
@@ -128,7 +133,7 @@ export default function ClientForms() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3.5">
+        <div className="border-t border-border">
           {filteredForms.map((f) => {
             const isPending = f.submission_status === 'pending';
             const isReviewed = f.submission_status === 'reviewed';
@@ -136,12 +141,12 @@ export default function ClientForms() {
             return (
               <div
                 key={f.id}
-                className="surface-card p-5 rounded-xl border border-border/80 hover:glow-subtle transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="ybs-form-row"
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-semibold text-foreground font-display">{f.name}</h3>
-                    <Badge className={cn('capitalize text-[11px]', getFormStatusColor(f.submission_status))}>
+                    <Badge className={cn('capitalize text-[12px]', getFormStatusColor(f.submission_status))}>
                       {f.submission_status === 'submitted' ? 'Under Review' : getFormStatusLabel(f.submission_status)}
                     </Badge>
                   </div>

@@ -120,7 +120,7 @@ export default function NutritionPlans() {
         <button
           onClick={() => { setView('client'); setSearch(''); }}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
             view === 'client'
               ? 'bg-secondary text-foreground border border-border'
               : 'text-muted-foreground hover:text-foreground'
@@ -131,7 +131,7 @@ export default function NutritionPlans() {
         <button
           onClick={() => { setView('template'); setSearch(''); }}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+            'px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors',
             view === 'template'
               ? 'bg-secondary text-foreground border border-border'
               : 'text-muted-foreground hover:text-foreground'
@@ -142,7 +142,7 @@ export default function NutritionPlans() {
         <button
           type="button"
           onClick={() => navigate('/nutrition/requests')}
-          className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-lg text-[14px] font-medium transition-colors bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 flex items-center gap-1.5"
         >
           <ArrowRight className="w-3.5 h-3.5" /> Replacement Requests
         </button>
@@ -156,7 +156,7 @@ export default function NutritionPlans() {
           placeholder={view === 'client' ? 'Search by plan or client…' : 'Search templates…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+          className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
         />
       </div>
 
@@ -179,10 +179,14 @@ export default function NutritionPlans() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="ybs-program-library">
           {filtered.map((p) => (
             <div
               key={p.id}
+              role="link"
+              tabIndex={0}
+              aria-label={`Open nutrition plan: ${p.name}`}
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) navigate(`/nutrition/builder/${p.id}`); }}
               onClick={() => navigate(`/nutrition/builder/${p.id}`)}
               className="surface-card p-5 hover:glow-subtle transition-all cursor-pointer rounded-2xl border border-border flex flex-col justify-between group"
             >
@@ -192,7 +196,7 @@ export default function NutritionPlans() {
                     {p.name}
                   </h3>
                   <Badge className={cn(
-                    'text-[10px] font-mono capitalize',
+                    'text-[12px] font-mono capitalize',
                     p.is_template ? ''
                     : p.status === 'draft' ? 'text-amber-400 bg-amber-500/10 border-amber-500/25'
                     : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25'
@@ -202,7 +206,7 @@ export default function NutritionPlans() {
                 </div>
 
                 {!p.is_template && p.client_name && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-3">
+                  <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-3">
                     <User className="w-3 h-3 text-primary" />
                     <span>{p.client_name}</span>
                     {p.client_code && <span className="font-mono text-muted-foreground/80">({p.client_code})</span>}
@@ -210,26 +214,26 @@ export default function NutritionPlans() {
                 )}
 
                 {/* Macro Summary Pills */}
-                <div className="grid grid-cols-4 gap-1 text-center py-2 px-1 rounded-lg bg-secondary/30 border border-border/40 text-[11px] font-mono">
+                <div className="ybs-library-macros grid grid-cols-4 gap-3 py-5 text-sm tabular-nums">
                   <div>
-                    <span className="text-[9px] text-muted-foreground block font-sans uppercase">Cal</span>
+                    <span className="text-[12px] text-muted-foreground block font-sans uppercase">Cal</span>
                     <span className="font-semibold text-primary">{Math.round(p.daily_calories || 0)}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-muted-foreground block font-sans uppercase">P</span>
+                    <span className="text-[12px] text-muted-foreground block font-sans uppercase">P</span>
                     <span>{Math.round(p.daily_protein || 0)}g</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-muted-foreground block font-sans uppercase">C</span>
+                    <span className="text-[12px] text-muted-foreground block font-sans uppercase">C</span>
                     <span>{Math.round(p.daily_carbs || 0)}g</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-muted-foreground block font-sans uppercase">F</span>
+                    <span className="text-[12px] text-muted-foreground block font-sans uppercase">F</span>
                     <span>{Math.round(p.daily_fat || 0)}g</span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-muted-foreground mt-3">
+                <p className="text-[12px] text-muted-foreground mt-3">
                   {p.meals?.length || 0} meals configured
                 </p>
               </div>
@@ -248,7 +252,7 @@ export default function NutritionPlans() {
                     <Copy className="w-3.5 h-3.5" /> Use as Template
                   </button>
                 ) : (
-                  <span className="text-[11px]">Click to edit</span>
+                  <span className="text-[12px]">Click to edit</span>
                 )}
 
                 <button
@@ -366,7 +370,7 @@ export default function NutritionPlans() {
                       >
                         <div>
                           <span className="font-medium text-foreground block">{t.name}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono">
+                          <span className="text-[12px] text-muted-foreground font-mono">
                             {Math.round(t.daily_calories || 0)} kcal · {(t.meals_count ?? t.meals?.length ?? 0)} meals
                           </span>
                         </div>

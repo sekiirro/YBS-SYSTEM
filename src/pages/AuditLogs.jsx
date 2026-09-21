@@ -39,7 +39,7 @@ export default function AuditLogs() {
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input type="text" placeholder="Search by actor, action, or entity…" value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] placeholder:text-muted-foreground/60 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
+          className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
       </div>
       {filtered.length === 0 ? (
         <EmptyState icon={ScrollText} title="No audit logs" description="System actions will be tracked here" />
@@ -51,14 +51,14 @@ export default function AuditLogs() {
                 <ScrollText className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-foreground">
+                <p className="text-[14px] text-foreground">
                   <span className="font-semibold">{log.actor_name || 'System'}</span>
                   <span className="text-muted-foreground"> {log.action}</span>
                 </p>
                 <p className="text-[12px] text-muted-foreground mt-0.5">
                   <span className="capitalize">{log.entity_type}</span> {log.entity_name && `· ${log.entity_name}`}
                 </p>
-                <p className="text-[11px] text-muted-foreground mt-1.5 font-mono">{formatDateTime(log.created_date)}</p>
+                <p className="text-[12px] text-muted-foreground mt-1.5 font-mono">{formatDateTime(log.created_date)}</p>
               </div>
             </div>
           ))}

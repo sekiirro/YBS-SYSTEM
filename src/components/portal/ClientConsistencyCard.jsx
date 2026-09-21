@@ -102,7 +102,7 @@ export default function ClientConsistencyCard({
     <div className="surface-card p-5 lg:p-6 rounded-xl border border-border/80 glow-subtle">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground block">
             Your Consistency
           </span>
           <h3 className="text-base font-semibold text-foreground mt-0.5 font-display">Weekly Adherence</h3>
@@ -124,7 +124,7 @@ export default function ClientConsistencyCard({
             <Dumbbell className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Workouts</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Workouts</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-lg font-bold text-foreground font-mono">{consistency.workouts}</span>
               <span className="text-xs text-muted-foreground font-mono">/ {consistency.plannedWorkouts != null ? `${consistency.plannedWorkouts} this week` : '—'}</span>
@@ -138,7 +138,7 @@ export default function ClientConsistencyCard({
             <Apple className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Nutrition</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Nutrition</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-lg font-bold text-foreground font-mono">{consistency.nutritionDays}</span>
               <span className="text-xs text-muted-foreground font-mono"> on track this week</span>
@@ -152,7 +152,7 @@ export default function ClientConsistencyCard({
             <ClipboardCheck className="w-4 h-4" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Check-ins</span>
+            <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Check-ins</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-lg font-bold text-foreground font-mono">{consistency.completedForms}</span>
               <span className="text-xs text-muted-foreground font-mono">/ {consistency.totalForms || '—'} completed</span>

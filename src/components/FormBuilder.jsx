@@ -237,7 +237,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {errors.save && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{errors.save}</div>
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{errors.save}</div>
           )}
 
           {/* Form metadata */}
@@ -264,7 +264,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
           {/* Questions */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-foreground">Questions ({questions.length})</h3>
+              <h3 className="text-[14px] font-semibold text-foreground">Questions ({questions.length})</h3>
               <Button variant="outline" size="sm" onClick={addQuestion}>
                 <Plus className="w-3.5 h-3.5" /> Add Question
               </Button>
@@ -289,7 +289,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
 
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-medium text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded">
+                        <span className="text-[12px] font-medium text-muted-foreground bg-secondary/60 px-2 py-0.5 rounded">
                           Q{idx + 1}
                         </span>
                         <TypeIcon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -300,19 +300,19 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
                         value={q.label}
                         onChange={(e) => updateQuestion(idx, 'label', e.target.value)}
                         className={cn(
-                          'w-full h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] text-foreground placeholder:text-muted-foreground/50',
+                          'w-full h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] text-foreground placeholder:text-muted-foreground',
                           'focus:outline-none focus:border-primary/40 transition-colors',
                           errors[`q_${idx}_label`] && 'border-red-500/40'
                         )}
                       />
-                      {errors[`q_${idx}_label`] && <p className="text-[11px] text-red-400">{errors[`q_${idx}_label`]}</p>}
+                      {errors[`q_${idx}_label`] && <p className="text-[12px] text-red-400">{errors[`q_${idx}_label`]}</p>}
 
                       <input
                         type="text"
                         placeholder="Description (optional)"
                         value={q.description || ''}
                         onChange={(e) => updateQuestion(idx, 'description', e.target.value)}
-                        className="w-full h-8 px-3 rounded-lg bg-secondary/30 border border-border/50 text-[12px] text-muted-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/30 transition-colors"
+                        className="w-full h-8 px-3 rounded-lg bg-secondary/30 border border-border/50 text-[12px] text-muted-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/30 transition-colors"
                       />
                     </div>
 
@@ -377,16 +377,16 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
                   {/* Options editor for choice/dropdown types */}
                   {TYPES_WITH_OPTIONS.includes(q.question_type) && (
                     <div className="space-y-2 pl-6">
-                      <p className="text-[11px] font-medium text-muted-foreground">Options</p>
+                      <p className="text-[12px] font-medium text-muted-foreground">Options</p>
                       {(q.options || []).map((opt, optIdx) => (
                         <div key={optIdx} className="flex items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground/60 w-5 text-right">{optIdx + 1}.</span>
+                          <span className="text-[12px] text-muted-foreground w-5 text-right">{optIdx + 1}.</span>
                           <input
                             type="text"
                             placeholder={`Option ${optIdx + 1}`}
                             value={opt}
                             onChange={(e) => updateOption(idx, optIdx, e.target.value)}
-                            className="flex-1 h-8 px-3 rounded-lg bg-secondary/30 border border-border/50 text-[12px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/30 transition-colors"
+                            className="flex-1 h-8 px-3 rounded-lg bg-secondary/30 border border-border/50 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/30 transition-colors"
                           />
                           <button onClick={() => removeOption(idx, optIdx)}
                             className="p-1 text-muted-foreground hover:text-red-400 transition-colors">
@@ -398,7 +398,7 @@ export default function FormBuilder({ open, onClose, onSave, onAutosave, initial
                         className="text-[12px] text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
                         <Plus className="w-3 h-3" /> Add Option
                       </button>
-                      {errors[`q_${idx}_options`] && <p className="text-[11px] text-red-400">{errors[`q_${idx}_options`]}</p>}
+                      {errors[`q_${idx}_options`] && <p className="text-[12px] text-red-400">{errors[`q_${idx}_options`]}</p>}
                     </div>
                   )}
                 </div>

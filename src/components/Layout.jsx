@@ -13,7 +13,8 @@ export default function Layout() {
   const location = useLocation();
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="ybs-workspace flex min-h-screen">
+      <a className="ybs-skip" href="#workspace-content">Skip to content</a>
       <Sidebar
         user={user}
         collapsed={collapsed}
@@ -23,7 +24,7 @@ export default function Layout() {
       />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 p-4 lg:p-6 overflow-x-hidden">
+        <main id="workspace-content" className="ybs-workspace-main flex-1 min-w-0">
           <motion.div
             key={location.pathname}
             variants={pageVariants}

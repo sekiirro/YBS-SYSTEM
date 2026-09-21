@@ -122,7 +122,7 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
               placeholder="Search by food name, Arabic, brand, or alias…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground"
+              className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground"
               autoFocus
             />
           </div>
@@ -165,17 +165,17 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-foreground truncate">{f.name}</span>
                         {f.name_ar && (
-                          <span className="text-[11px] text-muted-foreground" dir="rtl">
+                          <span className="text-[12px] text-muted-foreground" dir="rtl">
                             ({f.name_ar})
                           </span>
                         )}
                         {f.brand && (
-                          <Badge className="text-[10px] py-0 px-1 text-muted-foreground bg-secondary/60 border border-border/40 font-normal">
+                          <Badge className="text-[12px] py-0 px-1 text-muted-foreground bg-secondary/60 border border-border/40 font-normal">
                             {f.brand}
                           </Badge>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground/80 mt-0.5 font-mono">
+                      <div className="text-[12px] text-muted-foreground/80 mt-0.5 font-mono">
                         Per 100g: {Math.round(f.calories || 0)} kcal · {f.protein || 0}P / {f.carbs || 0}C / {f.fat || 0}F
                       </div>
                     </div>
@@ -198,11 +198,11 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">
+                  <span className="text-[12px] uppercase tracking-wider text-primary font-semibold">
                     Selected Food
                   </span>
                   {selectedFood.category && (
-                    <span className="text-[10px] text-muted-foreground capitalize">
+                    <span className="text-[12px] text-muted-foreground capitalize">
                       · {selectedFood.category}
                     </span>
                   )}
@@ -215,7 +215,7 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
 
               {/* Database Reference Note */}
               <div className="text-right shrink-0">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground block font-medium">
+                <span className="text-[12px] uppercase tracking-wider text-muted-foreground block font-medium">
                   DB Reference
                 </span>
                 <span className="text-xs font-mono text-muted-foreground">
@@ -230,7 +230,7 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
                 <label className="text-xs text-foreground font-medium block">
                   Portion & Quantity
                 </label>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-[12px] text-muted-foreground block">
                   Choose unit (e.g. grams, count, tbsp) for automatic normalization
                 </span>
               </div>
@@ -253,7 +253,7 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
 
             {/* Normalization Helper Info */}
             {scaled && unit !== 'g' && (
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-secondary/30 px-3 py-1.5 rounded-lg border border-border/30">
+              <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground bg-secondary/30 px-3 py-1.5 rounded-lg border border-border/30">
                 <Info className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span>
                   Normalized to <strong className="text-foreground font-mono">{scaled.gramWeight}g</strong> from the 100g database standard.
@@ -271,28 +271,28 @@ export default function FoodPickerModal({ open, onClose, onSelectFood }) {
               /* Live Calculated Nutrition Cards */
               <div className="grid grid-cols-4 gap-2 pt-0.5 text-center">
                 <div className="bg-background/90 p-2.5 rounded-xl border border-primary/20">
-                  <p className="text-[10px] text-muted-foreground uppercase font-medium">Calories</p>
+                  <p className="text-[12px] text-muted-foreground uppercase font-medium">Calories</p>
                   <p className="text-base font-bold text-primary font-mono">{scaled.calories}</p>
-                  <span className="text-[10px] text-muted-foreground font-mono">kcal</span>
+                  <span className="text-[12px] text-muted-foreground font-mono">kcal</span>
                 </div>
                 <div className="bg-background/90 p-2.5 rounded-xl border border-border/60">
-                  <p className="text-[10px] text-muted-foreground uppercase font-medium">Protein</p>
+                  <p className="text-[12px] text-muted-foreground uppercase font-medium">Protein</p>
                   <p className="text-base font-bold text-foreground font-mono">{scaled.protein}g</p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground">
                     {scaled.calories > 0 ? Math.round((scaled.protein * 4 * 100) / scaled.calories) : 0}%
                   </span>
                 </div>
                 <div className="bg-background/90 p-2.5 rounded-xl border border-border/60">
-                  <p className="text-[10px] text-muted-foreground uppercase font-medium">Carbs</p>
+                  <p className="text-[12px] text-muted-foreground uppercase font-medium">Carbs</p>
                   <p className="text-base font-bold text-foreground font-mono">{scaled.carbs}g</p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground">
                     {scaled.calories > 0 ? Math.round((scaled.carbs * 4 * 100) / scaled.calories) : 0}%
                   </span>
                 </div>
                 <div className="bg-background/90 p-2.5 rounded-xl border border-border/60">
-                  <p className="text-[10px] text-muted-foreground uppercase font-medium">Fat</p>
+                  <p className="text-[12px] text-muted-foreground uppercase font-medium">Fat</p>
                   <p className="text-base font-bold text-foreground font-mono">{scaled.fat}g</p>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground">
                     {scaled.calories > 0 ? Math.round((scaled.fat * 9 * 100) / scaled.calories) : 0}%
                   </span>
                 </div>

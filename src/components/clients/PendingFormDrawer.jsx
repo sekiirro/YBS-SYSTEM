@@ -156,11 +156,11 @@ export default function PendingFormDrawer({
                   <h3 className="text-sm font-semibold text-foreground truncate">
                     {client?.full_name}
                   </h3>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-muted-foreground border border-white/[0.08]">
+                  <span className="text-[12px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-muted-foreground border border-white/[0.08]">
                     {client?.client_code}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                <p className="text-[12px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-amber-400" />
                   <span className="text-amber-400 font-medium">Pending Submission</span>
                 </p>
@@ -183,14 +183,14 @@ export default function PendingFormDrawer({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="w-4 h-4 text-primary shrink-0" />
-                  <span className="text-[13px] font-semibold text-foreground truncate">
+                  <span className="text-[14px] font-semibold text-foreground truncate">
                     {form.name || 'Assessment Form'}
                   </span>
                 </div>
                 {urgencyText && (
                   <span
                     className={cn(
-                      'text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 border',
+                      'text-[12px] font-semibold px-2 py-0.5 rounded-full shrink-0 border',
                       isOverdue
                         ? 'bg-red-500/10 text-red-400 border-red-500/20'
                         : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
@@ -201,13 +201,13 @@ export default function PendingFormDrawer({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-white/[0.04]">
+              <div className="grid grid-cols-2 gap-2 text-[12px] pt-1 border-t border-white/[0.04]">
                 <div>
-                  <span className="text-muted-foreground/70 block">Date Sent</span>
+                  <span className="text-muted-foreground block">Date Sent</span>
                   <span className="text-foreground font-medium">{formatDate(form.created_at)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground/70 block">Due Date</span>
+                  <span className="text-muted-foreground block">Due Date</span>
                   <span className={cn('font-medium', isOverdue ? 'text-red-400' : 'text-foreground')}>
                     {form.due_date ? formatDate(form.due_date) : 'No deadline'}
                   </span>

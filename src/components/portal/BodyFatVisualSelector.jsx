@@ -54,7 +54,7 @@ export default function BodyFatVisualSelector({
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="relative w-40 sm:w-48 aspect-[3/4] rounded-xl overflow-hidden border border-black/10 bg-white">
+        <div className="relative w-48 sm:w-60 aspect-[3/4] rounded-2xl overflow-hidden border border-black/10 bg-white">
           {selectedImage ? (
             <img
               src={selectedImage}
@@ -67,7 +67,7 @@ export default function BodyFatVisualSelector({
             </div>
           )}
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2">
-            <span className="px-2 py-0.5 rounded-full bg-white/90 text-gray-900 border border-black/10 text-[12px] font-bold font-mono shadow-sm">
+            <span className="px-4 py-2 rounded-xl bg-white/95 text-gray-900 text-3xl font-bold tabular-nums shadow-sm">
               {index >= 0 ? `${value}%` : `${effectiveValue}%`}
             </span>
           </div>
@@ -96,7 +96,7 @@ export default function BodyFatVisualSelector({
           aria-valuetext={value != null ? `${value} percent body fat` : 'No selection'}
           className="w-full accent-primary cursor-pointer"
         />
-        <div className="flex justify-between mt-1 text-[10px] text-muted-foreground/70 font-mono">
+        <div className="flex justify-between mt-1 text-[12px] text-muted-foreground font-mono">
           <span>{thresholds[0]}%</span>
           <span className="text-primary font-medium">
             {value != null ? `${value}% selected` : 'Select a value'}

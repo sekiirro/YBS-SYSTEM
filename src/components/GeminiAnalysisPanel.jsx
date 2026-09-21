@@ -109,13 +109,13 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
             ) : (
               <Activity className="w-4 h-4 text-primary shrink-0" />
             )}
-            <span className="text-[13px] font-semibold text-foreground">
+            <span className="text-[14px] font-semibold text-foreground">
               Gemini {isNutrition ? 'Nutrition' : 'Training'} Assessment
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {result.cached && (
-              <span className="text-[10px] text-muted-foreground bg-secondary/70 px-2 py-0.5 rounded-full border border-border/40">
+              <span className="text-[12px] text-muted-foreground bg-secondary/70 px-2 py-0.5 rounded-full border border-border/40">
                 Cached · {result.model}
               </span>
             )}
@@ -135,7 +135,7 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
           {/* Summary */}
           <div>
             <SectionLabel>Client Summary</SectionLabel>
-            <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap">
+            <p className="text-[14px] text-foreground/90 leading-relaxed whitespace-pre-wrap">
               {a.clientSummary || 'No summary returned.'}
             </p>
           </div>
@@ -146,7 +146,7 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
               <SectionLabel>Key Assessment Points</SectionLabel>
               <ul className="space-y-1.5">
                 {a.keyPoints.map((k, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[13px] text-foreground/90 leading-relaxed">
+                  <li key={i} className="flex items-start gap-2 text-[14px] text-foreground/90 leading-relaxed">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
                     <span>{k}</span>
                   </li>
@@ -164,7 +164,7 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
               <SectionLabel accent>Coaching Next Steps</SectionLabel>
               <ul className="space-y-1.5">
                 {a.coaching.map((c, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[13px] text-foreground/90 leading-relaxed">
+                  <li key={i} className="flex items-start gap-2 text-[14px] text-foreground/90 leading-relaxed">
                     <Zap className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
                     <span>{c}</span>
                   </li>
@@ -199,7 +199,7 @@ function SectionLabel({ children, accent }) {
   return (
     <p
       className={cn(
-        'text-[10px] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5',
+        'text-[12px] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5',
         accent ? 'text-amber-500' : 'text-primary'
       )}
     >
@@ -212,7 +212,7 @@ function Stat({ label, value }) {
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3 text-center">
       <p className="text-base font-mono font-bold text-foreground">{value}</p>
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mt-0.5">{label}</p>
+      <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }
@@ -325,7 +325,7 @@ function BlockQuote({ title, text }) {
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-4">
       <SectionLabel>{title}</SectionLabel>
-      <p className="text-[13px] text-foreground/90 leading-relaxed whitespace-pre-wrap">{text}</p>
+      <p className="text-[14px] text-foreground/90 leading-relaxed whitespace-pre-wrap">{text}</p>
     </div>
   );
 }
@@ -336,7 +336,7 @@ function NoAnalysisState({ icon: Icon, message }) {
       <div className="mx-auto w-12 h-12 rounded-2xl bg-secondary/60 border border-border/60 flex items-center justify-center mb-3">
         <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
-      <p className="text-[13px] text-muted-foreground">{message}</p>
+      <p className="text-[14px] text-muted-foreground">{message}</p>
     </div>
   );
 }

@@ -9,7 +9,7 @@ export default function ClientPackageCard({ subscription, client }) {
     return (
       <div className="surface-card p-5 lg:p-6 rounded-xl border border-border/80">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <CreditCard className="w-3.5 h-3.5 text-primary" />
             Your Package
           </span>
@@ -34,7 +34,7 @@ export default function ClientPackageCard({ subscription, client }) {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-semibold text-primary tracking-wider block">
+            <span className="text-[12px] uppercase font-semibold text-primary tracking-wider block">
               Current Package
             </span>
             <h3 className="text-lg font-bold text-foreground font-display">
@@ -55,13 +55,13 @@ export default function ClientPackageCard({ subscription, client }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-3 border-y border-border/40 text-xs">
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Period</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Period</span>
           <span className="font-medium text-foreground mt-0.5 block">
             {formatDate(subscription.start_date)} → {formatDate(subscription.end_date)}
           </span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Remaining</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Remaining</span>
           <span
             className={cn(
               'font-semibold mt-0.5 block',
@@ -72,7 +72,7 @@ export default function ClientPackageCard({ subscription, client }) {
           </span>
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Coach</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Coach</span>
           <span className="font-medium text-foreground mt-0.5 block">
             {client?.assigned_ybs_coach_name || 'YBS Coaching Team'}
           </span>

@@ -573,7 +573,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
   if (!workout) {
     return (
       <div className="surface-card p-10 text-center rounded-2xl border border-border">
-        <Dumbbell className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
+        <Dumbbell className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
         <h3 className="text-base font-semibold text-foreground">No Workout Program Assigned</h3>
         <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
           Your coach has not assigned a workout program yet. Once assigned, your training days and exercise logs will appear here.
@@ -670,7 +670,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                     <div className="min-w-0">
                       <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         {log.session_name}
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       </h4>
                       <p className="text-xs text-muted-foreground mt-0.5">{dateStr}</p>
                       {log.notes && (
@@ -680,13 +680,13 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
+                      <span className="px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
                         {log.status || 'Completed'}
                       </span>
                       <div className="text-xs text-muted-foreground font-mono mt-1">
                         {durationMins ? `${durationMins}m · ` : ''}{completedSets} sets
                       </div>
-                      <div className="text-[10px] text-primary/70 mt-1 font-medium flex items-center justify-end gap-0.5">
+                      <div className="text-[12px] text-primary/70 mt-1 font-medium flex items-center justify-end gap-0.5">
                         View details
                       </div>
                     </div>
@@ -729,7 +729,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 <div>
                   <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <span>{activeLog.session_name}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono">IN PROGRESS</span>
+                    <span className="text-[12px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono">IN PROGRESS</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-primary font-mono font-medium">
                     <Clock className="w-3 h-3" />
@@ -737,12 +737,12 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                   </div>
                   <div className="flex items-center gap-2 mt-1 min-h-[14px]">
                     {syncState === 'syncing' && (
-                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                      <span className="flex items-center gap-1 text-[12px] text-muted-foreground font-mono">
                         <Loader2 className="w-2.5 h-2.5 animate-spin" /> Syncing…
                       </span>
                     )}
                     {syncState === 'offline' && (
-                      <span className="flex items-center gap-1 text-[10px] text-amber-400/90 font-mono">
+                      <span className="flex items-center gap-1 text-[12px] text-amber-400/90 font-mono">
                         <Pause className="w-2.5 h-2.5" /> Saved locally
                       </span>
                     )}
@@ -778,7 +778,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                   )}
                 >
                   <div className="font-semibold">{d.day_name || `Day ${idx + 1}`}</div>
-                  <div className="text-[10px] opacity-80">
+                  <div className="text-[12px] opacity-80">
                     {d.rest_day ? 'Rest & Recovery' : `${d.exercises?.length || 0} exercises`}
                   </div>
                 </button>
@@ -864,12 +864,12 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                     {ex.exercise_name || ex.name || 'Exercise'}
                                   </h4>
                                   {ex.category && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-secondary text-muted-foreground border border-border/40 capitalize">
+                                    <span className="px-2 py-0.5 rounded-full text-[12px] bg-secondary text-muted-foreground border border-border/40 capitalize">
                                       {ex.category}
                                     </span>
                                   )}
                                   {ex.warmup && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    <span className="px-2 py-0.5 rounded-full text-[12px] bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                       Warmup
                                     </span>
                                   )}
@@ -883,7 +883,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                 </div>
 
                                 {ex.notes && (
-                                  <p className="text-[11px] text-muted-foreground mt-1.5 italic">
+                                  <p className="text-[12px] text-muted-foreground mt-1.5 italic">
                                     Coach: "{ex.notes}"
                                   </p>
                                 )}
@@ -909,7 +909,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                             <div className="hidden md:block overflow-x-auto">
                               <table className="w-full text-xs">
                                 <thead>
-                                  <tr className="text-muted-foreground border-b border-border/30 text-[11px]">
+                                  <tr className="text-muted-foreground border-b border-border/30 text-[12px]">
                                     <th className="py-2 text-left font-medium w-12">SET</th>
                                     <th className="py-2 text-left font-medium">PRESCRIBED</th>
                                     <th className="py-2 text-center font-medium w-24">KG</th>
@@ -932,7 +932,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                         {isWarmup && setNum === 1 && warmupCount > 0 && (
                                           <tr>
                                             <td colSpan={6} className="pt-3 pb-1.5 px-1">
-                                              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+                                              <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-amber-400">
                                                 <Thermometer className="w-3 h-3" /> Warm-up Sets
                                               </div>
                                             </td>
@@ -941,7 +941,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                         {!isWarmup && setNum === warmupCount + 1 && warmupCount > 0 && (
                                           <tr>
                                             <td colSpan={6} className="pt-3 pb-1.5 px-1">
-                                              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                                              <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-primary">
                                                 <Target className="w-3 h-3" /> Working Sets
                                               </div>
                                             </td>
@@ -957,7 +957,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                             <span
                                               aria-label={isWarmup ? 'Warm-up set' : 'Working set'}
                                               className={cn(
-                                                'inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-mono font-semibold',
+                                                'inline-flex items-center justify-center w-6 h-6 rounded-md text-[12px] font-mono font-semibold',
                                                 isCompleted
                                                   ? 'bg-emerald-500/20 text-emerald-400'
                                                   : isWarmup
@@ -968,16 +968,16 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                               {isWarmup ? `W${setNum}` : setNum - warmupCount}
                                             </span>
                                           </td>
-                                          <td className="py-2 font-mono text-muted-foreground text-[11px]">
+                                          <td className="py-2 font-mono text-muted-foreground text-[12px]">
                                             {isWarmup ? (
-                                              <span className="block font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
+                                              <span className="block font-sans normal-case text-amber-400/80 text-[12px] leading-tight">
                                                 {warmupNote}
                                               </span>
                                             ) : (
                                               <>
                                                 {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RIR ${ex.rpe}` : ''}
                                                 {warmupNote && (
-                                                  <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[10px] leading-tight">
+                                                  <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[12px] leading-tight">
                                                     {warmupNote}
                                                   </span>
                                                 )}
@@ -1004,7 +1004,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                                   type="button"
                                                   onClick={() => handleUsePrevWeight(exIdx, setNum, prevW)}
                                                   tabIndex={-1}
-                                                  className="text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-mono leading-none"
+                                                  className="text-[12px] text-muted-foreground hover:text-primary transition-colors font-mono leading-none"
                                                   title={`Use previous weight ${prevW} kg`}
                                                 >
                                                   <History className="inline-block w-2.5 h-2.5 mr-0.5 relative -top-px" />
@@ -1057,7 +1057,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                                   ? 'bg-emerald-500 text-white shadow-sm'
                                                   : activeLog
                                                   ? 'bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border'
-                                                  : 'bg-secondary/30 text-muted-foreground/40 cursor-not-allowed'
+                                                  : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
                                               )}
                                               title={isCompleted ? 'Mark uncompleted' : 'Mark set completed'}
                                             >
@@ -1115,7 +1115,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                       </div>
 
                                       {isCompleted && (
-                                        <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                                        <span className="text-[12px] font-semibold text-emerald-400 flex items-center gap-1">
                                           <CheckCircle2 className="w-3.5 h-3.5" /> Logged
                                         </span>
                                       )}
@@ -1125,7 +1125,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                     <div className="grid grid-cols-2 gap-2.5 pt-3">
                                       {/* Weight Stepper */}
                                       <div>
-                                        <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                        <label className="text-[12px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
                                           Weight (kg)
                                         </label>
                                         <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10">
@@ -1164,7 +1164,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                           <button
                                             type="button"
                                             onClick={() => handleUsePrevWeight(exIdx, setNum, prevW)}
-                                            className="mt-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors font-mono flex items-center gap-1"
+                                            className="mt-1.5 text-[12px] text-muted-foreground hover:text-primary transition-colors font-mono flex items-center gap-1"
                                           >
                                             <History className="w-2.5 h-2.5" />
                                             Last time: {prevW} kg
@@ -1174,7 +1174,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
 
                                       {/* Reps Stepper */}
                                       <div>
-                                        <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                        <label className="text-[12px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
                                           Reps
                                         </label>
                                         <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10">
@@ -1214,7 +1214,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                       {/* Optional RIR Stepper */}
                                       {ex.rpe && (
                                         <div className="col-span-2">
-                                          <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
+                                          <label className="text-[12px] uppercase tracking-wider font-semibold text-muted-foreground block mb-1">
                                             RIR (Reps in Reserve)
                                           </label>
                                           <div className="flex items-center rounded-lg bg-secondary/50 border border-border overflow-hidden h-10 max-w-[220px]">
@@ -1263,7 +1263,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                           ? 'bg-emerald-500/20 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40'
                                           : activeLog
                                           ? 'bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.99]'
-                                          : 'bg-secondary/40 text-muted-foreground/40 border border-border/30 cursor-not-allowed'
+                                          : 'bg-secondary/40 text-muted-foreground border border-border/30 cursor-not-allowed'
                                       )}
                                     >
                                       <Check className={cn('w-4 h-4', isCompleted ? 'stroke-[2.5]' : 'stroke-2')} />
@@ -1275,7 +1275,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                             </div>
 
                             {!activeLog && (
-                              <p className="text-[11px] text-muted-foreground/70 text-center pt-2">
+                              <p className="text-[12px] text-muted-foreground text-center pt-2">
                                 Click "Start This Workout" above to enable live set tracking.
                               </p>
                             )}
@@ -1320,7 +1320,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                   <Timer className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block leading-tight">
+                  <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground block leading-tight">
                     {restTimer.isFinished ? 'Rest Complete!' : 'Rest Interval'}
                   </span>
                   <p className="text-xs font-medium text-foreground truncate max-w-[200px] sm:max-w-[240px]">
@@ -1442,11 +1442,11 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 : ''}
             </span>
             {historyDetail?.duration_seconds ? (
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-[10px] font-mono">
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-[12px] font-mono">
                 {Math.round(historyDetail.duration_seconds / 60)}m
               </span>
             ) : null}
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
+            <span className="px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 capitalize">
               {(historyDetail?.status || 'completed').replace(/_/g, ' ')}
             </span>
             {historyDetailLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
@@ -1466,26 +1466,26 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 <div key={group.name} className="rounded-xl border border-border/60 overflow-hidden">
                   <div className="px-3 py-2 bg-secondary/30 border-b border-border/40 flex items-center justify-between">
                     <h4 className="text-xs font-semibold text-foreground">{group.name}</h4>
-                    <span className="text-[10px] text-muted-foreground font-mono">{group.sets.length} sets</span>
+                    <span className="text-[12px] text-muted-foreground font-mono">{group.sets.length} sets</span>
                   </div>
                   <div className="divide-y divide-border/20">
                     {group.sets.map((s) => (
                       <div key={s.id || `${group.name}-${s.set_number}`} className="px-3 py-2 flex items-center justify-between gap-3 text-xs">
                         <div className="flex items-center gap-2 min-w-0">
                           {s.is_warmup ? (
-                            <span className="inline-flex items-center justify-center min-w-[54px] px-1.5 h-5 rounded-md text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-400">
+                            <span className="inline-flex items-center justify-center min-w-[54px] px-1.5 h-5 rounded-md text-[12px] font-mono font-semibold bg-amber-500/15 text-amber-400">
                               Warmup {s.set_number}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center justify-center min-w-[38px] px-1.5 h-5 rounded-md text-[10px] font-mono font-semibold bg-secondary text-muted-foreground">
+                            <span className="inline-flex items-center justify-center min-w-[38px] px-1.5 h-5 rounded-md text-[12px] font-mono font-semibold bg-secondary text-muted-foreground">
                               Set {s.set_number}
                             </span>
                           )}
-                          <span className="text-muted-foreground/60 text-[11px] truncate">
+                          <span className="text-muted-foreground text-[12px] truncate">
                             {s.completed ? '' : 'Not completed'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground shrink-0">
+                        <div className="flex items-center gap-3 font-mono text-[12px] text-muted-foreground shrink-0">
                           <span>{s.weight_kg != null ? `${s.weight_kg} kg` : '—'}</span>
                           <span>{s.reps_completed != null ? `${s.reps_completed} reps` : '—'}</span>
                           <span className="text-primary/80">{effortLabel(s.rpe) || '—'}</span>

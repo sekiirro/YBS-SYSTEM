@@ -165,7 +165,7 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
               placeholder="Search by food name, Arabic, brand, or alias…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground"
+              className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40 text-foreground placeholder:text-muted-foreground"
               autoFocus
             />
           </div>
@@ -208,17 +208,17 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-foreground truncate">{f.name}</span>
                         {f.name_ar && (
-                          <span className="text-[11px] text-muted-foreground" dir="rtl">
+                          <span className="text-[12px] text-muted-foreground" dir="rtl">
                             ({f.name_ar})
                           </span>
                         )}
                         {f.brand && (
-                          <Badge className="text-[10px] py-0 px-1 text-muted-foreground bg-secondary/60 border border-border/40 font-normal">
+                          <Badge className="text-[12px] py-0 px-1 text-muted-foreground bg-secondary/60 border border-border/40 font-normal">
                             {f.brand}
                           </Badge>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground/80 mt-0.5 font-mono">
+                      <div className="text-[12px] text-muted-foreground/80 mt-0.5 font-mono">
                         Per 100g: {Math.round(f.calories || 0)} kcal · {f.protein || 0}P / {f.carbs || 0}C / {f.fat || 0}F
                       </div>
                     </div>
@@ -241,7 +241,7 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
         {selectedFoods.length > 0 && (
           <div className="surface-card p-4 rounded-xl border border-primary/30 bg-primary/[0.03] space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider text-primary font-semibold flex items-center gap-1.5">
+              <span className="text-[12px] uppercase tracking-wider text-primary font-semibold flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5" /> Selected Items ({selectedFoods.length})
               </span>
               <span className="text-xs font-mono text-muted-foreground">
@@ -260,11 +260,11 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground truncate">{f.name}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">
+                      <p className="text-[12px] text-muted-foreground font-mono">
                         {Number(scaled?.calories) || 0} kcal · {Number(scaled?.protein) || 0}P / {Number(scaled?.carbs) || 0}C / {Number(scaled?.fat) || 0}F
                       </p>
                       {hasWarning && (
-                        <p className="text-[10px] text-amber-400 flex items-center gap-1 mt-0.5">
+                        <p className="text-[12px] text-amber-400 flex items-center gap-1 mt-0.5">
                           <AlertCircle className="w-3 h-3" /> {scaled.warning}
                         </p>
                       )}
@@ -296,7 +296,7 @@ export default function BulkFoodPickerModal({ open, onClose, onAddItems }) {
 
         {/* Modal Actions */}
         <div className="flex justify-between items-center gap-2 pt-2 border-t border-border/50">
-          <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] text-muted-foreground flex items-center gap-1.5">
             <Utensils className="w-3.5 h-3.5 text-primary" /> Each food keeps its own portion — adjust above before adding.
           </span>
           <div className="flex justify-end gap-2 shrink-0">

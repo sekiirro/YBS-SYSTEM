@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/components/ui/responsive-table';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
@@ -422,7 +423,7 @@ export default function Assessments() {
                 key={tab.key}
                 onClick={() => { setActiveTab(tab.key); setSearch(''); setStatusFilter('all'); setWorkspaceFilter('all'); }}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[14px] font-medium transition-all duration-200',
                   activeTab === tab.key
                     ? 'bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
@@ -444,7 +445,7 @@ export default function Assessments() {
             placeholder={activeTab === 'forms' ? 'Search forms…' : 'Search templates…'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] placeholder:text-muted-foreground/60 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+            className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
           />
         </div>
         {activeTab === 'forms' && (
@@ -452,7 +453,7 @@ export default function Assessments() {
             <select
               value={workspaceFilter}
               onChange={(e) => setWorkspaceFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="all">All Workspaces</option>
               {workspaceOptions.map((w) => (
@@ -464,7 +465,7 @@ export default function Assessments() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[13px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="all">All Statuses</option>
               <option value="__most_urgent__">Most Urgent</option>
@@ -485,16 +486,16 @@ export default function Assessments() {
           ) : (
             <div className="surface-card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <ResponsiveTable className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Plan Delivery</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
-                      <th className="text-left px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
-                      <th className="text-right px-4 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Form</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Plan Delivery</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Submitted</th>
+                      <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                      <th className="text-right px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -503,19 +504,19 @@ export default function Assessments() {
                       return (
                       <tr key={f.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                         <td className="px-4 py-3">
-                          <p className="text-[13px] font-medium">{f.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{f.response_count || 0} responses</p>
+                          <p className="text-[14px] font-medium">{f.name}</p>
+                          <p className="text-[12px] text-muted-foreground">{f.response_count || 0} responses</p>
                         </td>
                         <td className="px-4 py-3">
                           {f.client_id ? (
                             <button
                               onClick={() => navigate(`/clients/${f.client_id}`)}
-                              className="text-[13px] font-medium text-primary hover:text-primary/80 hover:underline transition-colors"
+                              className="text-[14px] font-medium text-primary hover:text-primary/80 hover:underline transition-colors"
                             >
                               {f.assigned_client_name || '—'}
                             </button>
                           ) : (
-                            <span className="text-[13px] text-muted-foreground">{f.assigned_client_name || '—'}</span>
+                            <span className="text-[14px] text-muted-foreground">{f.assigned_client_name || '—'}</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-[12px] text-muted-foreground">{f.workspace_name || '—'}</td>
@@ -561,7 +562,7 @@ export default function Assessments() {
                       );
                     })}
                   </tbody>
-                </table>
+                </ResponsiveTable>
               </div>
             </div>
           )}
@@ -594,7 +595,7 @@ export default function Assessments() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="text-[13px] font-medium">{t.name}</p>
+                        <p className="text-[14px] font-medium">{t.name}</p>
                         <Badge className={cn(
                           t.status === 'published'
                             ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
@@ -604,7 +605,7 @@ export default function Assessments() {
                           {t.status}
                         </Badge>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-[12px] text-muted-foreground mt-0.5">
                         {t.question_count} questions · Created {formatDate(t.created_at)}
                       </p>
                     </div>
@@ -614,7 +615,7 @@ export default function Assessments() {
                       <Button variant="outline" size="sm" onClick={() => openAssignToWorkspaces(t)}>
                         <Building2 className="w-3.5 h-3.5" /> Workspaces
                         {(t.assigned_workspace_ids?.length || 0) > 0 && (
-                          <span className="ml-1 text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded">
+                          <span className="ml-1 text-[12px] font-mono bg-secondary px-1.5 py-0.5 rounded">
                             {t.assigned_workspace_ids.length}
                           </span>
                         )}
@@ -659,13 +660,13 @@ export default function Assessments() {
         <div className="space-y-4">
           {assignTemplate && (
             <div className="p-3 rounded-lg bg-secondary/30 border border-border/50">
-              <p className="text-[13px] font-medium">{assignTemplate.name}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{assignTemplate.question_count} questions</p>
+              <p className="text-[14px] font-medium">{assignTemplate.name}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{assignTemplate.question_count} questions</p>
             </div>
           )}
 
           {assignError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{assignError}</div>
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{assignError}</div>
           )}
 
           <div className="relative">
@@ -675,12 +676,12 @@ export default function Assessments() {
               placeholder="Search clients by name, email, or code…"
               value={assignSearch}
               onChange={(e) => setAssignSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
             />
           </div>
 
           {clientsLoading ? (
-            <div className="py-6 text-center text-muted-foreground text-[13px]">Loading clients…</div>
+            <div className="py-6 text-center text-muted-foreground text-[14px]">Loading clients…</div>
           ) : (
             <div className="max-h-48 overflow-y-auto space-y-1 border border-border/50 rounded-lg p-1">
               {filteredClients.length === 0 ? (
@@ -701,8 +702,8 @@ export default function Assessments() {
                       {c.full_name?.[0] || '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium truncate">{c.full_name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{c.client_code} · {c.email || c.phone}</p>
+                      <p className="text-[14px] font-medium truncate">{c.full_name}</p>
+                      <p className="text-[12px] text-muted-foreground truncate">{c.client_code} · {c.email || c.phone}</p>
                     </div>
                     {selectedClient?.id === c.id && (
                       <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -737,15 +738,15 @@ export default function Assessments() {
         <div className="space-y-4">
           {assignWsTemplate && (
             <div className="p-3 rounded-lg bg-secondary/30 border border-border/50">
-              <p className="text-[13px] font-medium">{assignWsTemplate.name}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-[14px] font-medium">{assignWsTemplate.name}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
                 Master template · visible only to workspaces selected below.
               </p>
             </div>
           )}
 
           {assignWsError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{assignWsError}</div>
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{assignWsError}</div>
           )}
 
           <div className="max-h-72 overflow-y-auto space-y-1 border border-border/50 rounded-lg p-1">
@@ -770,8 +771,8 @@ export default function Assessments() {
                       {(w.name?.[0] || 'W').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium truncate">{w.name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{w.owner_name || w.slug || ' '}</p>
+                      <p className="text-[14px] font-medium truncate">{w.name}</p>
+                      <p className="text-[12px] text-muted-foreground truncate">{w.owner_name || w.slug || ' '}</p>
                     </div>
                     <div
                       className={cn(
@@ -779,7 +780,7 @@ export default function Assessments() {
                         selected ? 'bg-primary border-primary' : 'border-border'
                       )}
                     >
-                      {selected && <span className="text-primary-foreground text-[11px]">✓</span>}
+                      {selected && <span className="text-primary-foreground text-[12px]">✓</span>}
                     </div>
                   </button>
                 );
@@ -803,8 +804,8 @@ export default function Assessments() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
               <div>
-                <p className="text-[13px] font-medium">{viewingForm.name}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Submitted {formatDate(viewingForm.submitted_at)}</p>
+                <p className="text-[14px] font-medium">{viewingForm.name}</p>
+                <p className="text-[12px] text-muted-foreground mt-0.5">Submitted {formatDate(viewingForm.submitted_at)}</p>
               </div>
               <Badge className={cn(getFormStatusColor(viewingForm.submission_status), 'capitalize')}>
                 {getFormStatusLabel(viewingForm.submission_status)}
@@ -832,7 +833,7 @@ export default function Assessments() {
                     )}
                     <div className="space-y-1 py-1">
                       <p className="text-[12px] font-medium text-muted-foreground" dir="auto">Q{idx + 1}. {q.label}</p>
-                      <p className="text-[13px] text-foreground pl-4" dir="auto">
+                      <p className="text-[14px] text-foreground pl-4" dir="auto">
                         {(q.question_type === 'file_upload' || q.question_type === 'image_upload')
                           ? (displayVal && displayVal !== '—' && displayVal !== '""' ? displayVal : 'يتم الإرسال على رقم المتابعة')
                           : (displayVal || '—')}
@@ -852,7 +853,7 @@ export default function Assessments() {
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[13px] font-medium" dir="auto">{deleteTarget.name}</p>
+                <p className="text-[14px] font-medium" dir="auto">{deleteTarget.name}</p>
                 <Badge className={cn(getFormStatusColor(deleteTarget.submission_status), 'capitalize shrink-0')}>
                   {getFormStatusLabel(deleteTarget.submission_status)}
                 </Badge>
@@ -864,11 +865,11 @@ export default function Assessments() {
                 Responses: {deleteTarget.response_count || 0}
               </p>
             </div>
-            <p className="text-[13px] text-foreground/90">
+            <p className="text-[14px] text-foreground/90">
               Deleting this form will permanently remove this client's form instance and its saved responses. The form template will not be deleted.
             </p>
             {deleteError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{deleteError}</div>
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{deleteError}</div>
             )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={closeDelete} disabled={deleting}>Cancel</Button>
@@ -888,7 +889,7 @@ function PlanPill({ label, delivered }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-medium',
+        'inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[12px] font-medium',
         delivered
           ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
           : 'text-muted-foreground bg-secondary/40 border-border/60'

@@ -258,7 +258,7 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
             <MailCheck className="w-7 h-7 text-emerald-400" />
           </div>
           <p className="text-[15px] font-semibold text-foreground">Confirm your email address</p>
-          <p className="text-[13px] text-muted-foreground mt-1 max-w-sm">
+          <p className="text-[14px] text-muted-foreground mt-1 max-w-sm">
             We sent a confirmation link to <strong className="text-foreground">{signupEmail}</strong>. Click it to
             activate your account, then sign in. Your registration is automatically submitted to the YBS team.
           </p>
@@ -295,7 +295,7 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
               <Building2 className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-foreground">Joining {workspace.workspace_name || workspace.brand_name}</p>
+              <p className="text-[14px] font-semibold text-foreground">Joining {workspace.workspace_name || workspace.brand_name}</p>
               {isScopedLink ? (
                 <p className="text-[12px] text-muted-foreground mt-0.5">
                   Your selected package is <strong className="text-foreground">{workspace.package_name || `${workspace.package_tier} · ${workspace.package_duration} month${workspace.package_duration > 1 ? 's' : ''}`}</strong>. This cannot be changed during registration.
@@ -317,7 +317,7 @@ export default function ClientSignup({ workspace = null, joinToken = null }) {
         )}
       </div>
       {error && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {error}
         </div>
       )}

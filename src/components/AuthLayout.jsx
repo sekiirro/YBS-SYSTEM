@@ -1,35 +1,32 @@
 import React from "react";
+import { Link } from 'react-router-dom';
+import { Activity } from 'lucide-react';
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, brand }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          {brand ? (
-            <div className="flex flex-col items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-[0_0_30px_-6px_hsl(var(--primary)/0.8)]">
-                <span className="text-primary-foreground font-bold text-xl tracking-tight">Y</span>
-              </div>
-              <div className="flex flex-col leading-none items-center">
-                <span className="font-bold text-2xl tracking-tight text-foreground">YBS</span>
-                <span className="text-[11px] text-muted-foreground tracking-[0.2em] uppercase mt-1">Coaching OS</span>
-              </div>
-            </div>
-          ) : (
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
-              <Icon className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
-            </div>
-          )}
-          {!brand && <h1 className="text-3xl font-bold tracking-tight text-foreground font-display">{title}</h1>}
-          {subtitle && <p className="text-muted-foreground mt-2 text-sm">{subtitle}</p>}
+    <div className="ybs-auth">
+      <aside className="ybs-auth-story">
+        <Link to="/" className="ybs-brand w-fit" aria-label="YBS home"><span className="ybs-monogram">Y</span><span><span className="ybs-wordmark block">YBS</span><span className="ybs-eyebrow">Coaching OS</span></span></Link>
+        <div className="py-8 lg:py-20">
+          <p className="ybs-eyebrow mb-6 flex items-center gap-2"><Activity size={16} /> Built around your progress</p>
+          <h2>Your effort.<br />A clearer direction.</h2>
+          <p className="mt-6 max-w-md text-base text-slate-300">Training, nutrition, and your coach. Together in one place, so you can focus on the next step.</p>
         </div>
-        <div className="bg-card rounded-xl shadow-2xl shadow-black/30 border border-white/[0.08] p-7">
+        <p className="text-sm text-slate-300">YBS · Technology meets human performance.</p>
+      </aside>
+      <main className="ybs-auth-form">
+        <header>
+          {!brand && Icon && <div className="mb-5 inline-flex rounded-2xl bg-primary/10 p-3"><Icon className="h-6 w-6 text-primary" aria-hidden="true" /></div>}
+          <h1 className="font-bold text-foreground">{title || 'Welcome to YBS'}</h1>
+          {subtitle && <p className="text-muted-foreground mt-2 text-sm">{subtitle}</p>}
+        </header>
+        <div>
           {children}
         </div>
         {footer && (
           <p className="text-center text-sm text-muted-foreground mt-6">{footer}</p>
         )}
-      </div>
+      </main>
     </div>
   );
 }

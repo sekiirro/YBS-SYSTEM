@@ -173,7 +173,7 @@ export default function ClientNutritionWorkspace({ client }) {
             <h3 className="text-[14px] font-display font-semibold text-foreground">
               Nutrition Plans
             </h3>
-            <span className="text-[11px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-secondary/80 text-muted-foreground">
+            <span className="text-[12px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-secondary/80 text-muted-foreground">
               {plans.length}
             </span>
             <ChevronDown
@@ -186,7 +186,7 @@ export default function ClientNutritionWorkspace({ client }) {
           <Button
             size="sm"
             onClick={() => setNewPlanOpen(true)}
-            className="text-[11px] h-7 px-2.5 shadow-sm"
+            className="text-[12px] h-7 px-2.5 shadow-sm"
           >
             <Plus className="w-3 h-3" /> New Plan
           </Button>
@@ -207,7 +207,7 @@ export default function ClientNutritionWorkspace({ client }) {
                   placeholder="Filter plans…"
                   value={planSearch}
                   onChange={(e) => setPlanSearch(e.target.value)}
-                  className="w-full h-7 pl-8 pr-2.5 rounded-lg bg-secondary/40 border border-border text-[11px] focus:outline-none focus:border-primary/50"
+                  className="w-full h-7 pl-8 pr-2.5 rounded-lg bg-secondary/40 border border-border text-[12px] focus:outline-none focus:border-primary/50"
                 />
               </div>
             )}
@@ -244,13 +244,13 @@ export default function ClientNutritionWorkspace({ client }) {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[13px] font-semibold text-foreground truncate">
+                      <p className="text-[14px] font-semibold text-foreground truncate">
                         {p.name}
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Badge
                           className={cn(
-                            'text-[10px] font-mono capitalize shrink-0 border py-0',
+                            'text-[12px] font-mono capitalize shrink-0 border py-0',
                             isDraft
                               ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                               : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
@@ -261,7 +261,7 @@ export default function ClientNutritionWorkspace({ client }) {
                         <button
                           type="button"
                           onClick={(e) => handleRemovePlan(p, e)}
-                          className="p-1 rounded-md text-muted-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
                           title="Remove plan"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -269,7 +269,7 @@ export default function ClientNutritionWorkspace({ client }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground font-mono flex-wrap">
+                    <div className="flex items-center gap-2 mt-1.5 text-[12px] text-muted-foreground font-mono flex-wrap">
                       {p.daily_calories != null && (
                         <span className="text-primary font-medium">{Math.round(p.daily_calories)} kcal</span>
                       )}
@@ -509,7 +509,7 @@ export default function ClientNutritionWorkspace({ client }) {
                         >
                           <div>
                             <span className="font-medium text-foreground block">{t.name}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono">
+                            <span className="text-[12px] text-muted-foreground font-mono">
                               {Math.round(t.daily_calories || 0)} kcal · {t.meals?.length || 0} meals
                             </span>
                           </div>

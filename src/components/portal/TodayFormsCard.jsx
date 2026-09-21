@@ -14,16 +14,16 @@ export default function TodayFormsCard({ forms = [], onOpenForm }) {
     <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full glow-subtle transition-all">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <ClipboardList className="w-3.5 h-3.5 text-primary" />
             Check-ins & Forms
           </span>
           {pendingForms.length > 0 ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
               <Clock className="w-3 h-3" /> {pendingForms.length} Due
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="w-3 h-3" /> Up to Date
             </span>
           )}
@@ -57,11 +57,11 @@ export default function TodayFormsCard({ forms = [], onOpenForm }) {
 
         {/* Status summary tags */}
         <div className="flex items-center gap-2 mt-3 pt-2">
-          <span className="text-[10px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border/40">
+          <span className="text-[12px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded border border-border/40">
             {reviewedCount} Reviewed
           </span>
           {underReviewCount > 0 && (
-            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+            <span className="text-[12px] text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
               {underReviewCount} Under Review
             </span>
           )}

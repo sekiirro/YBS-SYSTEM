@@ -9,7 +9,7 @@ export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) 
       <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Dumbbell className="w-3.5 h-3.5 text-primary" />
               Today&apos;s Workout
             </span>
@@ -40,20 +40,20 @@ export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) 
     <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full glow-subtle transition-all">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <Dumbbell className="w-3.5 h-3.5 text-primary" />
             Today&apos;s Workout
           </span>
           {isCompleted ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="w-3 h-3" /> Completed
             </span>
           ) : isRestDay ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
               <BedDouble className="w-3 h-3" /> Rest Day
             </span>
           ) : (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-primary/10 text-primary border border-primary/20">
               Ready
             </span>
           )}
@@ -69,7 +69,7 @@ export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) 
               Great work! Today&apos;s session is logged. Rest, hydrate, and hit your nutrition goals.
             </p>
             {todayLog.session_name && (
-              <p className="text-[11px] text-emerald-400/90 font-mono mt-2 bg-emerald-500/10 px-2 py-1 rounded inline-block">
+              <p className="text-[12px] text-emerald-400/90 font-mono mt-2 bg-emerald-500/10 px-2 py-1 rounded inline-block">
                 Session: {todayLog.session_name}
               </p>
             )}

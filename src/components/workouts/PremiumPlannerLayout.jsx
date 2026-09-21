@@ -34,9 +34,9 @@ export default function PremiumPlannerLayout({
   className,
 }) {
   return (
-    <div className={cn('relative w-full h-full', className)}>
+    <div className={cn('ybs-planner relative w-full h-full', className)}>
       {/* ─── Desktop: Resizable panels ─── */}
-      <div className="hidden md:flex h-full">
+      <div className="hidden xl:flex h-full">
         <PanelGroup
           direction="horizontal"
           autoSaveId="ybs-planner-col-sizes"
@@ -92,7 +92,7 @@ export default function PremiumPlannerLayout({
       </div>
 
       {/* ─── Mobile: Progressive single-column navigation ─── */}
-      <div className="md:hidden h-full overflow-y-auto">
+      <div className="xl:hidden h-full overflow-y-auto">
         {step === 1 && (
           <div className="h-full">
             {column1}

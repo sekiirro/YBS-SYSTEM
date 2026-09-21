@@ -38,56 +38,56 @@ export default function PlanSummaryBar({ totals }) {
           {/* Calories */}
           <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider">Calories</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider">Calories</span>
               <Flame className="w-4 h-4 text-primary" />
             </div>
             <div>
               <span className="text-2xl font-bold font-display tracking-tight text-primary tabular-nums">
                 {calories}
               </span>
-              <span className="text-[11px] text-muted-foreground ml-1">kcal</span>
+              <span className="text-[12px] text-muted-foreground ml-1">kcal</span>
             </div>
           </div>
 
           {/* Protein */}
           <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider">Protein</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider">Protein</span>
               <Beef className="w-4 h-4 text-sky-400" />
             </div>
             <div>
               <span className="text-2xl font-bold font-display tracking-tight text-foreground tabular-nums">
                 {protein}
               </span>
-              <span className="text-[11px] text-muted-foreground ml-1">g ({pPct}%)</span>
+              <span className="text-[12px] text-muted-foreground ml-1">g ({pPct}%)</span>
             </div>
           </div>
 
           {/* Carbs */}
           <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider">Carbs</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider">Carbs</span>
               <Wheat className="w-4 h-4 text-amber-400" />
             </div>
             <div>
               <span className="text-2xl font-bold font-display tracking-tight text-foreground tabular-nums">
                 {carbs}
               </span>
-              <span className="text-[11px] text-muted-foreground ml-1">g ({cPct}%)</span>
+              <span className="text-[12px] text-muted-foreground ml-1">g ({cPct}%)</span>
             </div>
           </div>
 
           {/* Fat */}
           <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground mb-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider">Fat</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider">Fat</span>
               <Droplets className="w-4 h-4 text-red-400" />
             </div>
             <div>
               <span className="text-2xl font-bold font-display tracking-tight text-foreground tabular-nums">
                 {fat}
               </span>
-              <span className="text-[11px] text-muted-foreground ml-1">g ({fPct}%)</span>
+              <span className="text-[12px] text-muted-foreground ml-1">g ({fPct}%)</span>
             </div>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function PlanSummaryBar({ totals }) {
                       if (!payload || !payload[0]) return null;
                       const d = payload[0].payload;
                       return (
-                        <div className="bg-popover text-popover-foreground text-[11px] px-2 py-1 rounded shadow-md border border-border">
+                        <div className="bg-popover text-popover-foreground text-[12px] px-2 py-1 rounded shadow-md border border-border">
                           {d.name}: {d.grams}g ({d.value} kcal)
                         </div>
                       );
@@ -124,13 +124,13 @@ export default function PlanSummaryBar({ totals }) {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="w-full h-full rounded-full border-2 border-dashed border-border/60 flex items-center justify-center text-[9px] text-muted-foreground">
+              <div className="w-full h-full rounded-full border-2 border-dashed border-border/60 flex items-center justify-center text-[12px] text-muted-foreground">
                 0%
               </div>
             )}
           </div>
 
-          <div className="space-y-1 text-[11px]">
+          <div className="space-y-1 text-[12px]">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
               <span className="text-muted-foreground">Protein:</span>

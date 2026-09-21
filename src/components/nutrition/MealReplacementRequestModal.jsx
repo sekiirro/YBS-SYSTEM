@@ -52,7 +52,7 @@ function fmtMacro(value) {
 function MacroChip({ label, value, className = '' }) {
   return (
     <div className={cn('rounded-lg bg-background/60 border border-white/[0.06] px-2 py-1.5 text-center', className)}>
-      <p className="text-[9px] uppercase tracking-wide text-muted-foreground/80 font-medium leading-tight">{label}</p>
+      <p className="text-[12px] uppercase tracking-wide text-muted-foreground/80 font-medium leading-tight">{label}</p>
       <p className="text-[12px] font-semibold text-foreground font-mono mt-0.5">{value}</p>
     </div>
   );
@@ -216,7 +216,7 @@ export default function MealReplacementRequestModal({
             <Utensils className="w-4 h-4 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meal</p>
+            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">Meal</p>
             <h4 className="text-sm font-semibold text-foreground truncate">{meal?.meal_name || 'Meal'}</h4>
           </div>
         </div>
@@ -251,7 +251,7 @@ export default function MealReplacementRequestModal({
                         type="button"
                         onClick={() => handlePickTarget(idx)}
                         className={cn(
-                          'text-[11px] px-2.5 py-1.5 rounded-lg border transition-colors',
+                          'text-[12px] px-2.5 py-1.5 rounded-lg border transition-colors',
                           active
                             ? 'border-primary/55 bg-primary/[0.06] text-foreground'
                             : 'border-border/70 bg-secondary/30 text-muted-foreground hover:text-foreground hover:border-primary/30'
@@ -270,7 +270,7 @@ export default function MealReplacementRequestModal({
                 {/* Step 2 — current item + candidates */}
                 <div className="rounded-xl border border-white/[0.08] bg-card p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    <span className="text-[12px] uppercase tracking-wider text-muted-foreground font-semibold">
                       Current Item
                     </span>
                   </div>
@@ -315,7 +315,7 @@ export default function MealReplacementRequestModal({
                 {(status === 'ok' || status === 'no_match') && (
                   <div className="space-y-2">
                     {results.length > 0 && (
-                      <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground/80 font-semibold">
+                      <div className="flex items-center gap-3 text-[12px] uppercase tracking-widest text-muted-foreground/80 font-semibold">
                         <span className="h-px flex-1 bg-white/[0.08]" />
                         <ArrowLeftRight className="w-3.5 h-3.5 text-primary" />
                         Suggested alternatives
@@ -352,21 +352,21 @@ export default function MealReplacementRequestModal({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[13px] font-semibold text-foreground truncate">{r.name}</span>
+                                  <span className="text-[14px] font-semibold text-foreground truncate">{r.name}</span>
                                   {r.name_ar && (
-                                    <span dir="rtl" className="text-[11px] text-muted-foreground">
+                                    <span dir="rtl" className="text-[12px] text-muted-foreground">
                                       ({r.name_ar})
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                   {r.food_role && (
-                                    <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    <Badge variant="outline" className="text-[12px] uppercase tracking-wide text-muted-foreground">
                                       {roleLabel(r.food_role)}
                                     </Badge>
                                   )}
                                   {r.substitution_group && (
-                                    <Badge className="text-[10px] text-primary bg-primary/10 border-transparent">
+                                    <Badge className="text-[12px] text-primary bg-primary/10 border-transparent">
                                       {humanize(r.substitution_group)}
                                     </Badge>
                                   )}
@@ -393,7 +393,7 @@ export default function MealReplacementRequestModal({
                               <MacroChip label="Fat" value={`${fmtMacro(r.estimated_fat)}g`} />
                             </div>
                             {r.explanation && (
-                              <p className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                              <p className="mt-2.5 flex items-start gap-1.5 text-[12px] text-muted-foreground leading-relaxed">
                                 <Info className="w-3.5 h-3.5 shrink-0 text-primary/70 mt-0.5" />
                                 <span>{r.explanation}</span>
                               </p>
@@ -421,7 +421,7 @@ export default function MealReplacementRequestModal({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="text-[13px] font-semibold text-foreground">Other</span>
+                            <span className="text-[14px] font-semibold text-foreground">Other</span>
                             <p dir="rtl" className="text-[12px] text-muted-foreground mt-1 clear-both text-right">
                               {OTHER_HELPER_TEXT}
                             </p>
@@ -454,7 +454,7 @@ export default function MealReplacementRequestModal({
                   onChange={(e) => setReason(e.target.value)}
                   disabled={submitting || submitted}
                   placeholder="Tell your coach what you'd prefer…"
-                  className="w-full p-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/50 resize-none"
+                  className="w-full p-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/50 resize-none"
                 />
               </div>
             )}
@@ -473,7 +473,7 @@ export default function MealReplacementRequestModal({
                   <p className="font-semibold text-foreground">Request submitted</p>
                   <p className="mt-0.5">
                     Status:{' '}
-                    <Badge className="text-[10px] text-amber-400 bg-amber-500/10 border-amber-500/25">Pending</Badge>{' '}
+                    <Badge className="text-[12px] text-amber-400 bg-amber-500/10 border-amber-500/25">Pending</Badge>{' '}
                     — your coach will review it and either apply the swap or suggest alternatives in chat.
                   </p>
                 </div>
@@ -496,7 +496,7 @@ export default function MealReplacementRequestModal({
             )}
 
             {!choseOther && status === 'no_match' && (results.length === 0) && (
-              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                 <SearchX className="w-3.5 h-3.5" /> You can still use <strong>Other</strong> above to ask for more
                 options in chat.
               </p>

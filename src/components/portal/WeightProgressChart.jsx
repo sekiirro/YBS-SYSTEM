@@ -81,12 +81,12 @@ export default function WeightProgressChart({ metrics = [], client = null }) {
       {/* Header & period toggles */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <Scale className="w-3.5 h-3.5 text-primary" />
             Your Weight Progress
           </span>
           <div className="flex items-baseline gap-2.5 mt-1">
-            <span className="text-2xl lg:text-3xl font-bold font-display tracking-tight text-foreground tabular-nums">
+            <span className="text-4xl lg:text-5xl font-bold font-display tracking-tight text-foreground tabular-nums">
               {stats.current} <span className="text-sm font-normal text-muted-foreground">kg</span>
             </span>
             {stats.delta !== 0 && (
@@ -127,21 +127,21 @@ export default function WeightProgressChart({ metrics = [], client = null }) {
       {/* Summary stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-3 mb-5 border-y border-border/40 text-center">
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Starting</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Starting</span>
           <span className="text-sm font-bold text-foreground font-mono">{stats.starting} kg</span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Current</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Current</span>
           <span className="text-sm font-bold text-primary font-mono">{stats.current} kg</span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Total Change</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Total Change</span>
           <span className={cn('text-sm font-bold font-mono', stats.delta <= 0 ? 'text-emerald-400' : 'text-amber-400')}>
             {stats.delta > 0 ? `+${stats.delta}` : stats.delta} kg
           </span>
         </div>
         <div>
-          <span className="text-[10px] uppercase font-semibold text-muted-foreground block">Target</span>
+          <span className="text-[12px] uppercase font-semibold text-muted-foreground block">Target</span>
           <span className="text-sm font-bold text-foreground font-mono">
             {stats.target ? `${stats.target} kg` : '—'}
           </span>
@@ -154,7 +154,7 @@ export default function WeightProgressChart({ metrics = [], client = null }) {
           <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/50 rounded-lg">
             <Calendar className="w-6 h-6 text-muted-foreground mb-2" />
             <p className="text-xs text-foreground font-medium">1 measurement logged ({chartData[0].weight} kg)</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               The line progression will emerge as future measurements are recorded.
             </p>
           </div>
@@ -172,14 +172,14 @@ export default function WeightProgressChart({ metrics = [], client = null }) {
                 dataKey="date"
                 tickFormatter={(d) => formatDate(d)}
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 domain={[minWeight, maxWeight]}
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `${v}`}
@@ -193,7 +193,7 @@ export default function WeightProgressChart({ metrics = [], client = null }) {
                         <p className="font-semibold text-foreground">{formatDate(data.date)}</p>
                         <p className="text-primary font-bold mt-0.5">{data.weight} kg</p>
                         {data.body_fat != null && (
-                          <p className="text-muted-foreground text-[11px] mt-0.5">{data.body_fat}% Body Fat</p>
+                          <p className="text-muted-foreground text-[12px] mt-0.5">{data.body_fat}% Body Fat</p>
                         )}
                       </div>
                     );

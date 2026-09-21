@@ -226,7 +226,7 @@ export default function ClientTrainingWorkspace({ client }) {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[13px] font-semibold text-foreground truncate">{p.name}</p>
+                      <p className="text-[14px] font-semibold text-foreground truncate">{p.name}</p>
                       <button
                         type="button"
                         onClick={(e) => handleRemovePlan(p, e)}
@@ -237,11 +237,11 @@ export default function ClientTrainingWorkspace({ client }) {
                       </button>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[11px] text-muted-foreground capitalize font-medium">
+                      <span className="text-[12px] text-muted-foreground capitalize font-medium">
                         {(p.split_type || 'custom').replace(/_/g, ' ')} · {p.days?.length || 0} sessions
                       </span>
-                      <span className="text-[11px] text-muted-foreground">·</span>
-                      <span className="text-[11px] text-primary font-mono font-medium">
+                      <span className="text-[12px] text-muted-foreground">·</span>
+                      <span className="text-[12px] text-primary font-mono font-medium">
                         {p.total_working_sets || 0} working sets/wk
                       </span>
                     </div>
@@ -472,7 +472,7 @@ export default function ClientTrainingWorkspace({ client }) {
                           >
                             <div>
                               <span className="font-medium text-foreground block">{t.name}</span>
-                              <span className="text-[11px] text-muted-foreground font-mono">
+                              <span className="text-[12px] text-muted-foreground font-mono">
                                 {(t.split_type || 'custom').replace(/_/g, ' ')} · {sessionCount} sessions · {restCount} rest days
                               </span>
                             </div>

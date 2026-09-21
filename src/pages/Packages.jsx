@@ -136,7 +136,7 @@ export default function Packages() {
                 <select
                   value={selectedWorkspaceId}
                   onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-                  className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40 appearance-none"
+                  className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40 appearance-none"
                 >
                   <option value="">Select a workspace…</option>
                   {workspaceList.map((w) => (
@@ -156,7 +156,7 @@ export default function Packages() {
             </div>
           </div>
           {!selectedWorkspaceId ? (
-            <p className="text-[13px] text-muted-foreground border border-dashed border-border rounded-lg p-6 text-center">
+            <p className="text-[14px] text-muted-foreground border border-dashed border-border rounded-lg p-6 text-center">
               Select a workspace above to view and edit its packages.
             </p>
           ) : workspacePackages.length === 0 ? (
@@ -180,7 +180,7 @@ export default function Packages() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text" placeholder="Search packages…" value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
             />
           </div>
           {filtered.length === 0 ? (
@@ -222,7 +222,7 @@ export default function Packages() {
 
 function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
   return (
-    <div className="surface-card overflow-hidden group transition-all duration-300 hover:border-primary/25 hover:shadow-[0_0_24px_rgba(59,130,246,0.06)] hover:-translate-y-0.5">
+    <div className="ybs-package-card surface-card overflow-hidden group">
       {/* Card Header */}
       <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] bg-gradient-to-br from-[#0d1322] to-[#0b0f19]">
         <div className="flex items-start justify-between">
@@ -256,7 +256,7 @@ function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
       </div>
       {/* Card Body */}
       <div className="px-5 py-4">
-        <p className="text-2xl font-display font-bold tabular-nums text-foreground">
+        <p className="text-4xl tracking-tight font-bold tabular-nums text-foreground break-words">
           {formatCurrency(p.price)}
         </p>
         <p className="text-[12px] text-muted-foreground mt-1">{p.duration} {p.duration_unit}</p>
@@ -305,7 +305,7 @@ function FeaturesEditor({ value = [], onChange }) {
     <div>
       <div className="flex items-center justify-between">
         <label className="text-[12px] font-medium text-muted-foreground">Features</label>
-        <span className="text-[11px] text-muted-foreground">{value.length} feature{value.length === 1 ? '' : 's'}</span>
+        <span className="text-[12px] text-muted-foreground">{value.length} feature{value.length === 1 ? '' : 's'}</span>
       </div>
       {value.length === 0 ? (
         <p className="text-[12px] text-muted-foreground border border-dashed border-border rounded-lg p-3 text-center mt-2">
@@ -338,7 +338,7 @@ function FeaturesEditor({ value = [], onChange }) {
                 value={f.title}
                 onChange={(e) => setTitleAt(i, e.target.value)}
                 placeholder="Feature title"
-                className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+                className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
               />
               <button
                 type="button"
@@ -359,7 +359,7 @@ function FeaturesEditor({ value = [], onChange }) {
           onChange={(e) => setAdding(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
           placeholder="Add feature and press Enter"
-          className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[13px] focus:outline-none focus:border-primary/40"
+          className="flex-1 h-9 px-3 rounded-lg bg-secondary/50 border border-border text-[14px] focus:outline-none focus:border-primary/40"
         />
         <Button type="button" variant="outline" size="sm" onClick={add}>
           <Plus className="w-3.5 h-3.5" /> Add
@@ -405,7 +405,7 @@ function CreatePackageModal({ title = 'Create Package', workspaceId, onClose, on
     <Modal open onClose={onClose} title={title} size="lg">
       <div className="space-y-4">
         {error && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{error}</div>
         )}
         <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Gold — 3 Months" />
         <div className="grid grid-cols-3 gap-3">
@@ -541,7 +541,7 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
           </div>
         )}
         {error && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{error}</div>
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[14px]">{error}</div>
         )}
         <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         {isAdmin ? (
@@ -562,7 +562,7 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
             </div>
             <Input label="Price ($)" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             <TextArea label="Description" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+            <label className="flex items-center gap-2 text-[14px] cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.is_active}
@@ -579,7 +579,7 @@ function EditPackageModal({ pkg, isAdmin, onClose, onUpdated }) {
               <Input label="Tier" value={form.tier} readOnly />
               <Input label={`Duration (${form.duration_unit})`} value={form.duration} readOnly />
             </div>
-            <label className="flex items-center gap-2 text-[13px] cursor-pointer">
+            <label className="flex items-center gap-2 text-[14px] cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.is_active}

@@ -97,10 +97,10 @@ export default function Login() {
       }
     >
       <div className="mb-8 text-center">
-        <p className="text-[13px] text-muted-foreground">Sign in to your workspace</p>
+        <p className="text-[14px] text-muted-foreground">Sign in to your workspace</p>
       </div>
       {error && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[13px]">
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
           {error}
         </div>
       )}
