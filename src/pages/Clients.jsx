@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 
@@ -25,6 +25,7 @@ import ClientFormsPopover from '@/components/clients/ClientFormsPopover';
 
 export default function Clients() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
@@ -34,7 +35,11 @@ export default function Clients() {
   const [assessments, setAssessments] = useState([]);
   const [activeWsTab, setActiveWsTab] = useState('all');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const CLIENT_STATUSES = ['all', 'pending', 'active', 'expiring_soon', 'expired', 'frozen', 'no_subscription'];
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const s = searchParams.get('status');
+    return s && CLIENT_STATUSES.includes(s) ? s : 'all';
+  });
   const [trainerFilter, setTrainerFilter] = useState('all');
   const [packageFilter, setPackageFilter] = useState('all');
   const [formsFilter, setFormsFilter] = useState('all');

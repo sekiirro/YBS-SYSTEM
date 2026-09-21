@@ -9,18 +9,31 @@ import { AssessmentsService } from '@/services/assessments';
 import { SubscriptionsService } from '@/services/subscriptions';
 import { PackagesService } from '@/services/packages';
 import { WorkspacesService } from '@/services/workspaces';
-import { AuditService } from '@/services/audit';
 import { hasPermission, canViewFinancials, isPlatformAdmin } from '@/lib/permissions';
 import { PageHeader, StatCard, LoadingState, Badge, Button } from '@/components/ui';
-import { formatDate, formatCurrency, getSubscriptionStatusColor, daysUntil } from '@/lib/ybs-utils';
+import { formatDate, formatCurrency } from '@/lib/ybs-utils';
 import {
-  Users, UserCheck, AlertTriangle, CalendarCheck, FileText, FileWarning,
-  FileClock, DollarSign, TrendingUp, Activity, ArrowRight, CreditCard,
-  Building2, ClipboardCheck, UsersRound, AlertCircle, Gauge, Handshake, Globe, ShieldAlert
+  Users, UserCheck, AlertTriangle, CalendarCheck, FileClock,
+  DollarSign, ArrowRight, Building2, ClipboardCheck, UsersRound,
+  AlertCircle, Handshake, ShieldAlert, Apple, Dumbbell, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { cardGridVariants, fadeUp, listVariants, listItemVariants } from '@/lib/motion';
+import { cardGridVariants, fadeUp } from '@/lib/motion';
+
+const QUICK_ACTIONS = [
+  { label: 'Clients', to: '/clients', perm: 'clients.view', icon: Users },
+  { label: 'Forms', to: '/forms', perm: 'forms.view', icon: FileClock },
+  { label: 'Pending Approvals', to: '/admin/applications', perm: 'applications.view', icon: ClipboardCheck },
+  { label: 'Workspaces', to: '/admin/workspaces', perm: 'workspaces.view', icon: Building2 },
+  { label: 'Nutrition Plans', to: '/nutrition', perm: 'nutrition.view', icon: Apple },
+  { label: 'Exercise Plans', to: '/workouts', perm: 'workout.view', icon: Dumbbell },
+];
+
+const scrollToFinancial = () => {
+  const el = document.getElementById('ybs-financial-overview');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -30,9 +43,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [workspaceStats, setWorkspaceStats] = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
 
-  const [expiringClients, setExpiringClients] = useState([]);
   const [pendingForms, setPendingForms] = useState([]);
   const [revenueData, setRevenueData] = useState(null);
   const [adminStats, setAdminStats] = useState({ activeWorkspaces: 0, pendingApprovals: 0, ybsTrainers: 0 });
@@ -53,7 +64,6 @@ export default function Dashboard() {
         ClientsService.list(clientFilter),
         AssessmentsService.list({}),
         SubscriptionsService.list(),
-        AuditService.list(),
         PackagesService.list(),
       ];
 
@@ -70,22 +80,21 @@ export default function Dashboard() {
       const clients = results[0] || [];
       const forms = results[1] || [];
       const subscriptions = results[2] || [];
-      const timeline = results[3] || [];
-      const packages = results[4] || [];
+      const packages = results[3] || [];
 
       if (isAdmin) {
-        const wsList = results[5] || [];
-        const pendingApps = results[6] || [];
-        const allUsers = results[7] || [];
+        const wsList = results[4] || [];
+        const pendingApps = results[5] || [];
+        const allUsers = results[6] || [];
         const trainerUsers = allUsers.filter(u => u.platform_role === 'platform_trainer' || u.ybs_coach === true);
         setAdminStats({
           activeWorkspaces: wsList.filter(w => w.status === 'active').length,
           pendingApprovals: pendingApps.length,
           ybsTrainers: trainerUsers.length,
         });
-        setWorkspaceStats(results[8]);
+        setWorkspaceStats(results[7]);
       } else {
-        setWorkspaceStats(results[5]);
+        setWorkspaceStats(results[4]);
       }
 
 
@@ -116,9 +125,7 @@ export default function Dashboard() {
         totalClients: clients.length,
       });
 
-      setExpiringClients(expiringSoon.slice(0, 5));
       setPendingForms(unreviewed.slice(0, 5));
-      setRecentActivity(timeline);
 
       // Financial data — owner only
       if (canViewFinancials(user)) {
@@ -161,7 +168,7 @@ export default function Dashboard() {
 
       {/* Operational Alert banner for admin */}
       {isAdmin && adminStats.pendingApprovals > 0 && (
-        <div className="mb-6 p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/25 shadow-[inset_2px_0_0_rgb(245,158,11)] flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-xl bg-amber-500/[0.08] border border-amber-500/25 shadow-[inset_2px_0_0_hsl(var(--warning))] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
               <AlertCircle className="w-4 h-4 text-amber-400" />
@@ -172,14 +179,14 @@ export default function Dashboard() {
             </div>
           </div>
           <Link to="/admin/applications">
-            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-[0_0_16px_rgba(245,158,11,0.3)]">Review Approvals</Button>
+            <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-[0_0_16px_hsl(var(--warning)/0.3)]">Review Approvals</Button>
           </Link>
         </div>
       )}
 
       {/* Workspace Operational & Capacity Strip (Section 22) */}
       {workspaceStats && (
-        <div className="surface-card p-4 mb-6 border border-border bg-gradient-to-br from-[#0d1322] to-[#0b0f19] shadow-sm">
+        <div className="surface-card p-4 mb-6 border border-border bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))] shadow-sm">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -232,8 +239,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Top stats grid */}
-
+{/* Top stats grid */}
       <motion.div
         variants={cardGridVariants}
         initial="initial"
@@ -242,163 +248,115 @@ export default function Dashboard() {
       >
         {isAdmin && (
           <>
-            <StatCard label="Active Workspaces" value={adminStats.activeWorkspaces} icon={Building2} accent />
-            <StatCard label="Pending Approvals" value={adminStats.pendingApprovals} icon={ClipboardCheck} accent={adminStats.pendingApprovals > 0} />
+            <StatCard to="/admin/workspaces?status=active" label="Active Workspaces" value={adminStats.activeWorkspaces} icon={Building2} accent />
+            <StatCard to="/admin/applications" label="Pending Approvals" value={adminStats.pendingApprovals} icon={ClipboardCheck} accent={adminStats.pendingApprovals > 0} />
           </>
         )}
-        <StatCard label="Active Clients" value={stats.activeClients} sublabel={`${stats.totalClients || 0} total`} icon={UserCheck} accent={!isAdmin} />
-        <StatCard label="Expired" value={stats.expiredClients} icon={Users} />
-        <StatCard label="Expiring Soon" value={stats.expiringSoon} sublabel="within 7 days" icon={AlertTriangle} />
+        <StatCard to="/clients?status=active" label="Active Clients" value={stats.activeClients} sublabel={`${stats.totalClients || 0} total`} icon={UserCheck} accent={!isAdmin} />
+        <StatCard to="/clients?status=expired" label="Expired" value={stats.expiredClients} icon={Users} />
+        <StatCard to="/clients?status=expiring_soon" label="Expiring Soon" value={stats.expiringSoon} sublabel="within 7 days" icon={AlertTriangle} />
         {isAdmin && (
-          <StatCard label="YBS Trainers" value={adminStats.ybsTrainers} icon={UsersRound} />
+          <StatCard to="/team" label="YBS Trainers" value={adminStats.ybsTrainers} icon={UsersRound} />
         )}
-        <StatCard label="Today's Check-ins" value={stats.todayCheckins} icon={CalendarCheck} />
-        <StatCard label="Unreviewed Forms" value={stats.unreviewedForms} icon={FileClock} />
+        <StatCard to="/forms?checkin=today" label="Today's Check-ins" value={stats.todayCheckins} icon={CalendarCheck} />
+        <StatCard to="/forms?status=most_urgent" label="Unreviewed Forms" value={stats.unreviewedForms} icon={FileClock} />
         {canViewFinancials(user) && (
-          <StatCard label="Total Revenue" value={formatCurrency(revenueData?.totalRevenue || 0)} icon={DollarSign} accent />
+          <StatCard
+            onClick={scrollToFinancial}
+            label="Total Revenue"
+            value={formatCurrency(revenueData?.totalRevenue || 0)}
+            icon={DollarSign}
+            accent
+            ariaLabel="Total Revenue. Open financial overview."
+          />
         )}
       </motion.div>
 
-      {/* Financial section — owner only */}
+      {/* Quick Actions */}
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="surface-card p-5 mb-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="w-4 h-4 text-primary" />
+          <h3 className="text-[14px] font-display font-semibold">Quick Actions</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+          {QUICK_ACTIONS.filter((a) => hasPermission(user, a.perm)).map((a) => (
+            <Link
+              key={a.to}
+              to={a.to}
+              className="group flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.05] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+            >
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <a.icon className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-[14px] font-medium group-hover:text-primary transition-colors">{a.label}</span>
+              <ArrowRight className="ml-auto w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+            </Link>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Financial Overview — owner only */}
       {canViewFinancials(user) && revenueData && (
         <motion.div
           variants={fadeUp}
           initial="initial"
           animate="animate"
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
+          id="ybs-financial-overview"
+          className="surface-card p-5 mb-6"
         >
-          <div className="surface-card p-5 lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="w-4 h-4 text-primary" />
-              <h3 className="text-[14px] font-display font-semibold">Financial Overview</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="w-4 h-4 text-primary" />
+            <h3 className="text-[14px] font-display font-semibold">Financial Overview</h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Total Revenue</p>
+              <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.totalRevenue)}</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Total Revenue</p>
-                <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.totalRevenue)}</p>
-              </div>
-              <div>
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Active Sub Value</p>
-                <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.activeSubValue)}</p>
-              </div>
-              <div>
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Renewals</p>
-                <p className="text-xl font-display font-semibold mt-1 tabular-nums">{revenueData.renewals}</p>
-              </div>
-              <div>
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Expired Subs</p>
-                <p className="text-xl font-display font-semibold mt-1 tabular-nums">{revenueData.expired}</p>
-              </div>
+            <div>
+              <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Active Sub Value</p>
+              <p className="text-xl font-display font-semibold mt-1 tabular-nums">{formatCurrency(revenueData.activeSubValue)}</p>
             </div>
-            {/* Revenue by package */}
-            {Object.keys(revenueData.revByPkg).length > 0 && (
-              <div className="mt-5 pt-4 border-t border-border">
-                <p className="text-[12px] text-muted-foreground uppercase tracking-wider mb-3">Revenue by Package</p>
-                <div className="space-y-2">
-                  {Object.entries(revenueData.revByPkg).map(([pkg, rev]) => {
-                    const maxRev = Math.max(...Object.values(revenueData.revByPkg));
-                    return (
-                      <div key={pkg} className="flex items-center gap-3">
-                        <span className="text-[12px] text-muted-foreground w-32 truncate">{pkg}</span>
-                        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${(rev / maxRev) * 100}%` }} />
-                        </div>
-                        <span className="text-[12px] font-medium tabular-nums w-20 text-right">{formatCurrency(rev)}</span>
+            <div>
+              <p className="text-[12px] text-muted-foreground uppercase tracking-wider">Renewals</p>
+              <p className="text-xl font-display font-semibold mt-1 tabular-nums">{revenueData.renewals}</p>
+            </div>
+            <Link
+              to="/clients?status=expired"
+              className="group rounded-lg -m-1 p-1 hover:bg-primary/5 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+              aria-label="Expired Subscriptions. Open clients filtered to expired subscriptions."
+            >
+              <p className="text-[12px] text-muted-foreground uppercase tracking-wider group-hover:text-primary">Expired Subs</p>
+              <p className="text-xl font-display font-semibold mt-1 tabular-nums group-hover:text-primary">{revenueData.expired}</p>
+            </Link>
+          </div>
+          {/* Revenue by package */}
+          {Object.keys(revenueData.revByPkg).length > 0 && (
+            <div className="mt-5 pt-4 border-t border-border">
+              <p className="text-[12px] text-muted-foreground uppercase tracking-wider mb-3">Revenue by Package</p>
+              <div className="space-y-2">
+                {Object.entries(revenueData.revByPkg).map(([pkg, rev]) => {
+                  const maxRev = Math.max(...Object.values(revenueData.revByPkg));
+                  return (
+                    <div key={pkg} className="flex items-center gap-3">
+                      <span className="text-[12px] text-muted-foreground w-32 truncate">{pkg}</span>
+                      <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${(rev / maxRev) * 100}%` }} />
                       </div>
-                    );
-                  })}
-                </div>
+                      <span className="text-[12px] font-medium tabular-nums w-20 text-right">{formatCurrency(rev)}</span>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-          <div className="surface-card p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <h3 className="text-[14px] font-display font-semibold">Quick Actions</h3>
             </div>
-            <div className="space-y-2">
-              <Link to="/clients" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">View Clients</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </Link>
-              <Link to="/subscriptions" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Manage Subscriptions</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </Link>
-              <Link to="/assessments" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Review Forms</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </Link>
-              <Link to="/team" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-primary/10 border border-white/[0.04] hover:border-primary/25 hover:translate-x-0.5 transition-all duration-200 group">
-                <span className="text-[14px] font-medium group-hover:text-primary transition-colors">Team Management</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </Link>
-            </div>
-          </div>
+          )}
         </motion.div>
       )}
-
-      {/* Two column: expiring + activity */}
-      <motion.div
-        variants={fadeUp}
-        initial="initial"
-        animate="animate"
-        className="grid grid-cols-1 lg:grid-cols-2 gap-4"
-      >
-        {/* Expiring soon */}
-        <div className="surface-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <h3 className="text-[14px] font-display font-semibold">Expiring Soon</h3>
-            </div>
-            <Link to="/clients" className="text-[12px] text-primary hover:underline">View all</Link>
-          </div>
-          {expiringClients.length === 0 ? (
-            <p className="text-[14px] text-muted-foreground py-6 text-center">No subscriptions expiring soon</p>
-          ) : (
-            <div className="space-y-2">
-              {expiringClients.map((c) => {
-                const days = daysUntil(c.subscription_end_date);
-                return (
-                  <Link key={c.id} to={`/clients/${c.id}`} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-amber-500/[0.05] border border-white/[0.04] hover:border-amber-500/20 transition-all duration-200 group">
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-medium truncate">{c.full_name}</p>
-                      <p className="text-[12px] text-muted-foreground">{c.client_code} · {c.package_name || 'No package'}</p>
-                    </div>
-                    <Badge className={cn(getSubscriptionStatusColor(c.subscription_status), 'shrink-0')}>
-                      {days} days left
-                    </Badge>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Recent activity */}
-        <div className="surface-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-primary" />
-            <h3 className="text-[14px] font-display font-semibold">Recent Activity</h3>
-          </div>
-          {recentActivity.length === 0 ? (
-            <p className="text-[14px] text-muted-foreground py-6 text-center">No recent activity</p>
-          ) : (
-            <div className="space-y-3">
-              {recentActivity.map((event) => (
-                <div key={event.id} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_rgba(59,130,246,0.6)] mt-1.5 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[14px] font-medium">{event.title}</p>
-                    <p className="text-[12px] text-muted-foreground">{event.client_name} · {formatDate(event.created_date, 'MMM d, h:mm a')}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.div>
 
       {/* Unreviewed forms */}
       {pendingForms.length > 0 && (

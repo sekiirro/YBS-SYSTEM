@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/utils/supabase';
 import { WorkspacesService } from '@/services/workspaces';
 import { PartnershipTypesService } from '@/services/partnershipTypes';
@@ -248,8 +249,14 @@ function TrainersBlock({ workspace, assigned = [], allTrainers = [], onAssign, o
 
 export default function Workspaces() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [workspaces, setWorkspaces] = useState([]);
+  const WORKSPACE_STATUSES = ['all', 'active', 'pending', 'suspended'];
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const s = searchParams.get('status');
+    return s && WORKSPACE_STATUSES.includes(s) ? s : 'all';
+  });
   const [partnershipTypes, setPartnershipTypes] = useState([]);
   const [partnershipTypesLoading, setPartnershipTypesLoading] = useState(false);
   const [partnershipTypesError, setPartnershipTypesError] = useState('');
@@ -492,6 +499,7 @@ export default function Workspaces() {
     const act = Number(w.active_clients_count || 0);
     return (act / cap) >= 0.9;
   }).length;
+  const filteredWorkspaces = statusFilter === 'all' ? workspaces : workspaces.filter((w) => w.status === statusFilter);
 
   return (
     <div>
@@ -505,6 +513,25 @@ export default function Workspaces() {
           </Button>
         }
       />
+
+      {/* Status filter chips (dashboard Active Workspaces / Quick Action entry point) */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {WORKSPACE_STATUSES.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className={cn(
+              'h-8 px-3 rounded-full text-[13px] font-medium border transition-colors capitalize',
+              statusFilter === s
+                ? 'bg-primary/10 text-primary border-primary/30'
+                : 'bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground'
+            )}
+          >
+            {s === 'all' ? 'All' : s}
+          </button>
+        ))}
+      </div>
 
       {openError && (
         <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
@@ -536,16 +563,18 @@ export default function Workspaces() {
               Strict multi-tenant isolation, partnership tiers, and client capacity limits.
             </p>
           </div>
-          <Badge variant="outline">{workspaces.length} total</Badge>
+          <Badge variant="outline">{filteredWorkspaces.length} total</Badge>
         </div>
 
-        {workspaces.length === 0 ? (
+        {filteredWorkspaces.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground text-[14px]">
-            No workspaces have been created yet. Click "Create Workspace" above.
+            {statusFilter === 'all'
+              ? 'No workspaces have been created yet. Click "Create Workspace" above.'
+              : `No workspaces with status "${statusFilter}".`}
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {workspaces.map((w) => {
+            {filteredWorkspaces.map((w) => {
               const activeClients = Number(w.active_clients_count ?? w.client_count ?? 0);
               const capacity = w.client_capacity;
               const isUnlimited = capacity === null || capacity === undefined;

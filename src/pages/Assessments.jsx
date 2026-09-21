@@ -2,7 +2,7 @@ import ResponsiveTable from '@/components/ui/responsive-table';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AssessmentsService, TemplatesService, QuestionsService } from '@/services/assessments';
 import { ClientsService } from '@/services/clients';
 import { hasPermission } from '@/lib/permissions';
@@ -10,7 +10,7 @@ import { getActiveWorkspaceId, isPlatformAdmin, getRoleCategory } from '@/lib/yb
 import { WorkspacesService } from '@/services/workspaces';
 import { PageHeader, LoadingState, EmptyState, Badge, Button, Modal, Input } from '@/components/ui';
 import { formatDate, getFormStatusColor, getFormStatusLabel, planDeliveryState, getPlanDeliveryColor, getPlanDeliveryLabel } from '@/lib/ybs-utils';
-import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2, Copy, Trash2 } from 'lucide-react';
+import { ClipboardList, Search, Plus, Send, Eye, FileText, LayoutTemplate, ChevronRight, Building2, Copy, Trash2, CalendarCheck, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import FormBuilder from '@/components/FormBuilder';
@@ -18,6 +18,7 @@ import FormBuilder from '@/components/FormBuilder';
 export default function Assessments() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const wsId = getActiveWorkspaceId(user);
   const roleCat = getRoleCategory(user);
   const [activeTab, setActiveTab] = useState('forms');
@@ -25,8 +26,20 @@ export default function Assessments() {
   const [forms, setForms] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const STATUS_VALUES = ['all', '__most_urgent__', 'pending', 'submitted', 'reviewed', 'overdue'];
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const s = searchParams.get('status');
+    const mapped = s === 'most_urgent' ? '__most_urgent__' : s;
+    return mapped && STATUS_VALUES.includes(mapped) ? mapped : 'all';
+  });
   const [workspaceFilter, setWorkspaceFilter] = useState('all');
+
+  // "Today's Check-ins" (dashboard card -> /forms?checkin=today): narrow the
+  // list to forms assigned to clients whose follow-up day is today. Null while
+  // the client set is still loading (shows the full list briefly), empty set
+  // once loaded with no matches (empty state).
+  const checkinToday = searchParams.get('checkin') === 'today';
+  const [checkinClientIds, setCheckinClientIds] = useState(null);
 
   // Builder state
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -81,6 +94,24 @@ export default function Assessments() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Load the client follow-up-day set for the dashboard's "Today's Check-ins"
+  // entry point (/forms?checkin=today).
+  useEffect(() => {
+    if (!checkinToday) {
+      setCheckinClientIds(null);
+      return;
+    }
+    let alive = true;
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    ClientsService.list({})
+      .then((data) => {
+        if (!alive) return;
+        setCheckinClientIds(new Set((data || []).filter((c) => c.follow_up_day === dayName).map((c) => c.id)));
+      })
+      .catch(() => { if (alive) setCheckinClientIds(new Set()); });
+    return () => { alive = false; };
+  }, [checkinToday]);
+
   // ── Workspace scoping ──
   // Workspace owners/managers operate strictly inside their active workspace;
   // platform staff keep the cross-workspace view plus the dropdown.
@@ -107,6 +138,8 @@ export default function Assessments() {
       }
       if (statusToMatch !== 'all' && f.submission_status !== statusToMatch) return false;
       if (workspaceFilter !== 'all' && f.workspace_id !== workspaceFilter) return false;
+      if (checkinToday && checkinClientIds && checkinClientIds.size > 0 && !checkinClientIds.has(f.client_id)) return false;
+      if (checkinToday && checkinClientIds && checkinClientIds.size === 0) return false;
       return true;
     });
 
@@ -138,7 +171,7 @@ export default function Assessments() {
       if (ua !== ub) return ua - ub;
       return toTs(b.created_at) - toTs(a.created_at);
     });
-  }, [workspaceScopedForms, search, statusFilter, workspaceFilter]);
+  }, [workspaceScopedForms, search, statusFilter, workspaceFilter, checkinToday, checkinClientIds]);
 
   // Workspace dropdown options derive from the RLS-visible forms themselves,
   // so every option by construction respects what the caller can see. No
@@ -474,6 +507,18 @@ export default function Assessments() {
               <option value="reviewed">Reviewed</option>
               <option value="overdue">Overdue</option>
             </select>
+            {checkinToday && (
+              <button
+                type="button"
+                onClick={() => navigate('/forms')}
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[13px] font-medium px-3 hover:bg-sky-500/20 transition-colors"
+                aria-label="Today's check-ins filter active. Click to clear."
+              >
+                <CalendarCheck className="w-3.5 h-3.5" />
+                Today's Check-ins
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </>
         )}
       </div>

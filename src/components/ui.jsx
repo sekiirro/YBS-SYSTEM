@@ -1,8 +1,11 @@
 import React, { useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { cardItemVariants, buttonMotion } from '@/lib/motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const MotionLink = motion(Link);
 
 export function PageHeader({ title, description, actions, icon: Icon }) {
   return (
@@ -28,15 +31,18 @@ export function PageHeader({ title, description, actions, icon: Icon }) {
   );
 }
 
-export function StatCard({ label, value, sublabel, icon: Icon, trend, accent }) {
-  return (
-    <motion.div
-      variants={cardItemVariants}
-      className={cn(
-        'ybs-stat transition-colors duration-200 cursor-default min-w-0',
-        accent && 'ybs-stat-accent'
-      )}
-    >
+export function StatCard({ label, value, sublabel, icon: Icon, trend, accent, to, onClick, ariaLabel }) {
+  const interactive = !!to || !!onClick;
+  const accessibilityLabel = ariaLabel || `${label}: ${value}.`;
+  const className = cn(
+    'ybs-stat transition-colors duration-200 min-w-0',
+    accent && 'ybs-stat-accent',
+    interactive &&
+      'cursor-pointer hover:bg-primary/5 hover:ring-1 hover:ring-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+  );
+
+  const content = (
+    <>
       <div className="flex items-start justify-between mb-3">
         <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         {Icon && (
@@ -54,6 +60,39 @@ export function StatCard({ label, value, sublabel, icon: Icon, trend, accent }) 
         )}
       </div>
       {sublabel && <p className="text-[12px] text-muted-foreground mt-1.5">{sublabel}</p>}
+    </>
+  );
+
+  if (to) {
+    return (
+      <MotionLink
+        to={to}
+        variants={cardItemVariants}
+        whileTap={{ scale: 0.985 }}
+        className={className}
+        aria-label={accessibilityLabel}
+      >
+        {content}
+      </MotionLink>
+    );
+  }
+  if (onClick) {
+    return (
+      <motion.button
+        type="button"
+        onClick={onClick}
+        variants={cardItemVariants}
+        whileTap={{ scale: 0.985 }}
+        className={className}
+        aria-label={accessibilityLabel}
+      >
+        {content}
+      </motion.button>
+    );
+  }
+  return (
+    <motion.div variants={cardItemVariants} className={cn('ybs-stat transition-colors duration-200 cursor-default min-w-0', accent && 'ybs-stat-accent')}>
+      {content}
     </motion.div>
   );
 }
