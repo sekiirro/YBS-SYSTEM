@@ -200,7 +200,7 @@ function SectionLabel({ children, accent }) {
     <p
       className={cn(
         'text-[12px] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5',
-        accent ? 'text-amber-500' : 'text-primary'
+        accent ? 'text-warning' : 'text-primary'
       )}
     >
       {children}

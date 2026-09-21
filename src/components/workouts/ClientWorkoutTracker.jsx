@@ -754,7 +754,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 <Button
                   size="sm"
                   onClick={() => setFinishModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-pearl shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" /> Finish Workout
                 </Button>
@@ -1054,7 +1054,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                               className={cn(
                                                 'w-7 h-7 rounded-md flex items-center justify-center transition-all mx-auto',
                                                 isCompleted
-                                                  ? 'bg-emerald-500 text-white shadow-sm'
+                                                  ? 'bg-emerald-500 text-pearl shadow-sm'
                                                   : activeLog
                                                   ? 'bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border'
                                                   : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
@@ -1538,7 +1538,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
             <Button variant="outline" onClick={() => setFinishModalOpen(false)}>
               Keep Training
             </Button>
-            <Button onClick={handleFinishWorkout} className="bg-emerald-600 hover:bg-emerald-500 text-white">
+            <Button onClick={handleFinishWorkout} className="bg-emerald-600 hover:bg-emerald-500 text-pearl">
               <Check className="w-4 h-4" /> Complete & Save
             </Button>
           </div>

@@ -221,7 +221,7 @@ export default function PendingApplications() {
       />
 
       {/* Filters */}
-      <div className="surface-card p-4 mb-4 bg-gradient-to-br from-[#0d1322] to-[#0b0f19] border border-white/[0.08]">
+      <div className="surface-card p-4 mb-4 bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))] border border-white/[0.08]">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -229,7 +229,7 @@ export default function PendingApplications() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, phone, or email…"
-              className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export default function PendingApplications() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-10 px-3 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="pending">Pending</option>
               <option value="under_review">Under Review</option>
@@ -259,7 +259,7 @@ export default function PendingApplications() {
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
+                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[hsl(var(--card))] to-transparent">
                   {['Applicant', 'Workspace / Brand', 'Package', 'Phone', 'Submitted', 'Status', 'Actions'].map((h) => (
                     <th
                       key={h}

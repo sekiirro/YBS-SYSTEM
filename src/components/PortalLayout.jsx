@@ -24,6 +24,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ThemeControl from '@/components/ThemeControl';
 
 const DESKTOP_NAV = [
   { label: 'Dashboard', path: '/portal/dashboard', icon: LayoutDashboard },
@@ -124,7 +125,7 @@ export default function PortalLayout() {
               YBS <span className="hidden sm:inline text-[12px] font-normal text-muted-foreground uppercase tracking-wider">Coaching Portal</span>
             </span>
             {workspaceName ? (
-              <span className="text-[12px] font-medium text-primary tracking-wide uppercase mt-0.5 truncate max-w-[120px] sm:max-w-xs">
+              <span className="text-[12px] font-medium text-primary tracking-wide uppercase mt-0.5 truncate max-w-[120px] max-[400px]:max-w-[80px] sm:max-w-xs">
                 {workspaceName}
               </span>
             ) : (
@@ -150,6 +151,7 @@ export default function PortalLayout() {
             </div>
           </Link>
 
+          <ThemeControl />
           <button
             onClick={() => { logout(); }}
             className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-red-400 px-2.5 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"

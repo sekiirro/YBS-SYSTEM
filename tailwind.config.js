@@ -1,3 +1,9 @@
+// Compatibility aliases keep existing utility classes on the semantic theme.
+const tone = (text, fill) => Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map((shade) => [shade, `hsl(var(--${shade >= 500 ? fill : text}) / <alpha-value>)`]));
+const info = tone('primary', 'legacy-info-fill');
+const signal = tone('destructive', 'brand-crimson');
+const neutral = tone('muted-foreground', 'foreground');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ["class"],
@@ -12,6 +18,19 @@ module.exports = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
+        white: 'hsl(var(--foreground) / <alpha-value>)',
+        pearl: 'hsl(var(--brand-pearl) / <alpha-value>)',
+        blue: info, sky: info, cyan: info, teal: info, indigo: info,
+        green: info, emerald: info, lime: info,
+        red: signal, rose: signal, pink: signal, orange: signal,
+        purple: neutral, violet: neutral, fuchsia: neutral,
+        amber: tone('warning', 'brand-pearl'), yellow: tone('warning', 'brand-pearl'),
+        slate: neutral, gray: neutral, zinc: neutral, stone: neutral, neutral,
+        nutri: {
+          surface: 'hsl(var(--nutri-surface))', 'surface-2': 'hsl(var(--nutri-surface-2))',
+          'border-strong': 'hsl(var(--nutri-border-strong))', 'border-soft': 'hsl(var(--nutri-border-soft))', 'border-faint': 'hsl(var(--nutri-border-faint))',
+          info: 'hsl(var(--nutri-info))', 'macro-p': 'hsl(var(--nutri-macro-p))', 'macro-c': 'hsl(var(--nutri-macro-c))', 'macro-f': 'hsl(var(--nutri-macro-f))',
+        },
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -24,7 +43,7 @@ module.exports = {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+                foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -44,11 +63,11 @@ module.exports = {
   			},
   			success: {
   				DEFAULT: 'hsl(var(--success))',
-  				foreground: '0 0% 100%'
+                foreground: 'hsl(var(--primary-foreground))'
   			},
   			warning: {
   				DEFAULT: 'hsl(var(--warning))',
-  				foreground: '0 0% 100%'
+                foreground: 'hsl(var(--primary-foreground))'
   			},
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',

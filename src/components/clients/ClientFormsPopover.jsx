@@ -41,10 +41,10 @@ export default function ClientFormsPopover({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -5 }}
           transition={{ duration: 0.15 }}
-          className="w-full max-w-sm bg-[#0d1322] border border-white/[0.12] rounded-xl shadow-2xl overflow-hidden z-20"
+          className="w-full max-w-sm bg-[hsl(var(--card))] border border-white/[0.12] rounded-xl shadow-2xl overflow-hidden z-20"
         >
           {/* Header */}
-          <div className="px-4 py-3 bg-gradient-to-b from-[#11192e] to-[#090d16] border-b border-primary/20 flex items-center justify-between">
+          <div className="px-4 py-3 bg-gradient-to-b from-[hsl(var(--secondary))] to-[hsl(var(--sidebar-background))] border-b border-primary/20 flex items-center justify-between">
             <div>
               <h4 className="text-xs font-semibold text-foreground">
                 All Forms ({forms.length})

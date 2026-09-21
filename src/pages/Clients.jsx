@@ -644,7 +644,7 @@ export default function Clients() {
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
               formsFilter === 'all'
-                ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_12px_rgba(59,130,246,0.2)]'
+                ? 'bg-primary/20 text-primary border-primary/40 shadow-[0_0_12px_hsl(var(--primary)/0.2)]'
                 : 'bg-white/[0.03] text-muted-foreground border-white/[0.06] hover:bg-white/[0.06] hover:text-foreground'
             )}
           >
@@ -661,7 +661,7 @@ export default function Clients() {
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
               formsFilter === 'submitted'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_hsl(var(--success)/0.25)]'
                 : 'bg-white/[0.03] text-emerald-400/80 border-white/[0.06] hover:bg-emerald-500/10 hover:border-emerald-500/30'
             )}
           >
@@ -676,7 +676,7 @@ export default function Clients() {
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
               formsFilter === 'pending'
-                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-[0_0_12px_hsl(var(--warning)/0.25)]'
                 : 'bg-white/[0.03] text-amber-400/80 border-white/[0.06] hover:bg-amber-500/10 hover:border-amber-500/30'
             )}
           >
@@ -693,7 +693,7 @@ export default function Clients() {
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border focus:outline-none focus-visible:ring-1 focus-visible:ring-primary',
               urgentSort
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/45 shadow-[0_0_14px_rgba(244,63,94,0.28)]'
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/45 shadow-[0_0_14px_hsl(var(--destructive)/0.28)]'
                 : 'bg-white/[0.03] text-rose-300/80 border-white/[0.06] hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-300'
             )}
           >
@@ -766,7 +766,7 @@ export default function Clients() {
                       key={c.id}
                       className={cn(
                         'border-b border-white/[0.04] hover:bg-white/[0.02] transition-all duration-300 ease-out cursor-pointer group relative',
-                        isSubmitted && 'hover:shadow-[inset_2px_0_0_rgba(16,185,129,0.8)]'
+                        isSubmitted && 'hover:shadow-[inset_2px_0_0_hsl(var(--success)/0.8)]'
                       )}
                       onClick={() => navigate(`/clients/${c.id}`)}
                     >
@@ -817,7 +817,7 @@ export default function Clients() {
                                 <button
                                   type="button"
                                   onClick={() => setViewingForm({ form: primaryForm, client: c })}
-                                  className="group/pill inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                                  className="group/pill inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:shadow-[0_0_12px_hsl(var(--success)/0.15)] transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                                   title="Click to view submitted form"
                                 >
                                   {/* Notification dot shown ONLY when unreviewed */}
@@ -845,7 +845,7 @@ export default function Clients() {
                                 <button
                                   type="button"
                                   onClick={() => setPendingForm({ form: primaryForm, client: c })}
-                                  className="group/pill inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 hover:border-amber-500/40 hover:shadow-[0_0_12px_rgba(245,158,11,0.15)] transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                                  className="group/pill inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 hover:border-amber-500/40 hover:shadow-[0_0_12px_hsl(var(--warning)/0.15)] transition-all duration-300 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                                   title="Click to manage pending form"
                                 >
                                   <Clock className="w-3 h-3 text-amber-400" />

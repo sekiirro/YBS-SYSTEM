@@ -43,8 +43,8 @@ export default function Settings() {
 
   const [brandingForm, setBrandingForm] = useState({
     logo_url: '',
-    primary_color: '#3B82F6',
-    accent_color: '#10B981',
+    primary_color: '#5B88B2',
+    accent_color: '#490B1A',
     brand_tagline: '',
   });
 
@@ -111,8 +111,8 @@ export default function Settings() {
 
         setBrandingForm({
           logo_url: ws.settings?.branding?.logo_url || '',
-          primary_color: ws.settings?.branding?.primary_color || '#3B82F6',
-          accent_color: ws.settings?.branding?.accent_color || '#10B981',
+          primary_color: ws.settings?.branding?.primary_color || '#5B88B2',
+          accent_color: ws.settings?.branding?.accent_color || '#490B1A',
           brand_tagline: ws.settings?.branding?.brand_tagline || '',
         });
 
@@ -733,7 +733,7 @@ export default function Settings() {
                       <Input
                         value={brandingForm.primary_color}
                         onChange={(e) => setBrandingForm({ ...brandingForm, primary_color: e.target.value })}
-                        placeholder="#3B82F6"
+                        placeholder="#5B88B2"
                         className="font-mono"
                       />
                     </div>
@@ -751,7 +751,7 @@ export default function Settings() {
                       <Input
                         value={brandingForm.accent_color}
                         onChange={(e) => setBrandingForm({ ...brandingForm, accent_color: e.target.value })}
-                        placeholder="#10B981"
+                        placeholder="#490B1A"
                         className="font-mono"
                       />
                     </div>

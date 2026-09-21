@@ -610,7 +610,7 @@ export default function Workspaces() {
                         ) : !isUnlimited ? (
                           <span className="text-muted-foreground">{utilizationPct}% utilized</span>
                         ) : (
-                          <span className="text-emerald-500 font-medium">Unlimited Capacity</span>
+                          <span className="text-success font-medium">Unlimited Capacity</span>
                         )}
                       </div>
                       {!isUnlimited && (

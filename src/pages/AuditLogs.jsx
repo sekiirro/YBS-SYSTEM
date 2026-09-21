@@ -39,7 +39,7 @@ export default function AuditLogs() {
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input type="text" placeholder="Search by actor, action, or entity…" value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
+          className="w-full h-10 pl-9 pr-4 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors" />
       </div>
       {filtered.length === 0 ? (
         <EmptyState icon={ScrollText} title="No audit logs" description="System actions will be tracked here" />

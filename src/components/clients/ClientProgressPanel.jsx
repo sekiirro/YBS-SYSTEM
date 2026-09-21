@@ -37,16 +37,16 @@ const PERIODS = [
 ];
 
 const MEASUREMENT_SERIES = [
-  { key: 'waist', label: 'Waist', color: '#f472b6' },
-  { key: 'chest', label: 'Chest', color: '#818cf8' },
-  { key: 'hip', label: 'Hip', color: '#38bdf8' },
-  { key: 'neck', label: 'Neck', color: '#a78bfa' },
-  { key: 'right_arm', label: 'Arm (R)', color: '#34d399' },
-  { key: 'left_arm', label: 'Arm (L)', color: '#2dd4bf' },
-  { key: 'right_thigh', label: 'Thigh (R)', color: '#fbbf24' },
-  { key: 'left_thigh', label: 'Thigh (L)', color: '#f59e0b' },
-  { key: 'right_calf', label: 'Calf (R)', color: '#94a3b8' },
-  { key: 'left_calf', label: 'Calf (L)', color: '#64748b' },
+  { key: 'waist', label: 'Waist', color: 'hsl(var(--chart-3))' },
+  { key: 'chest', label: 'Chest', color: 'hsl(var(--chart-5))' },
+  { key: 'hip', label: 'Hip', color: 'hsl(var(--chart-1))' },
+  { key: 'neck', label: 'Neck', color: 'hsl(var(--chart-4))' },
+  { key: 'right_arm', label: 'Arm (R)', color: 'hsl(var(--chart-2))' },
+  { key: 'left_arm', label: 'Arm (L)', color: 'hsl(var(--chart-1))' },
+  { key: 'right_thigh', label: 'Thigh (R)', color: 'hsl(var(--chart-2))' },
+  { key: 'left_thigh', label: 'Thigh (L)', color: 'hsl(var(--chart-3))' },
+  { key: 'right_calf', label: 'Calf (R)', color: 'hsl(var(--chart-4))' },
+  { key: 'left_calf', label: 'Calf (L)', color: 'hsl(var(--chart-5))' },
 ];
 
 const FIELD_ORDER = [
@@ -59,8 +59,8 @@ const FIELD_ORDER = [
   })),
 ];
 
-const WEIGHT_COLOR = '#3b82f6';
-const BODY_FAT_COLOR = '#8b5cf6';
+const WEIGHT_COLOR = 'hsl(var(--chart-1))';
+const BODY_FAT_COLOR = 'hsl(var(--chart-3))';
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(

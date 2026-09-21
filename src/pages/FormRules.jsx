@@ -501,10 +501,10 @@ function ToggleRule({ isOn, onClick }) {
         isOn ? 'bg-primary' : 'bg-white/10'
       )}
     >
-      <Power className={cn('w-3 h-3 text-white absolute left-1.5 transition-opacity', isOn ? 'opacity-100' : 'opacity-40')} />
+      <Power className={cn('w-3 h-3 text-primary-foreground absolute left-1.5 transition-opacity', isOn ? 'opacity-100' : 'opacity-40')} />
       <span
         className={cn(
-          'block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+          'block h-5 w-5 rounded-full bg-pearl shadow transition-transform duration-200',
           isOn ? 'translate-x-[22px]' : 'translate-x-[2px]'
         )}
       />

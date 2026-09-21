@@ -1396,7 +1396,7 @@ export default function WorkoutPlanBuilder(props = {}) {
 
   // ─── Column content: Embedded header (embedded mode action bar) ─────
   const embeddedHeaderContent = (
-    <div className="px-4 py-3 border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-[#0b0f19] shrink-0">
+    <div className="px-4 py-3 border-b border-white/[0.06] bg-gradient-to-r from-[hsl(var(--card))] to-[hsl(var(--background))] shrink-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -1429,7 +1429,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setDays((prev) => prev.map((d, idx) => ({ ...d, day_name: idx === 0 ? customName : d.day_name })));
                 }
               }}
-              className="h-6 px-1.5 rounded-md bg-[#0d1322] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-6 px-1.5 rounded-md bg-[hsl(var(--card))] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               {SPLIT_TYPES.map((st) => (
                 <option key={st.id} value={st.id}>{st.label}</option>
@@ -1444,7 +1444,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                   setCustomSplitName(e.target.value);
                   if (days.length === 1) handleUpdateDay(0, { day_name: e.target.value || 'Session 1' });
                 }}
-                className="h-6 px-2 rounded-md bg-[#0d1322] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 min-w-0 flex-1 transition-colors"
+                className="h-6 px-2 rounded-md bg-[hsl(var(--card))] border border-white/[0.08] text-[12px] text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 min-w-0 flex-1 transition-colors"
               />
             )}
           </div>
@@ -1537,12 +1537,12 @@ export default function WorkoutPlanBuilder(props = {}) {
                               'group relative rounded-xl border select-none transition-colors duration-150 ease-out',
                               isActive
                                 ? isRest
-                                  ? 'bg-[#0d1322] border-amber-500/40 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-400 before:rounded-r'
-                                  : 'bg-[#0d1322] border-primary/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                                  ? 'bg-[hsl(var(--card))] border-amber-500/40 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-amber-400 before:rounded-r'
+                                  : 'bg-[hsl(var(--card))] border-primary/50 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
                                 : isRest
-                                  ? 'bg-[#0b0f19] border-amber-500/20 hover:border-amber-500/40 hover:bg-[#0d1322]'
-                                  : 'bg-[#0b0f19] border-white/[0.08] hover:border-white/[0.12] hover:bg-[#0d1322]',
-                              dragSnapshot.isDragging && 'shadow-xl ring-1 ring-primary/40 opacity-95 z-50 bg-[#0d1322]'
+                                  ? 'bg-[hsl(var(--background))] border-amber-500/20 hover:border-amber-500/40 hover:bg-[hsl(var(--card))]'
+                                  : 'bg-[hsl(var(--background))] border-white/[0.08] hover:border-white/[0.12] hover:bg-[hsl(var(--card))]',
+                              dragSnapshot.isDragging && 'shadow-xl ring-1 ring-primary/40 opacity-95 z-50 bg-[hsl(var(--card))]'
                             )}
                           >
                           <button
@@ -1588,7 +1588,7 @@ export default function WorkoutPlanBuilder(props = {}) {
                                   isActive ? 'text-muted-foreground' : 'text-muted-foreground'
                                 )}>
                                   {isRest ? (
-                                    <span className="text-amber-500/70 font-mono text-[12px]">Recovery</span>
+                                    <span className="text-warning/70 font-mono text-[12px]">Recovery</span>
                                   ) : (
                                     <span>
                                       {exCount > 0 ? (

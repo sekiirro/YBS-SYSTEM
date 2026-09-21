@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { WorkspacesService } from '@/services/workspaces';
 import { getActiveWorkspaceId, getRoleCategory } from '@/lib/ybs-auth';
 import { getInitials } from '@/lib/ybs-utils';
+import ThemeControl from '@/components/ThemeControl';
 
 const dropdownVariants = {
   initial: { opacity: 0, scale: 0.96, y: -6 },
@@ -104,6 +105,7 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-1.5">
+        <ThemeControl />
         {/* Notification bell */}
         <motion.button
           className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
@@ -123,7 +125,7 @@ export default function Topbar({ onMenuClick }) {
             aria-label="Account menu"
             aria-expanded={menuOpen}
             className="flex items-center gap-2.5 pl-1 pr-2.5 py-1 rounded-full hover:bg-white/5 transition-colors"
-            whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+            whileHover={{ backgroundColor: 'hsl(var(--foreground)/0.05)' }}
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.15 }}
           >

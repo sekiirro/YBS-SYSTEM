@@ -13,11 +13,11 @@ import {
 import { cn } from '@/lib/utils';
 
 const SECTION_COLORS = [
-  { border: 'border-sky-500/20', bg: 'bg-sky-500/5', headerBg: 'bg-sky-500/10', text: 'text-sky-400', glow: 'hover:shadow-[0_0_20px_rgba(14,165,233,0.06)]' },
-  { border: 'border-violet-500/20', bg: 'bg-violet-500/5', headerBg: 'bg-violet-500/10', text: 'text-violet-400', glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,0.06)]' },
-  { border: 'border-emerald-500/20', bg: 'bg-emerald-500/5', headerBg: 'bg-emerald-500/10', text: 'text-emerald-400', glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.06)]' },
-  { border: 'border-amber-500/20', bg: 'bg-amber-500/5', headerBg: 'bg-amber-500/10', text: 'text-amber-400', glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.06)]' },
-  { border: 'border-rose-500/20', bg: 'bg-rose-500/5', headerBg: 'bg-rose-500/10', text: 'text-rose-400', glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.06)]' },
+  { border: 'border-sky-500/20', bg: 'bg-sky-500/5', headerBg: 'bg-sky-500/10', text: 'text-sky-400', glow: 'hover:shadow-[0_0_20px_hsl(var(--primary)/0.06)]' },
+  { border: 'border-violet-500/20', bg: 'bg-violet-500/5', headerBg: 'bg-violet-500/10', text: 'text-violet-400', glow: 'hover:shadow-[0_0_20px_hsl(var(--muted-foreground)/0.06)]' },
+  { border: 'border-emerald-500/20', bg: 'bg-emerald-500/5', headerBg: 'bg-emerald-500/10', text: 'text-emerald-400', glow: 'hover:shadow-[0_0_20px_hsl(var(--success)/0.06)]' },
+  { border: 'border-amber-500/20', bg: 'bg-amber-500/5', headerBg: 'bg-amber-500/10', text: 'text-amber-400', glow: 'hover:shadow-[0_0_20px_hsl(var(--warning)/0.06)]' },
+  { border: 'border-rose-500/20', bg: 'bg-rose-500/5', headerBg: 'bg-rose-500/10', text: 'text-rose-400', glow: 'hover:shadow-[0_0_20px_hsl(var(--destructive)/0.06)]' },
 ];
 
 // ─── Answer helpers ───────────────────────────────────────────────
@@ -152,7 +152,7 @@ function SubmissionSkeleton() {
   return (
     <div className="space-y-4">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="rounded-xl border border-white/[0.08] bg-[#0d1322]/80 p-4 space-y-3">
+        <div key={i} className="rounded-xl border border-white/[0.08] bg-[hsl(var(--card))]/80 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="h-4 w-40 rounded bg-white/[0.06] animate-pulse" />
             <div className="h-3 w-16 rounded bg-white/[0.05] animate-pulse" />
@@ -379,12 +379,12 @@ export default function ViewFormDrawer({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="w-full bg-[#0b0f19] border-l border-white/[0.08] shadow-2xl flex flex-col h-full print:w-full print:max-w-none print:border-0 print:bg-white print:text-black"
+            className="w-full bg-[hsl(var(--background))] border-l border-white/[0.08] shadow-2xl flex flex-col h-full print:w-full print:max-w-none print:border-0 print:bg-pearl print:text-black"
           >
             {/* Top Bar / Header */}
-            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-primary/20 flex items-center justify-between shrink-0 bg-gradient-to-b from-[#11192e] to-[#0d1322] shadow-[0_4px_24px_rgba(0,0,0,0.2)] z-10 print:bg-transparent print:border-b-2 print:border-black print:shadow-none">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-primary/20 flex items-center justify-between shrink-0 bg-gradient-to-b from-[hsl(var(--secondary))] to-[hsl(var(--card))] shadow-[0_4px_24px_rgba(0,0,0,0.2)] z-10 print:bg-transparent print:border-b-2 print:border-black print:shadow-none">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-primary/20 border border-primary/30 shadow-[0_0_12px_rgba(59,130,246,0.2)] flex items-center justify-center text-primary font-bold text-xs sm:text-sm shrink-0 print:border-black print:shadow-none">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-primary/20 border border-primary/30 shadow-[0_0_12px_hsl(var(--primary)/0.2)] flex items-center justify-center text-primary font-bold text-xs sm:text-sm shrink-0 print:border-black print:shadow-none">
                   {getInitials(client?.full_name)}
                 </div>
                 <div className="min-w-0">
@@ -418,7 +418,7 @@ export default function ViewFormDrawer({
                 {/* Subtle secondary reviewed indicator */}
                 {isReviewed && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-sky-500/10 text-sky-200/80 border border-sky-500/20 shadow-[0_0_10px_rgba(14,165,233,0.1)]"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium tracking-wide bg-sky-500/10 text-sky-200/80 border border-sky-500/20 shadow-[0_0_10px_hsl(var(--primary)/0.1)]"
                     title={`Reviewed on ${formatDate(activeData?.reviewed_at)}`}
                   >
                     <CheckCheck className="w-3 h-3 text-sky-400" />
@@ -438,7 +438,7 @@ export default function ViewFormDrawer({
             </div>
 
             {/* Sub-Header: Form Title, Completion Meter, Activity Bar */}
-            <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#090d16]/80 border-b border-white/[0.04] shrink-0 print:bg-transparent print:border-b">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[hsl(var(--sidebar-background))]/80 border-b border-white/[0.04] shrink-0 print:bg-transparent print:border-b">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <div className="flex items-center gap-2">
@@ -534,7 +534,7 @@ export default function ViewFormDrawer({
                     <div
                       key={section.title || sIdx}
                       className={cn(
-                        "rounded-xl border overflow-hidden transition-all duration-300 ease-out print:border-gray-300 print:bg-white",
+                        "rounded-xl border overflow-hidden transition-all duration-300 ease-out print:border-gray-300 print:bg-pearl",
                         theme.bg, theme.border, theme.glow
                       )}
                     >
@@ -620,7 +620,7 @@ export default function ViewFormDrawer({
             </div>
 
             {/* Bottom Actions Footer */}
-            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-white/[0.08] bg-[#0d1322] shrink-0 flex items-center justify-between gap-2.5 print:hidden">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-white/[0.08] bg-[hsl(var(--card))] shrink-0 flex items-center justify-between gap-2.5 print:hidden">
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -650,7 +650,7 @@ export default function ViewFormDrawer({
                     size="sm"
                     onClick={handleMarkAsReviewed}
                     disabled={marking}
-                    className="gap-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white h-9"
+                    className="gap-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-pearl h-9"
                     aria-label="Mark form as reviewed"
                   >
                     <CheckCheck className="w-3.5 h-3.5" />

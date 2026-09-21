@@ -224,7 +224,7 @@ function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
   return (
     <div className="ybs-package-card surface-card overflow-hidden group">
       {/* Card Header */}
-      <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] bg-gradient-to-br from-[#0d1322] to-[#0b0f19]">
+      <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))]">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <h3 className="text-[15px] font-display font-semibold truncate pr-2">{p.name}</h3>
@@ -265,7 +265,7 @@ function PackageCard({ pkg: p, isTemplate = false, canEdit = false, onEdit }) {
           <ul className="mt-3 space-y-1">
             {p.features.slice(0, 3).map((f, i) => (
               <li key={i} className="text-[12px] text-muted-foreground flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_rgba(59,130,246,0.5)]" /> {f}
+                <span className="w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary)/0.5)]" /> {f}
               </li>
             ))}
           </ul>

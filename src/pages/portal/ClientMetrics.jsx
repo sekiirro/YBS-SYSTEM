@@ -370,7 +370,7 @@ export default function ClientMetrics() {
                   </div>
                 )}
                 <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                  <span className="text-[12px] font-semibold text-white uppercase tracking-wider block capitalize">
+                  <span className="text-[12px] font-semibold text-pearl uppercase tracking-wider block capitalize">
                     {photo.angle || 'Photo'}
                   </span>
                   <span className="text-[12px] text-gray-300 font-mono">{formatDate(photo.entry_date || photo.captured_at)}</span>

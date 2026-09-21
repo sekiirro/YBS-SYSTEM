@@ -13,9 +13,9 @@ const buttonVariants = cva(
         default:
           "ybs-button-primary",
         destructive:
-          "bg-rose-500 text-white shadow-[0_0_24px_-8px_rgba(244,63,94,0.6)] hover:bg-rose-600 hover:shadow-[0_0_32px_-8px_rgba(244,63,94,0.8)]",
+          "bg-rose-500 text-pearl shadow-[0_0_24px_-8px_hsl(var(--destructive)/0.6)] hover:bg-rose-600 hover:shadow-[0_0_32px_-8px_hsl(var(--destructive)/0.8)]",
         outline:
-          "border border-white/[0.12] bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]",
+          "border border-white/[0.12] bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary hover:shadow-[0_0_20px_hsl(var(--primary)/0.1)]",
         secondary:
           "bg-white/[0.06] text-foreground border border-white/[0.08] hover:bg-white/[0.1] hover:border-white/[0.12] shadow-sm",
         ghost: "text-foreground/80 hover:text-foreground hover:bg-white/[0.06]",

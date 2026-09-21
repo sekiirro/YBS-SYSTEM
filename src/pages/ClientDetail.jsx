@@ -107,10 +107,10 @@ export default function ClientDetail() {
       </button>
 
       {/* Header card */}
-      <div className="surface-card p-5 mb-4 bg-gradient-to-br from-[#0d1322] to-[#0b0f19] border border-white/[0.08]">
+      <div className="surface-card p-5 mb-4 bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))] border border-white/[0.08]">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 shadow-[0_0_20px_rgba(59,130,246,0.15)] flex items-center justify-center text-primary text-lg font-semibold shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 shadow-[0_0_20px_hsl(var(--primary)/0.15)] flex items-center justify-center text-primary text-lg font-semibold shrink-0">
               {getInitials(client.full_name)}
             </div>
             <div>

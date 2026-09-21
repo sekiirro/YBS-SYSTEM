@@ -205,7 +205,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                             : 'text-muted-foreground hover:text-foreground'
                         )}
                         whileHover={!isActive ? {
-                          backgroundColor: 'rgba(255,255,255,0.04)',
+                          backgroundColor: 'hsl(var(--foreground)/0.04)',
                           x: 1,
                           transition: { duration: 0.15 }
                         } : {}}
@@ -251,7 +251,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
           <motion.button
             onClick={() => setCollapsed(!collapsed)}
             className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-            whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+            whileHover={{ backgroundColor: 'hsl(var(--foreground)/0.05)' }}
             whileTap={{ scale: 0.97 }}
           >
             <motion.div

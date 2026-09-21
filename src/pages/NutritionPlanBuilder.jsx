@@ -837,7 +837,7 @@ export default function NutritionPlanBuilder(props = {}) {
   const planOverviewContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Plan Header */}
-      <div className="shrink-0 p-4 border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-[#0b0f19] space-y-3">
+      <div className="shrink-0 p-4 border-b border-white/[0.06] bg-gradient-to-r from-[hsl(var(--card))] to-[hsl(var(--background))] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -905,7 +905,7 @@ export default function NutritionPlanBuilder(props = {}) {
                 size="sm"
                 onClick={handleActivate}
                 disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600 text-[12px] h-8"
+                className="bg-emerald-600 hover:bg-emerald-500 text-pearl border-emerald-600 text-[12px] h-8"
               >
                 <Check className="w-3.5 h-3.5" />
                 {saving ? 'Activating…' : 'Activate & Assign'}
@@ -1020,9 +1020,9 @@ export default function NutritionPlanBuilder(props = {}) {
                             className={cn(
                               'group relative rounded-xl border p-3 cursor-pointer transition-all duration-150 select-none',
                               isSelected
-                                ? 'bg-[#0d1322] border-primary/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
-                                : 'bg-[#0b0f19] border-white/[0.08] hover:border-white/[0.12] hover:bg-[#0d1322]',
-                              snapshot.isDragging && 'shadow-lg ring-2 ring-primary/30 z-20 bg-[#0d1322]'
+                                ? 'bg-[hsl(var(--card))] border-primary/50 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.1)] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-primary before:rounded-r'
+                                : 'bg-[hsl(var(--background))] border-white/[0.08] hover:border-white/[0.12] hover:bg-[hsl(var(--card))]',
+                              snapshot.isDragging && 'shadow-lg ring-2 ring-primary/30 z-20 bg-[hsl(var(--card))]'
                             )}
                           >
                             <div className="flex items-center justify-between gap-2">

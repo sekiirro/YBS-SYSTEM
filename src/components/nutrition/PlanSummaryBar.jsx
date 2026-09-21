@@ -3,9 +3,9 @@ import { Flame, Beef, Wheat, Droplets } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 const MACRO_COLORS = {
-  protein: '#38bdf8', // Sky 400
-  carbs: '#fbbf24',   // Amber 400
-  fat: '#f87171',     // Red 400
+  protein: 'hsl(var(--chart-1))', // Protein
+  carbs: 'hsl(var(--chart-2))',   // Carbohydrates
+  fat: 'hsl(var(--chart-3))',     // Fat
 };
 
 export default function PlanSummaryBar({ totals }) {

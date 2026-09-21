@@ -78,7 +78,7 @@ export default function Team() {
           <div className="overflow-x-auto">
             <ResponsiveTable className="w-full">
               <thead>
-                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[#0d1322] to-transparent">
+                <tr className="border-b border-white/[0.06] bg-gradient-to-r from-[hsl(var(--card))] to-transparent">
                   <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Member</th>
                   <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Role</th>
                   <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
@@ -92,7 +92,7 @@ export default function Team() {
                   <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] hover:shadow-[inset_2px_0_0_hsl(var(--primary))] transition-all duration-300 group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.08)] flex items-center justify-center text-primary text-[12px] font-semibold shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_10px_hsl(var(--primary)/0.08)] flex items-center justify-center text-primary text-[12px] font-semibold shrink-0">
                           {getInitials(memberDisplayName(u))}
                         </div>
                         <div>

@@ -415,7 +415,7 @@ export default function Assessments() {
 
       {/* Tabs */}
       {TABS.length > 1 && (
-        <div className="flex gap-1 mb-4 p-1 bg-gradient-to-r from-[#0d1322] to-[#0b0f19] border border-white/[0.08] rounded-xl w-fit">
+        <div className="flex gap-1 mb-4 p-1 bg-gradient-to-r from-[hsl(var(--card))] to-[hsl(var(--background))] border border-white/[0.08] rounded-xl w-fit">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -425,7 +425,7 @@ export default function Assessments() {
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[14px] font-medium transition-all duration-200',
                   activeTab === tab.key
-                    ? 'bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                    ? 'bg-primary/10 text-primary shadow-[inset_0_1px_0_hsl(var(--foreground)/0.1)]'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
                 )}
               >
@@ -445,7 +445,7 @@ export default function Assessments() {
             placeholder={activeTab === 'forms' ? 'Search forms…' : 'Search templates…'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+            className="w-full h-10 pl-9 pr-4 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] placeholder:text-muted-foreground hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
           />
         </div>
         {activeTab === 'forms' && (
@@ -453,7 +453,7 @@ export default function Assessments() {
             <select
               value={workspaceFilter}
               onChange={(e) => setWorkspaceFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-10 px-3 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="all">All Workspaces</option>
               {workspaceOptions.map((w) => (
@@ -465,7 +465,7 @@ export default function Assessments() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 px-3 rounded-lg bg-[#0d1322] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
+              className="h-10 px-3 rounded-lg bg-[hsl(var(--card))] border border-white/[0.08] text-[14px] hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 transition-colors"
             >
               <option value="all">All Statuses</option>
               <option value="__most_urgent__">Most Urgent</option>

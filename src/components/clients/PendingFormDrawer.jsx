@@ -143,12 +143,12 @@ export default function PendingFormDrawer({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="relative w-full max-w-md bg-[#0b0f19] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden z-10"
+          className="relative w-full max-w-md bg-[hsl(var(--background))] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden z-10"
         >
           {/* Header */}
-          <div className="px-5 py-4 border-b border-primary/20 bg-gradient-to-b from-[#11192e] to-[#0d1322] flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-primary/20 bg-gradient-to-b from-[hsl(var(--secondary))] to-[hsl(var(--card))] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)] flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 shadow-[0_0_12px_hsl(var(--warning)/0.15)] flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
                 {getInitials(client?.full_name)}
               </div>
               <div className="min-w-0">
@@ -216,7 +216,7 @@ export default function PendingFormDrawer({
             </div>
 
             {/* Reminder Status */}
-            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-[#0d1322] border border-white/[0.04] text-[12px]">
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-[hsl(var(--card))] border border-white/[0.04] text-[12px]">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Bell className="w-3.5 h-3.5 text-primary/80" />
                 <span>Last Reminder:</span>
@@ -247,7 +247,7 @@ export default function PendingFormDrawer({
                   'w-full gap-2 text-xs font-semibold h-10 transition-all',
                   cooldown > 0
                     ? 'bg-secondary text-muted-foreground cursor-not-allowed border border-white/[0.06]'
-                    : 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                    : 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_12px_hsl(var(--warning)/0.2)]'
                 )}
                 aria-label="Send reminder to client"
               >

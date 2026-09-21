@@ -1,0 +1,103 @@
+/* One palette; derived shades retain the existing surface hierarchy. */
+:root {
+  --legacy-info-fill: 211.622 40.217% 36.078%;
+  --brand-midnight: 214.426 62.887% 19.020%; /* #122C4F */
+  --brand-pearl: 54.783 74.194% 93.922%; /* #FBF9E4 */
+  --brand-noir: 0.000 0.000% 0.000%; /* #000000 */
+  --brand-ocean: 208.966 36.100% 52.745%; /* #5B88B2 */
+  --brand-crimson: 345.484 73.810% 16.471%; /* #490B1A */
+  --card-foreground: var(--foreground);
+  --popover-foreground: var(--foreground);
+  --secondary-foreground: var(--foreground);
+  --accent-foreground: var(--foreground);
+  --danger: var(--destructive);
+  --sidebar-foreground: var(--muted-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --nutri-surface: var(--card);
+  --nutri-surface-2: var(--secondary);
+  --nutri-border-strong: var(--input);
+  --nutri-border-soft: var(--border);
+  --nutri-border-faint: var(--muted);
+  --nutri-info: var(--primary);
+  --nutri-macro-p: var(--chart-1);
+  --nutri-macro-c: var(--chart-2);
+  --nutri-macro-f: var(--chart-3);
+  --ybs-gradient: linear-gradient(115deg, hsl(var(--action-start)) 0%, hsl(var(--action-mid)) 50%, hsl(var(--action-end)) 100%);
+  --ybs-hero: radial-gradient(ellipse at 100% 0%, hsl(var(--hero-a)) 0%, transparent 65%), linear-gradient(125deg, hsl(var(--hero-b)), hsl(var(--hero-c)) 65%, hsl(var(--hero-d)));
+}
+:root, :root[data-theme="day"] {
+  --background: 54.783 74.194% 93.922%;
+  --foreground: 214.426 62.887% 19.020%;
+  --card: 60.000 45.000% 92.157%;
+  --popover: 54.783 74.194% 93.922%;
+  --primary: 214.426 62.887% 19.020%;
+  --primary-foreground: 54.783 74.194% 93.922%;
+  --secondary: 80.000 22.222% 89.412%;
+  --muted: 63.529 27.869% 88.039%;
+  --muted-foreground: 211.579 18.627% 40.000%;
+  --accent: 127.500 11.429% 86.275%;
+  --border: 102.857 5.785% 76.275%;
+  --input: 205.714 9.170% 55.098%;
+  --ring: 210.380 36.406% 42.549%;
+  --success: 210.789 38.000% 39.216%;
+  --warning: 345.484 73.810% 16.471%;
+  --destructive: 345.484 73.810% 16.471%;
+  --destructive-foreground: 54.783 74.194% 93.922%;
+  --sidebar-background: 67.500 34.783% 90.980%;
+  --chart-1: 214.426 62.887% 19.020%;
+  --chart-2: 210.380 36.406% 42.549%;
+  --chart-3: 345.484 73.810% 16.471%;
+  --chart-4: 208.750 32.432% 29.020%;
+  --chart-5: 283.846 17.568% 29.020%;
+  --hero-a: 102.000 16.129% 87.843%;
+  --hero-b: 67.500 34.783% 90.980%;
+  --hero-c: 63.529 27.869% 88.039%;
+  --hero-d: 47.500 44.444% 89.412%;
+  --action-start: 214.426 62.887% 19.020%;
+  --action-mid: 211.622 40.217% 36.078%;
+  --action-end: 232.941 34.694% 19.216%;
+  --action-foreground: 54.783 74.194% 93.922%;
+}
+:root[data-theme="night"] {
+  --background: 212.000 65.217% 4.510%;
+  --foreground: 54.783 74.194% 93.922%;
+  --card: 214.839 63.265% 9.608%;
+  --popover: 214.118 62.963% 15.882%;
+  --primary: 203.721 27.389% 69.216%;
+  --primary-foreground: 0.000 0.000% 0.000%;
+  --secondary: 213.750 54.237% 23.137%;
+  --muted: 214.800 62.500% 15.686%;
+  --muted-foreground: 193.043 19.328% 76.667%;
+  --accent: 212.174 46.309% 29.216%;
+  --border: 212.571 44.304% 30.980%;
+  --input: 210.380 35.747% 43.333%;
+  --ring: 203.721 27.389% 69.216%;
+  --success: 198.750 23.529% 73.333%;
+  --warning: 22.000 21.739% 72.941%;
+  --destructive: 16.875 19.512% 67.843%;
+  --destructive-foreground: 0.000 0.000% 0.000%;
+  --sidebar-background: 215.455 64.706% 6.667%;
+  --chart-1: 203.721 27.389% 69.216%;
+  --chart-2: 54.783 74.194% 93.922%;
+  --chart-3: 16.875 19.512% 67.843%;
+  --chart-4: 208.966 36.100% 52.745%;
+  --chart-5: 229.500 19.048% 41.176%;
+  --hero-a: 212.727 51.563% 25.098%;
+  --hero-b: 214.444 62.791% 16.863%;
+  --hero-c: 215.000 62.069% 11.373%;
+  --hero-d: 227.692 40.206% 19.020%;
+  --action-start: 208.966 36.100% 52.745%;
+  --action-mid: 191.429 18.261% 77.451%;
+  --action-end: 54.783 74.194% 93.922%;
+  --action-foreground: 0.000 0.000% 0.000%;
+}
+:root, :root[data-theme="day"] { color-scheme:light; }
+:root[data-theme="night"] { color-scheme:dark; }
+@media (prefers-contrast:more) {
+  :root, :root[data-theme] { --muted-foreground:var(--foreground); --border:var(--input); }
+}

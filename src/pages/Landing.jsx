@@ -4,6 +4,7 @@ import { ArrowUpRight, Activity, Dumbbell, Apple, TrendingUp } from 'lucide-reac
 import { useAuth } from '@/lib/AuthContext';
 import { getLandingPath } from '@/lib/ybs-auth';
 import { LoadingState } from '@/components/ui';
+import ThemeControl from '@/components/ThemeControl';
 
 export default function Landing() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
@@ -16,7 +17,7 @@ export default function Landing() {
     <div className="ybs-landing min-h-dvh">
       <header className="flex items-center justify-between gap-4 px-6 md:px-12 lg:px-20 py-6">
         <Link to="/" className="ybs-brand" aria-label="YBS home"><span className="ybs-monogram">Y</span><span className="ybs-wordmark">YBS</span></Link>
-        <Link to={login} className="ybs-button inline-flex items-center gap-2 px-4 border border-white/20">Sign in <ArrowUpRight size={18} /></Link>
+        <div className="flex items-center gap-2"><ThemeControl /><Link to={login} className="ybs-button inline-flex items-center gap-2 px-4 border border-white/20">Sign in <ArrowUpRight size={18} /></Link></div>
       </header>
       <main className="mx-auto max-w-[1600px] px-6 md:px-12 lg:px-20 pt-16 lg:pt-28 pb-16">
         <p className="ybs-eyebrow flex items-center gap-2 mb-7"><Activity size={16} /> Your coaching, connected</p>

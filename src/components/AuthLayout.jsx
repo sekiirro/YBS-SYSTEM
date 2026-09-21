@@ -1,12 +1,13 @@
 import React from "react";
 import { Link } from 'react-router-dom';
 import { Activity } from 'lucide-react';
+import ThemeControl from '@/components/ThemeControl';
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, brand }) {
   return (
     <div className="ybs-auth">
       <aside className="ybs-auth-story">
-        <Link to="/" className="ybs-brand w-fit" aria-label="YBS home"><span className="ybs-monogram">Y</span><span><span className="ybs-wordmark block">YBS</span><span className="ybs-eyebrow">Coaching OS</span></span></Link>
+        <div className="flex items-center justify-between"><Link to="/" className="ybs-brand w-fit" aria-label="YBS home"><span className="ybs-monogram">Y</span><span><span className="ybs-wordmark block">YBS</span><span className="ybs-eyebrow">Coaching OS</span></span></Link><ThemeControl /></div>
         <div className="py-8 lg:py-20">
           <p className="ybs-eyebrow mb-6 flex items-center gap-2"><Activity size={16} /> Built around your progress</p>
           <h2>Your effort.<br />A clearer direction.</h2>

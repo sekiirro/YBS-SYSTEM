@@ -54,7 +54,7 @@ export default function BodyFatVisualSelector({
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="relative w-48 sm:w-60 aspect-[3/4] rounded-2xl overflow-hidden border border-black/10 bg-white">
+        <div className="relative w-48 sm:w-60 aspect-[3/4] rounded-2xl overflow-hidden border border-black/10 bg-pearl">
           {selectedImage ? (
             <img
               src={selectedImage}
@@ -67,7 +67,7 @@ export default function BodyFatVisualSelector({
             </div>
           )}
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-2">
-            <span className="px-4 py-2 rounded-xl bg-white/95 text-gray-900 text-3xl font-bold tabular-nums shadow-sm">
+            <span className="px-4 py-2 rounded-xl bg-pearl/95 text-black text-3xl font-bold tabular-nums shadow-sm">
               {index >= 0 ? `${value}%` : `${effectiveValue}%`}
             </span>
           </div>
