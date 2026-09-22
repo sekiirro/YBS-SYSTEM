@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -22,28 +22,30 @@ import Forbidden from '@/pages/Forbidden';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
-import Dashboard from '@/pages/Dashboard';
-import Clients from '@/pages/Clients';
-import ClientDetail from '@/pages/ClientDetail';
-import Packages from '@/pages/Packages';
-import Subscriptions from '@/pages/Subscriptions';
-import Exercises from '@/pages/Exercises';
-import Foods from '@/pages/Foods';
-import Assessments from '@/pages/Assessments';
-import FormRules from '@/pages/FormRules';
-import Metrics from '@/pages/Metrics';
-import NutritionPlans from '@/pages/NutritionPlans';
-import NutritionPlanBuilder from '@/pages/NutritionPlanBuilder';
-import NutritionReplacementRequests from '@/pages/NutritionReplacementRequests';
-import WorkoutPlans from '@/pages/WorkoutPlans';
-import WorkoutPlanBuilder from '@/pages/WorkoutPlanBuilder';
-import Team from '@/pages/Team';
-import Notifications from '@/pages/Notifications';
-import AuditLogs from '@/pages/AuditLogs';
-import Settings from '@/pages/Settings';
-import Workspaces from '@/pages/Workspaces';
-import PendingApplications from '@/pages/PendingApplications';
-import PortalDashboard from '@/pages/PortalDashboard';
+// Route-level code splitting: heavy workspace/portal pages load only when
+// navigated to, keeping the initial bundle small. Auth-shell pages above stay
+// eager (first paint + login flow). Behavior/routes/loading states unchanged.
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Clients = lazy(() => import('@/pages/Clients'));
+const ClientDetail = lazy(() => import('@/pages/ClientDetail'));
+const Packages = lazy(() => import('@/pages/Packages'));
+const Exercises = lazy(() => import('@/pages/Exercises'));
+const Foods = lazy(() => import('@/pages/Foods'));
+const Assessments = lazy(() => import('@/pages/Assessments'));
+const FormRules = lazy(() => import('@/pages/FormRules'));
+const Metrics = lazy(() => import('@/pages/Metrics'));
+const NutritionPlans = lazy(() => import('@/pages/NutritionPlans'));
+const NutritionPlanBuilder = lazy(() => import('@/pages/NutritionPlanBuilder'));
+const NutritionReplacementRequests = lazy(() => import('@/pages/NutritionReplacementRequests'));
+const WorkoutPlans = lazy(() => import('@/pages/WorkoutPlans'));
+const WorkoutPlanBuilder = lazy(() => import('@/pages/WorkoutPlanBuilder'));
+const Team = lazy(() => import('@/pages/Team'));
+const Notifications = lazy(() => import('@/pages/Notifications'));
+const AuditLogs = lazy(() => import('@/pages/AuditLogs'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Workspaces = lazy(() => import('@/pages/Workspaces'));
+const PendingApplications = lazy(() => import('@/pages/PendingApplications'));
+const PortalDashboard = lazy(() => import('@/pages/PortalDashboard'));
 import { isPlatformAdmin, isClient } from '@/lib/ybs-auth';
 
 // Ensures the route only renders when the user actually belongs to the

@@ -1,5 +1,17 @@
 import { supabase } from '@/utils/supabase';
 
+// Exercises is a largely static reference library read repeatedly (exercise
+// search pickers open on every planner row edit). Keep a short in-memory cache
+// keyed by workspace scope so navigations/pickers don't refetch the whole list;
+// every create/update/delete clears it, so users never see stale rows after a
+// mutation.
+const EXERCISES_CACHE_TTL = 60 * 1000;
+const exercisesCache = new Map();
+
+const cacheKeyFor = (workspaceId) => (workspaceId ? `${workspaceId}` : '__global__');
+
+const invalidateExercisesCache = () => exercisesCache.clear();
+
 // True when the row belongs to the YBS Global Library.
 // Prefers the explicit generated flag; falls back to the underlying
 // representation (workspace_id IS NULL) for remotes where the
@@ -21,6 +33,10 @@ export const ExercisesService = {
   // workspaceId === null/undefined → previous behavior (all accessible
   // non-archived exercises).
   async list(workspaceId) {
+    const key = cacheKeyFor(workspaceId);
+    const cached = exercisesCache.get(key);
+    if (cached && Date.now() - cached.ts < EXERCISES_CACHE_TTL) return cached.data;
+
     let query = supabase
       .from('exercises')
       .select('*')
@@ -33,7 +49,8 @@ export const ExercisesService = {
     }
     const { data, error } = await query.order('name', { ascending: true });
     if (error) throw error;
-    return data || [];
+    exercisesCache.set(key, { ts: Date.now(), data: data || [] });
+    return exercisesCache.get(key).data;
   },
 
   async getById(id) {
@@ -53,6 +70,7 @@ export const ExercisesService = {
       .select()
       .single();
     if (error) throw error;
+    invalidateExercisesCache();
     return data;
   },
 
@@ -64,6 +82,7 @@ export const ExercisesService = {
       .select()
       .single();
     if (error) throw error;
+    invalidateExercisesCache();
     return data;
   },
 
@@ -73,6 +92,7 @@ export const ExercisesService = {
       .update({ is_archived: true })
       .eq('id', id);
     if (error) throw error;
+    invalidateExercisesCache();
     return true;
   }
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/utils/supabase';
@@ -36,6 +36,14 @@ const DESKTOP_NAV = [
   { label: 'Notifications', path: '/portal/notifications', icon: Bell },
   { label: 'Profile', path: '/portal/profile', icon: User },
 ];
+
+// Shown only while a lazily-loaded portal route chunk downloads. Matches the
+// app's existing loading state so the portal chrome never blinks.
+const RouteFallback = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+  </div>
+);
 
 export default function PortalLayout() {
   const { user, logout } = useAuth();
@@ -209,7 +217,9 @@ export default function PortalLayout() {
 
         {/* Main content container with mobile bottom safe area clearance */}
         <main id="portal-content" className="ybs-portal-main flex-1 mx-auto w-full">
-          <Outlet />
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

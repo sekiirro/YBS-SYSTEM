@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useAuth } from '@/lib/AuthContext';
 import { pageVariants } from '@/lib/motion';
+
+// Shown only while a lazily-loaded route chunk downloads. Matches the app's
+// existing loading state so navigation appearance is unchanged.
+const RouteFallback = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+  </div>
+);
 
 export default function Layout() {
   const { user } = useAuth();
@@ -32,7 +40,9 @@ export default function Layout() {
             animate="animate"
             className="h-full"
           >
-            <Outlet />
+            <Suspense fallback={<RouteFallback />}>
+              <Outlet />
+            </Suspense>
           </motion.div>
         </main>
       </div>
