@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "anti-koshary": {
+      "source": "ismail9k/skills",
+      "sourceType": "github",
+      "skillPath": "skills/anti-koshary/SKILL.md",
+      "computedHash": "baa9cd33b7a9677642c6a17a253d52a523e310230c97190daee2dfaa283ae079"
+    },
+    "apple-design": {
+      "source": "dickwu/apple-design-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "f43b06a7305deb944c937151023298a91986abd50bd14db2e6ad16d9c9ef35f3"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",

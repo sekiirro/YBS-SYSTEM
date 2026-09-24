@@ -1,53 +1,40 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { ClientsService } from '@/services/clients';
-import { SubscriptionsService } from '@/services/subscriptions';
 import { WorkoutsService } from '@/services/workouts';
 import { NutritionService } from '@/services/nutrition';
-import { MetricsService } from '@/services/metrics';
 import { AssessmentsService } from '@/services/assessments';
 import { supabase } from '@/utils/supabase';
 
-import ClientDashboardHeader from '@/components/portal/ClientDashboardHeader';
-import TodayFocus from '@/components/portal/TodayFocus';
-import WeightProgressChart from '@/components/portal/WeightProgressChart';
+import TodayWorkoutCard from '@/components/portal/TodayWorkoutCard';
+import TodayNutritionCard from '@/components/portal/TodayNutritionCard';
+import TodayFormsCard from '@/components/portal/TodayFormsCard';
 import ClientConsistencyCard from '@/components/portal/ClientConsistencyCard';
-import ClientPackageCard from '@/components/portal/ClientPackageCard';
+import CinematicPortalNav from '@/components/portal/CinematicPortalNav';
 import FormFiller from '@/components/FormFiller';
 import { LoadingState } from '@/components/ui';
 import { getLocalDateKey } from '@/lib/ybs-utils';
-import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { Apple, Dumbbell, ArrowRight, ClipboardCheck } from 'lucide-react';
 
-const planStatusStyle = (status) => {
-  switch (status) {
-    case 'active':
-      return 'bg-primary/10 text-primary border-primary/20';
-    case 'paused':
-      return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-    default:
-      return 'bg-secondary text-muted-foreground border-border/80';
-  }
-};
+import heroVideo from '../../../vid 1.mp4';
 
 export default function ClientDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);
   const [workspaceName, setWorkspaceName] = useState('');
-  const [subscription, setSubscription] = useState(null);
   const [workout, setWorkout] = useState(null);
   const [nutrition, setNutrition] = useState(null);
-  const [metrics, setMetrics] = useState([]);
   const [forms, setForms] = useState([]);
   const [todayWorkoutLog, setTodayWorkoutLog] = useState(null);
-  const [workoutLogs, setWorkoutLogs] = useState([]);
   const [todayNutritionLog, setTodayNutritionLog] = useState(null);
+  const [workoutLogs, setWorkoutLogs] = useState([]);
   const [weeklyNutritionLogs, setWeeklyNutritionLogs] = useState([]);
   const [activeForm, setActiveForm] = useState(null);
+
+  const videoRef = useRef(null);
 
   const loadPortalData = useCallback(async () => {
     if (!user?.self_client_id) {
@@ -78,30 +65,23 @@ export default function ClientDashboard() {
 
       // 2. Parallel client-scoped queries
       const [
-        subs,
         wps,
         nps,
-        metList,
         formList,
         wLogs,
         todayNutri,
         weekNutri,
       ] = await Promise.all([
-        SubscriptionsService.list({ client_id: clientId }).catch(() => []),
         WorkoutsService.list({ client_id: clientId }).catch(() => []),
         NutritionService.list({ client_id: clientId }).catch(() => []),
-        MetricsService.listByClient(clientId).catch(() => []),
         AssessmentsService.list({ client_id: clientId }).catch(() => []),
         WorkoutsService.getClientWorkoutHistory(clientId, 30).catch(() => []),
         NutritionService.getDailyNutritionLog(clientId, todayStr).catch(() => null),
         NutritionService.getWeeklyNutritionLogs(clientId).catch(() => []),
       ]);
 
-      const activeSub = (subs || []).find((s) => s.status === 'active') || subs[0] || null;
-      setSubscription(activeSub);
       setWorkout(wps[0] || null);
       setNutrition(nps[0] || null);
-      setMetrics(metList || []);
       setForms(formList || []);
       setWorkoutLogs(wLogs || []);
 
@@ -124,6 +104,23 @@ export default function ClientDashboard() {
   useEffect(() => {
     loadPortalData();
   }, [loadPortalData]);
+
+  // Respect reduced-motion preferences by holding the local hero video on a
+  // stable frame while preserving the same visual composition.
+  useEffect(() => {
+    if (loading || !client || !videoRef.current || typeof window.matchMedia !== 'function') return undefined;
+    const video = videoRef.current;
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPlayback = () => {
+      if (motionPreference.matches) video.pause();
+      else video.play().catch(() => {});
+    };
+    syncPlayback();
+    motionPreference.addEventListener?.('change', syncPlayback);
+    return () => {
+      motionPreference.removeEventListener?.('change', syncPlayback);
+    };
+  }, [loading, client]);
 
   // Handle meal logging click from TodayNutritionCard
   const handleLogMeals = async () => {
@@ -181,149 +178,108 @@ export default function ClientDashboard() {
   };
 
   if (loading) {
-    return <LoadingState label="Loading your coaching dashboard…" />;
-  }
-
-  if (!client) {
     return (
-      <div className="surface-card p-12 text-center rounded-xl border border-border">
-        <h2 className="text-lg font-semibold text-foreground font-display">Client Profile Not Linked</h2>
-        <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-          Your account is authenticated, but not yet linked to an active client roster profile in this workspace.
-        </p>
+      <div className="ybs-cine">
+        <div className="ybs-cine__atmosphere" aria-hidden="true" />
+        <div className="ybs-cine__state">
+          <LoadingState label="Loading your coaching dashboard…" />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* 1. Dynamic Greeting Header */}
-      <ClientDashboardHeader client={client} workspaceName={workspaceName} />
+  if (!client) {
+    return (
+      <div className="ybs-cine">
+        <div className="ybs-cine__atmosphere" aria-hidden="true" />
+        <div className="ybs-cine__state">
+          <div>
+            <h2>Client Profile Not Linked</h2>
+            <p>
+              Your account is authenticated, but not yet linked to an active client roster profile in this workspace.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      {/* 2. Today's Focus (Workout, Nutrition, Forms) */}
-      <TodayFocus
-        workout={workout}
-        nutrition={nutrition}
-        forms={forms}
-        todayWorkoutLog={todayWorkoutLog}
-        todayNutritionLog={todayNutritionLog}
-        onStartWorkout={() => navigate('/portal/exercise')}
-        onLogMeals={handleLogMeals}
-        onOpenForm={handleOpenForm}
+  const displayName = client.full_name?.trim() || 'Athlete';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('') || 'C';
+  return (
+    <div className="ybs-cine">
+      <div className="ybs-cine__atmosphere" aria-hidden="true" />
+      <CinematicPortalNav
+        workspaceName={workspaceName}
+        initials={initials}
+        displayName={displayName}
+        onSignOut={() => logout()}
       />
 
-      {/* 3. Your Plans Quick Glance */}
-      <div>
-        <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-display">
-            Your Active Programs
-          </h2>
-        </div>
-
-        {!nutrition && !workout ? (
-          <ClientEmptyState
-            icon={ClipboardCheck}
-            title="No Programs Assigned Yet"
-            description="Your coach has not assigned your nutrition or training programs yet. They will appear here as soon as they are published to your account."
-          />
-        ) : (
-          <div className="ybs-programs">
-            {/* Active Nutrition Plan Card */}
-            {nutrition && (
-              <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between glow-subtle">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Apple className="w-3.5 h-3.5 text-primary" /> Nutrition Plan
-                    </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium border capitalize ${planStatusStyle(nutrition.status)}`}>
-                      {(nutrition.status || 'active').replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground font-display">
-                    {nutrition.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {nutrition.daily_calories
-                      ? `${Math.round(nutrition.daily_calories)} kcal/day · ${nutrition.meals?.length || 0} meals`
-                      : nutrition.meals?.length
-                        ? `${nutrition.meals.length} meals`
-                        : 'Nutrition program assigned'}
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-border/40">
-                  <Link to="/portal/nutrition" className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                    View meal details <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {/* Active Workout Plan Card */}
-            {workout && (
-              <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between glow-subtle">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Dumbbell className="w-3.5 h-3.5 text-primary" /> Workout Plan
-                    </span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium border capitalize ${planStatusStyle(workout.status)}`}>
-                      {(workout.status || 'active').replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground font-display">
-                    {workout.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    {workout.split_type
-                      ? `${workout.split_type.replace(/_/g, ' ')} · ${workout.days?.length || 0} sessions/week`
-                      : workout.days?.length
-                        ? `${workout.days.length} sessions/week`
-                        : 'Training program assigned'}
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-border/40">
-                  <Link to="/portal/exercise" className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                    View training plan <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            )}
+      <div className="ybs-cine__inner">
+        <section className="ybs-cine__hero" aria-label="Today at a glance">
+          <div className="ybs-cine__video-layer ybs-cine__reveal" style={{ '--cine-delay': '0s' }} aria-hidden="true">
+            <video
+              ref={videoRef}
+              className="ybs-cine__video"
+              src={heroVideo}
+              autoPlay
+              muted
+              playsInline
+              loop
+              preload="auto"
+              onCanPlay={(event) => event.currentTarget.classList.add('is-ready')}
+            />
           </div>
-        )}
-      </div>
 
-      {/* 4. Weight Progress Chart & Analysis */}
-      <div>
-        <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-display">
-            Your Progress
-          </h2>
-          <Link to="/portal/metrics" className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1">
-            All Metrics <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-        <WeightProgressChart metrics={metrics} client={client} />
-      </div>
+          <div className="ybs-cine__identity ybs-cine__reveal" style={{ '--cine-delay': '0.05s' }}>
+            <h1 className="ybs-cine__greeting">
+              <span className="dim">Hey,</span>
+              {displayName}.
+            </h1>
+            <p className="ybs-cine__motive">Your next step, made clear.</p>
+          </div>
 
-      {/* 5. Consistency & Streaks */}
-      <div>
-        <ClientConsistencyCard
-          workoutLogs={workoutLogs}
-          nutritionLogs={weeklyNutritionLogs}
-          forms={forms}
-          workoutPlan={workout}
-        />
-      </div>
+          <div className="ybs-cine__spacer" aria-hidden="true" />
 
-      {/* 6. Current Package Spotlight */}
-      <div>
-        <div className="flex items-center justify-between mb-3.5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground font-display">
-            Your Package
-          </h2>
-        </div>
-        <ClientPackageCard subscription={subscription} client={client} />
+          <div className="ybs-cine__rail ybs-cine__reveal" style={{ '--cine-delay': '0.25s' }}>
+            <TodayWorkoutCard
+              workout={workout}
+              todayLog={todayWorkoutLog}
+              onStartWorkout={() => navigate('/portal/exercise')}
+              compact
+            />
+            <TodayNutritionCard
+              nutrition={nutrition}
+              todayLog={todayNutritionLog}
+              onLogMeals={handleLogMeals}
+              compact
+            />
+            <TodayFormsCard
+              forms={forms}
+              onOpenForm={handleOpenForm}
+              compact
+            />
+          </div>
+        </section>
+
+        {/* Final section: consistency strip */}
+        <section className="ybs-cine__strip-wrap ybs-cine__reveal" style={{ '--cine-delay': '0.35s' }} aria-label="Your consistency">
+          <p className="ybs-cine__strip-label">Your Consistency</p>
+          <div className="ybs-cine__strip">
+            <ClientConsistencyCard
+              workoutLogs={workoutLogs}
+              nutritionLogs={weeklyNutritionLogs}
+              forms={forms}
+              workoutPlan={workout}
+            />
+          </div>
+        </section>
       </div>
 
       {/* Interactive Form Filler Modal */}

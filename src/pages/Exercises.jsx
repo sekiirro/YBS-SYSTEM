@@ -307,7 +307,7 @@ function CreateExerciseModal({ workspaceId, onClose, onCreated }) {
           </label>
         )}
         <Input label="Exercise Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Barbell Bench Press" />
-        <Input label="Video / Resource URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://youtube.com/…" />
+        <Input label="Exercise Image / Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://… (image or video)" />
         <div className="grid grid-cols-2 gap-3">
           <Select label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             {CATEGORIES.map((c) => (
@@ -369,7 +369,7 @@ function EditExerciseModal({ exercise, onClose, onUpdated }) {
           </div>
         )}
         <Input label="Exercise Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <Input label="Video / Resource URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://youtube.com/…" />
+        <Input label="Exercise Image / Video URL" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://… (image or video)" />
         <div className="grid grid-cols-2 gap-3">
           <Select label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             {CATEGORIES.map((c) => (

@@ -154,7 +154,7 @@ export default function ReplaceFoodModal({ open, onClose, item, workspaceId, onA
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
         >
           {status === 'loading' && (
-            <LoadingState label="Finding the best macro-matched alternatives…" />
+            <LoadingState inline label="Finding the best macro-matched alternatives…" />
           )}
 
           {status === 'invalid_target' && (

@@ -5,8 +5,8 @@ import { normalizePhone } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, ArrowLeft, Loader2 } from "lucide-react";
-import AuthLayout from "@/components/AuthLayout";
+import { Mail, Loader2, ArrowLeft } from "lucide-react";
+import AuthShell from "@/components/auth/AuthShell";
 
 export default function ForgotPassword() {
   const [identifier, setIdentifier] = useState("");
@@ -45,43 +45,40 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthLayout
-      icon={Mail}
-      title="Reset password"
-      subtitle="We'll send you instructions to reset your password"
-      footer={
-        <Link to="/login" className="text-primary font-medium hover:underline">
-          <ArrowLeft className="w-3 h-3 inline mr-1" />
-          Back to log in
-        </Link>
-      }
+    <AuthShell
+      workspaceName="Coaching OS"
+      loginTarget="/login"
+      panelKicker="Account recovery"
+      panelTitle="Reset password"
+      panelTitleId="forgot-password-heading"
+      panelSub="We'll send you instructions to reset your password."
     >
       {sent ? (
-        <p className="text-sm text-foreground text-center">
+        <p className="registration-assurance" role="status" style={{ marginTop: 25 }}>
           If an account exists with that phone number or email, password reset instructions have been sent.
         </p>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="identifier">Phone Number or Email</Label>
+        <form onSubmit={handleSubmit} className="registration-form">
+          <div className="registration-field">
+            <Label htmlFor="forgot-identifier">Phone Number or Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Mail className="registration-field-icon" aria-hidden="true" />
               <Input
-                id="identifier"
+                id="forgot-identifier"
                 type="text"
                 autoFocus
                 placeholder="+20 10x xxx xxxx or you@example.com"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="pl-10 h-12"
+                className="pl-10"
                 required
               />
             </div>
           </div>
-          <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+          <Button type="submit" className="registration-submit" disabled={loading}>
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="animate-spin" />
                 Sending Instructions...
               </>
             ) : (
@@ -90,6 +87,11 @@ export default function ForgotPassword() {
           </Button>
         </form>
       )}
-    </AuthLayout>
+      <p className="registration-assurance" style={{ marginTop: 18 }}>
+        <Link to="/login" className="registration-auxlink">
+          <ArrowLeft aria-hidden="true" /> Back to log in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

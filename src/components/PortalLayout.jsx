@@ -22,9 +22,11 @@ import {
   Sparkles,
   MoreHorizontal,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeControl from '@/components/ThemeControl';
+import { LoadingState } from '@/components/ui';
 
 const DESKTOP_NAV = [
   { label: 'Dashboard', path: '/portal/dashboard', icon: LayoutDashboard },
@@ -39,11 +41,7 @@ const DESKTOP_NAV = [
 
 // Shown only while a lazily-loaded portal route chunk downloads. Matches the
 // app's existing loading state so the portal chrome never blinks.
-const RouteFallback = () => (
-  <div className="min-h-[50vh] flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-  </div>
-);
+const RouteFallback = () => <LoadingState label="Loading…" />;
 
 export default function PortalLayout() {
   const { user, logout } = useAuth();
@@ -68,6 +66,7 @@ export default function PortalLayout() {
 
   // Derive client initials
   const clientName = user?.full_name || 'Trainee';
+  const clientDisplayName = clientName.split(' ').filter(Boolean).slice(0, 2).join(' ');
   const initials = clientName
     .split(' ')
     .filter(Boolean)
@@ -119,6 +118,22 @@ export default function PortalLayout() {
 
   const isSecondaryActive = secondaryNavItems.some((item) => item.active);
 
+  // The client dashboard renders its own cinematic chrome (dedicated top
+  // navigation). Bypass the standard portal header/sidebar/bottom-nav for
+  // that route only — every other portal view keeps the existing layout.
+  if (location.pathname === '/portal/dashboard' || location.pathname === '/portal/nutrition' || location.pathname === '/portal/forms' || location.pathname === '/portal/assessments' || location.pathname === '/portal/exercise' || location.pathname === '/portal/workout' || location.pathname === '/portal/metrics' || location.pathname === '/portal/progress') {
+    return (
+      <div className="ybs-portal min-h-screen flex flex-col">
+        <a className="ybs-skip" href="#portal-content">Skip to content</a>
+        <main id="portal-content" className="flex-1 w-full min-w-0">
+          <Suspense fallback={<RouteFallback />}>
+            <Outlet />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="ybs-portal min-h-screen flex flex-col selection:bg-primary/20 selection:text-primary">
       <a className="ybs-skip" href="#portal-content">Skip to content</a>
@@ -144,31 +159,30 @@ export default function PortalLayout() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Link
-            to="/portal/profile"
-            aria-label={`Profile for ${clientName}`}
-            className="flex min-h-11 items-center gap-2.5 px-2.5 py-1 rounded-full bg-secondary/50 border border-border/60 hover:border-primary/40 hover:bg-secondary/80 transition-all text-left"
+            to="/portal/notifications"
+            aria-label="Notifications"
+            className="grid h-11 w-11 place-items-center rounded-full border border-border/60 bg-secondary/40 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
           >
-            <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[12px] font-semibold">
-              {initials}
-            </div>
-            <div className="hidden sm:flex flex-col leading-tight pr-1">
-              <span className="text-[12px] font-medium text-foreground max-w-[120px] truncate">{clientName}</span>
-              <span className="text-[12px] text-muted-foreground font-mono">{user?.client_code || 'Active Client'}</span>
-            </div>
+            <Bell className="h-4 w-4" />
           </Link>
-
-          <ThemeControl />
-          <button
-            onClick={() => { logout(); }}
-            className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-red-400 px-2.5 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"
-            title="Sign out"
-            aria-label="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
+          <details className="group relative">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2.5 rounded-full border border-border/60 bg-secondary/50 py-1 pl-1 pr-3 text-left transition-all hover:border-primary/40 hover:bg-secondary/80">
+              {user?.avatar_url ? <img src={user.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary">{initials}</div>}
+              <div className="hidden flex-col leading-tight sm:flex">
+                <span className="max-w-[150px] truncate text-xs font-semibold text-foreground">{clientDisplayName}</span>
+                <span className="text-[11px] text-muted-foreground">Client</span>
+              </div>
+              <ChevronRight className="hidden h-3.5 w-3.5 rotate-90 text-muted-foreground sm:block" />
+            </summary>
+            <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-52 overflow-hidden rounded-2xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl">
+              <Link to="/portal/profile" className="flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-foreground hover:bg-secondary"><Settings className="h-4 w-4" /> Settings</Link>
+              <Link to="/portal/notifications" className="flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-foreground hover:bg-secondary"><Bell className="h-4 w-4" /> Notifications</Link>
+              <div className="flex min-h-11 items-center justify-between rounded-xl px-3"><span className="text-sm text-foreground">Appearance</span><ThemeControl /></div>
+              <button type="button" onClick={() => logout()} className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm text-red-400 hover:bg-red-500/10"><LogOut className="h-4 w-4" /> Log out</button>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -215,7 +229,7 @@ export default function PortalLayout() {
           </div>
         </aside>
 
-        {/* Main content container with mobile bottom safe area clearance */}
+{/* Main content container with mobile bottom safe area clearance */}
         <main id="portal-content" className="ybs-portal-main flex-1 mx-auto w-full">
           <Suspense fallback={<RouteFallback />}>
             <Outlet />

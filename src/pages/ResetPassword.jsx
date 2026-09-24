@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
 import { supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import AuthLayout from "@/components/AuthLayout";
+import { Lock, Loader2, CheckCircle2 } from "lucide-react";
+import AuthShell from "@/components/auth/AuthShell";
 
 export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState("");
@@ -48,69 +46,60 @@ export default function ResetPassword() {
   };
 
   return (
-    <AuthLayout icon={Lock} title="Set new password" subtitle="Enter your new password below">
-      <AnimatePresence mode="wait">
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm"
-          >
-            {error}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <AuthShell
+      workspaceName="Coaching OS"
+      loginTarget="/login"
+      panelKicker="Account recovery"
+      panelTitle="Set new password"
+      panelTitleId="reset-password-heading"
+      panelSub="Enter your new password below."
+    >
+      {error && <div className="registration-error" role="alert">{error}</div>}
       {success ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className="text-center py-4 space-y-3"
-        >
-          <CheckCircle2 className="w-10 h-10 text-green-400 mx-auto" />
-          <p className="text-sm font-medium text-foreground">Password updated successfully!</p>
-          <p className="text-xs text-muted-foreground">Redirecting you to sign in…</p>
-        </motion.div>
+        <div className="registration-inline-success" role="status">
+          <span className="registration-success-icon"><CheckCircle2 aria-hidden="true" /></span>
+          <h3>Password updated successfully!</h3>
+          <p>Redirecting you to sign in…</p>
+        </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">New Password</Label>
+        <form onSubmit={handleSubmit} className="registration-form">
+          <div className="registration-field">
+            <Label htmlFor="reset-password">New Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Lock className="registration-field-icon" aria-hidden="true" />
               <Input
-                id="password"
+                id="reset-password"
                 type="password"
                 autoComplete="new-password"
                 autoFocus
                 placeholder="••••••••"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="pl-10 h-12"
+                className="pl-10"
                 required
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm">Confirm Password</Label>
+          <div className="registration-field">
+            <Label htmlFor="reset-confirm">Confirm Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Lock className="registration-field-icon" aria-hidden="true" />
               <Input
-                id="confirm"
+                id="reset-confirm"
                 type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10 h-12"
+                className="pl-10"
                 required
               />
             </div>
           </div>
-          <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+          <Button type="submit" className="registration-submit" disabled={loading}>
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="animate-spin" />
                 Updating Password...
               </>
             ) : (
@@ -119,6 +108,6 @@ export default function ResetPassword() {
           </Button>
         </form>
       )}
-    </AuthLayout>
+    </AuthShell>
   );
 }

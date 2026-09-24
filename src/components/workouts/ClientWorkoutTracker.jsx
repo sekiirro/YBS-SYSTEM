@@ -19,13 +19,15 @@ import {
   Plus,
   Minus,
   Pause,
-  RotateCcw,
   X,
   Timer,
   ChevronRight,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const isImageUrl = (url = '') => /\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(url);
+const prescribedRir = (rpe) => rpe === null || rpe === undefined || rpe === '' ? null : Math.max(0, 10 - Number(rpe));
 
 export default function ClientWorkoutTracker({ workout, client, user }) {
   const [activeTab, setActiveTab] = useState('workout'); // 'workout' | 'history'
@@ -49,6 +51,9 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
 
   // Video Modal
   const [videoModalExercise, setVideoModalExercise] = useState(null);
+  const [activeExerciseIdx, setActiveExerciseIdx] = useState(null);
+  const [focusedSetByExercise, setFocusedSetByExercise] = useState({});
+  const [completionPulse, setCompletionPulse] = useState(null);
 
   // Workout History
   const [history, setHistory] = useState([]);
@@ -56,6 +61,14 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
 
   const days = workout?.days || [];
   const currentDay = days[activeDayIdx] || null;
+  const workingSetTotal = (currentDay?.exercises || []).reduce((total, exercise) => {
+    if (exercise.warmup) return total;
+    return total + (Number(exercise.working_sets) || Math.max(0, (Number(exercise.sets) || 0) - getWarmupCount(exercise)));
+  }, 0);
+  const estimatedMinutes = Math.max(1, Math.round((currentDay?.exercises || []).reduce((seconds, exercise) => {
+    const workSets = Number(exercise.working_sets) || Math.max(0, (Number(exercise.sets) || 0) - getWarmupCount(exercise));
+    return seconds + workSets * ((Number(exercise.rest_seconds) || 90) + 45);
+  }, 0) / 60));
 
   // Timer effect when workout is active
   useEffect(() => {
@@ -185,6 +198,18 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
   useEffect(() => {
     currentDayRef.current = currentDay;
   }, [currentDay]);
+
+  useEffect(() => {
+    if (activeExerciseIdx === null) return;
+    const exercise = currentDay?.exercises?.[activeExerciseIdx];
+    const totalSets = Number(exercise?.sets) || 3;
+    const isFinished = Array.from({ length: totalSets }, (_, index) => index + 1)
+      .every((setNumber) => setInputs[`${activeExerciseIdx}_${setNumber}`]?.completed);
+    if (isFinished) {
+      const timeout = window.setTimeout(() => setActiveExerciseIdx(null), 620);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [activeExerciseIdx, currentDay, setInputs]);
 
   // Build the previous-weights map once (most recent completed session wins).
   useEffect(() => {
@@ -449,7 +474,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           initialInputs[key] = {
             weight: isWarmup ? '' : ex.target_weight || '',
             reps: defaultReps || '',
-            rpe: 1,
+            rpe: prescribedRir(ex.rpe) ?? 1,
             completed: false,
           };
         }
@@ -490,6 +515,14 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
     const key = `${exIdx}_${setNumber}`;
     const current = setInputs[key] || {};
     const willBeCompleted = !current.completed;
+    if (willBeCompleted) {
+      setCompletionPulse(`${exIdx}_${setNumber}`);
+      window.setTimeout(() => setCompletionPulse(null), 520);
+      const totalSets = Number(ex.sets) || 3;
+      if (setNumber < totalSets) {
+        window.setTimeout(() => setFocusedSetByExercise((current) => ({ ...current, [exIdx]: setNumber + 1 })), 360);
+      }
+    }
 
     // optimistic UI
     setSetInputs((prev) => ({
@@ -583,9 +616,9 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn('workout-tracker space-y-4', activeTab === 'history' && 'is-history')}>
       {/* Top Header & Tab Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="workout-tracker__masthead flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-primary" />
@@ -594,9 +627,14 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           <p className="text-xs text-muted-foreground mt-0.5 capitalize">
             {(workout.split_type || 'custom').replace(/_/g, ' ')} · {days.length} training {days.length === 1 ? 'session' : 'sessions'}
           </p>
+          {activeTab === 'workout' && currentDay && !currentDay.rest_day && <div className="workout-tracker__hero-session">
+            <h2>{currentDay.day_name || `Session ${activeDayIdx + 1}`}</h2>
+            <p>{currentDay.exercises?.length || 0} exercises <span>·</span> {workingSetTotal} working sets <span>·</span> ≈ {estimatedMinutes} min</p>
+            <div><Button onClick={handleStartWorkout} disabled={Boolean(activeLog)}><Play className="w-4 h-4 fill-current" /> {activeLog ? 'Workout in progress' : 'Start workout'}</Button><Button variant="outline" onClick={() => setActiveTab('history')}><History className="w-4 h-4" /> Log history</Button></div>
+          </div>}
         </div>
 
-        <div className="flex gap-2">
+        <div className="workout-tracker__tabs flex gap-2">
           <button
             onClick={() => setActiveTab('workout')}
             className={cn(
@@ -721,7 +759,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
 
           {/* Active Workout Session Floating / Top Banner */}
           {activeLog && (
-            <div className="sticky top-2 z-20 p-3.5 rounded-xl bg-primary/10 border border-primary/30 shadow-lg backdrop-blur-md flex items-center justify-between">
+            <div className="workout-live-banner sticky top-2 z-20 p-3.5 rounded-xl bg-primary/10 border border-primary/30 shadow-lg backdrop-blur-md flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary animate-pulse">
                   <Flame className="w-4 h-4" />
@@ -763,7 +801,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
           )}
 
           {/* Day Selector Pills */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="workout-tracker__days flex gap-2 overflow-x-auto pb-1">
             {days.map((d, idx) => {
               const isSelected = activeDayIdx === idx;
               return (
@@ -810,7 +848,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                 /* Training Session Card */
                 <div className="space-y-4">
                   {/* Session Header Card */}
-                  <div className="surface-card p-4 rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="workout-tracker__session surface-card p-4 rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-base font-semibold text-foreground">{currentDay.day_name || `Session ${activeDayIdx + 1}`}</h3>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
@@ -819,11 +857,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                         </span>
                         <span>·</span>
                         <span className="font-mono">
-                          {currentDay.exercises?.reduce((acc, ex) => {
-                            if (ex.warmup) return acc;
-                            if (ex.working_sets !== undefined) return acc + (Number(ex.working_sets) || 0);
-                            return acc + (Number(ex.sets) || 0);
-                          }, 0)} working sets
+                          {workingSetTotal} working sets · ≈ {estimatedMinutes} min
                         </span>
                       </div>
                       {currentDay.session_notes && (
@@ -833,27 +867,32 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                       )}
                     </div>
 
-                    {!activeLog && (
-                      <Button onClick={handleStartWorkout} className="shrink-0">
-                        <Play className="w-4 h-4 fill-current" /> Start This Workout
-                      </Button>
-                    )}
+                    <div className="workout-tracker__session-actions">
+                      {!activeLog && <Button onClick={handleStartWorkout} className="shrink-0"><Play className="w-4 h-4 fill-current" /> Start workout</Button>}
+                      <Button variant="outline" onClick={() => setActiveTab('history')}><History className="w-4 h-4" /> Log history</Button>
+                    </div>
                   </div>
 
                   {/* Exercises List */}
-                  <div className="space-y-4">
+                  <div className={cn('workout-tracker__exercises space-y-4', activeExerciseIdx !== null && 'has-selection')}>
                     {(currentDay.exercises || []).map((ex, exIdx) => {
                       const setsCount = Number(ex.sets) || 3;
                       const setsList = Array.from({ length: setsCount }, (_, i) => i + 1);
                       const warmupCount = getWarmupCount(ex);
+                      const firstIncompleteSet = setsList.find((setNumber) => !setInputs[`${exIdx}_${setNumber}`]?.completed) || setsList[setsList.length - 1];
+                      const focusedSet = Math.min(setsCount, Math.max(1, focusedSetByExercise[exIdx] || firstIncompleteSet));
+                      const focusKey = `${exIdx}_${focusedSet}`;
+                      const focusState = setInputs[focusKey] || {};
+                      const focusPreviousWeight = activeLog ? prevWeightFor(ex, focusedSet) : undefined;
+                      const focusIsWarmup = focusedSet <= warmupCount;
 
                       return (
                         <div
                           key={ex.id || exIdx}
-                          className="surface-card rounded-xl border border-border overflow-hidden"
+                          className={cn('workout-exercise surface-card rounded-xl border border-border overflow-hidden', activeExerciseIdx === exIdx && 'is-selected', activeExerciseIdx !== null && activeExerciseIdx !== exIdx && 'is-compact', activeExerciseIdx === exIdx && (focusIsWarmup ? 'theme-warmup' : 'theme-working'), completionPulse?.startsWith(`${exIdx}_`) && 'is-card-celebrating')}
                         >
                           {/* Exercise Card Header */}
-                          <div className="p-4 border-b border-border/50 flex items-start justify-between gap-3">
+                          <div className="workout-exercise__header p-4 border-b border-border/50 flex items-start justify-between gap-3" role="button" tabIndex={0} onClick={(event) => { if (!event.target.closest('button')) { setActiveExerciseIdx(activeExerciseIdx === exIdx ? null : exIdx); setFocusedSetByExercise((current) => ({ ...current, [exIdx]: current[exIdx] || firstIncompleteSet })); } }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveExerciseIdx(activeExerciseIdx === exIdx ? null : exIdx); setFocusedSetByExercise((current) => ({ ...current, [exIdx]: current[exIdx] || firstIncompleteSet })); } }}>
                             <div className="flex items-start gap-3">
                               <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-xs font-mono font-semibold text-muted-foreground shrink-0 mt-0.5">
                                 {exIdx + 1}
@@ -878,7 +917,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                 {/* Prescribed targets summary */}
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap font-mono">
                                   <span>{ex.sets || 3} sets × {ex.rep_range || '8-12'} reps</span>
-                                  {ex.rpe && <span>· Target RIR {ex.rpe}</span>}
+                                  {ex.rpe && <span>· Target RIR {prescribedRir(ex.rpe)}</span>}
                                   {ex.rest_seconds && <span>· {ex.rest_seconds}s rest</span>}
                                 </div>
 
@@ -891,7 +930,9 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                             </div>
 
                             {/* Video Demo Button */}
-                            {ex.video_url && (
+                            {activeExerciseIdx === exIdx && <span className={cn('workout-exercise__phase', focusIsWarmup ? 'is-warmup' : 'is-working')}>{focusIsWarmup ? 'Warm-up set' : 'Working set'}</span>}
+                            {activeExerciseIdx !== exIdx && <ChevronRight className="workout-exercise__chevron" />}
+                            {ex.video_url && !isImageUrl(ex.video_url) && activeExerciseIdx !== exIdx && (
                               <button
                                 type="button"
                                 onClick={() => setVideoModalExercise(ex)}
@@ -904,9 +945,13 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                           </div>
 
                           {/* Interactive Set Table Container */}
-                          <div className="p-3 bg-secondary/10">
+                          {activeExerciseIdx === exIdx && <button type="button" className="workout-exercise__media" onClick={() => ex.video_url && (isImageUrl(ex.video_url) ? window.open(ex.video_url, '_blank', 'noopener,noreferrer') : setVideoModalExercise(ex))} aria-label={ex.video_url ? 'Open exercise demo' : 'Exercise preview'}>
+                            <img src={isImageUrl(ex.video_url) ? ex.video_url : '/images/workout/exercise-equipment-placeholder.png'} alt="" />
+                            {ex.video_url && <span><Play /> Watch exercise demo</span>}
+                          </button>}
+                          <div className="workout-exercise__sets p-3 bg-secondary/10">
                             {/* Desktop Set Table */}
-                            <div className="hidden md:block overflow-x-auto">
+                            <div className="workout-legacy-sets hidden md:block overflow-x-auto">
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="text-muted-foreground border-b border-border/30 text-[12px]">
@@ -949,7 +994,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                         )}
                                         <tr
                                           className={cn(
-                                            'transition-colors',
+                                            'workout-set-row transition-colors', isWarmup ? 'is-warmup' : 'is-working', firstIncompleteSet === setNum && 'is-current', completionPulse === key && 'is-celebrating',
                                             isCompleted ? 'bg-emerald-500/5' : 'hover:bg-secondary/20'
                                           )}
                                         >
@@ -975,7 +1020,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                               </span>
                                             ) : (
                                               <>
-                                                {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RIR ${ex.rpe}` : ''}
+                                                {ex.rep_range || '8-12'} reps {ex.rpe ? `@ RIR ${prescribedRir(ex.rpe)}` : ''}
                                                 {warmupNote && (
                                                   <span className="block mt-0.5 font-sans normal-case text-amber-400/80 text-[12px] leading-tight">
                                                     {warmupNote}
@@ -1073,7 +1118,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                             </div>
 
                             {/* Mobile Touch-Friendly Set Cards */}
-                            <div className="md:hidden space-y-2.5">
+                            <div className="workout-legacy-sets md:hidden space-y-2.5">
                               {setsList.map((setNum) => {
                                 const key = `${exIdx}_${setNum}`;
                                 const state = setInputs[key] || {};
@@ -1086,7 +1131,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                   <div
                                     key={setNum}
                                     className={cn(
-                                      'p-3.5 rounded-xl border transition-all',
+                                      'workout-set-card p-3.5 rounded-xl border transition-all', isWarmup ? 'is-warmup' : 'is-working', firstIncompleteSet === setNum && 'is-current', completionPulse === key && 'is-celebrating',
                                       isCompleted
                                         ? 'bg-emerald-500/5 border-emerald-500/40 shadow-sm'
                                         : activeLog
@@ -1110,7 +1155,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                                           {isWarmup ? `Warmup ${setNum}` : `Set ${setNum - warmupCount}`}
                                         </span>
                                         <span className="text-xs text-muted-foreground font-mono">
-                                          {isWarmup ? warmupNote : `${ex.rep_range || '8-12'} reps ${ex.rpe ? `@ RIR ${ex.rpe}` : ''}`}
+                                          {isWarmup ? warmupNote : `${ex.rep_range || '8-12'} reps ${ex.rpe ? `@ RIR ${prescribedRir(ex.rpe)}` : ''}`}
                                         </span>
                                       </div>
 
@@ -1274,6 +1319,16 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
                               })}
                             </div>
 
+                            {activeExerciseIdx === exIdx && <div className="workout-focus-controls">
+                              <div className="workout-focus-controls__top"><strong>Set {focusIsWarmup ? focusedSet : Math.max(1, focusedSet - warmupCount)} <span>of {focusIsWarmup ? Math.max(1, warmupCount) : Math.max(1, setsCount - warmupCount)}</span></strong><span className="workout-exercise__set-nav"><button type="button" aria-label="Previous set" disabled={focusedSet <= 1} onClick={() => setFocusedSetByExercise((current) => ({ ...current, [exIdx]: focusedSet - 1 }))}><ChevronRight /></button><button type="button" aria-label="Next set" disabled={focusedSet >= setsCount} onClick={() => setFocusedSetByExercise((current) => ({ ...current, [exIdx]: focusedSet + 1 }))}><ChevronRight /></button></span></div>
+                              <div className="workout-focus-controls__fields">
+                                {[['weight', 'Weight (kg)', 2.5], ['reps', 'Reps', 1], ['rpe', 'RIR', 1]].map(([field, label, step]) => <div key={field}><label>{label}</label><input type="number" step={step} min={field === 'rpe' ? 0 : 0} max={field === 'rpe' ? 5 : undefined} disabled={!activeLog} value={focusState[field] ?? ''} placeholder={field === 'weight' && focusPreviousWeight != null ? String(focusPreviousWeight) : field === 'rpe' && prescribedRir(ex.rpe) != null ? String(prescribedRir(ex.rpe)) : '—'} onChange={(event) => handleInputChange(exIdx, focusedSet, field, event.target.value)} /><span><button type="button" disabled={!activeLog} onClick={() => handleStepValue(exIdx, focusedSet, field, -step, field === 'rpe' ? 0 : 0, field === 'rpe' ? 5 : undefined)}><Minus /></button><button type="button" disabled={!activeLog} onClick={() => handleStepValue(exIdx, focusedSet, field, step, field === 'rpe' ? 0 : 0, field === 'rpe' ? 5 : undefined)}><Plus /></button></span></div>)}
+                              </div>
+                              <p className="workout-focus-controls__last">Last time: {focusPreviousWeight != null ? `${focusPreviousWeight} kg` : 'No previous record'}{focusState.reps ? ` × ${focusState.reps} reps` : ''}</p>
+                              <button type="button" className="workout-focus-controls__rest" onClick={() => startRestTimer(Number(ex.rest_seconds) || 90, ex.exercise_name || ex.name || 'Exercise')}><span><strong>{restTimer ? formatTimer(restTimer.remainingSeconds) : formatTimer(Number(ex.rest_seconds) || 90)}</strong></span><p><b>{restTimer?.isFinished ? 'Rest complete' : 'Rest timer'}</b><small>Tap to reset</small></p><i onClick={(event) => { event.stopPropagation(); if (restTimer) handleDismissRest(); }}>Skip rest <ChevronRight /></i></button>
+                              <button type="button" className="workout-focus-controls__complete" onClick={() => handleToggleSet(ex, exIdx, focusedSet)} disabled={!activeLog || savingSet[focusKey]}><Check /> Complete set</button>
+                            </div>}
+
                             {!activeLog && (
                               <p className="text-[12px] text-muted-foreground text-center pt-2">
                                 Click "Start This Workout" above to enable live set tracking.
@@ -1292,7 +1347,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
       )}
 
       {/* Floating Inter-Set Rest Timer */}
-      {restTimer && (
+      {restTimer && activeExerciseIdx === null && (
         <div
           role="region"
           aria-label="Rest period countdown"
@@ -1501,11 +1556,12 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
       </Modal>
 
       {/* Finish Session Confirmation Modal */}
-      <Modal
+      <div className="workout-finish-modal"><Modal
         open={finishModalOpen}
         onClose={() => setFinishModalOpen(false)}
         title="Finish Workout Session"
         size="md"
+        className="workout-finish-dialog"
       >
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-secondary/40 border border-border flex items-center justify-between">
@@ -1543,7 +1599,7 @@ export default function ClientWorkoutTracker({ workout, client, user }) {
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal></div>
     </div>
   );
 }

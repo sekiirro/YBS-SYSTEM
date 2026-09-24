@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
   const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+  const dateOfBirth = typeof body.date_of_birth === 'string' ? body.date_of_birth.trim() : '';
 
   if (!token) {
     return error('missing_token', 'A registration token is required.', 400);
@@ -152,6 +153,10 @@ Deno.serve(async (req) => {
   }
   if (!fullName || fullName.length > 80) {
     return error('invalid_name', 'A valid full name is required (max 80 characters).', 400);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) || dateOfBirth < '1900-01-01' || dateOfBirth > today) {
+    return error('invalid_date_of_birth', 'A valid date of birth that is not in the future is required.', 400);
   }
 
   // ------------------------------------------------------------
@@ -271,6 +276,7 @@ Deno.serve(async (req) => {
       platform_role: 'none',
       account_status: 'pending_approval',
       link_token: token,
+      date_of_birth: dateOfBirth,
     },
     app_metadata: {
       platform_role: 'none',

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Camera, Check, Loader2, Users, Ruler } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Camera, Check, Loader2, Users, Ruler, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MetricsService } from '@/services/metrics';
-import { Modal, Button, Input, Select, TextArea } from '@/components/ui';
+import { Button, Input, Select, TextArea } from '@/components/ui';
 import BodyFatVisualSelector from './BodyFatVisualSelector';
+import CinematicPortalNav from './CinematicPortalNav';
 import {
   CIRCUMFERENCE_FIELDS,
   VALIDATION_RANGES,
@@ -14,15 +15,15 @@ import {
 
 const STEPS = [
   { id: 'info', label: 'Body Info' },
-  { id: 'fat', label: 'Body Fat' },
   { id: 'measurements', label: 'Measurements' },
+  { id: 'fat', label: 'Body Fat' },
 ];
 
 function draftKey(clientId) {
   return `ybs-baseline-draft-${clientId || 'anon'}`;
 }
 
-export default function MetricsBaselineWizard({ open, onClose, clientId, state, onSaved }) {
+export default function MetricsBaselineWizard({ open, onClose, clientId, state, onSaved, portalNav }) {
   const baseline = useMemo(() => getBaselineState(state), [state]);
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -67,6 +68,20 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
     }
   }, [form, open, clientId]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const setMeasurement = (key, value) =>
     setForm((f) => ({ ...f, measurements: { ...f.measurements, [key]: value } }));
@@ -101,7 +116,7 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
       };
       return Object.values(errs).find(Boolean) || null;
     }
-    if (idx === 1) {
+    if (STEPS[idx]?.id === 'fat') {
       if (!form.body_fat) return null; // skipped is valid
       return validateField('body_fat', form.body_fat, false);
     }
@@ -131,6 +146,13 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
   };
 
   const handleSave = async () => {
+    if (form.body_fat !== '') {
+      const fatErr = validateField('body_fat', form.body_fat, false);
+      if (fatErr) {
+        setErrors((prev) => ({ ...prev, body_fat: fatErr }));
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {};
@@ -175,10 +197,46 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
     left_calf: 'Calf (L)',
   };
 
+  if (!open) return null;
+
   return (
-    <Modal open={open} onClose={onClose} title="Set Up Your Body Progress Baseline" size="lg">
+    <div className={cn('metrics-baseline', STEPS[step]?.id === 'fat' && fatMode === 'visual' && 'metrics-baseline--body-fat')} role="dialog" aria-modal="true" aria-labelledby="metrics-baseline-title">
+      {STEPS[step]?.id === 'fat' && fatMode === 'visual' && portalNav && (
+        <CinematicPortalNav {...portalNav} warmActive />
+      )}
+      <section className="metrics-baseline__media" aria-label="YBS calibration introduction">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          src="/videos/13258615_2160_3840_25fps.mp4"
+          aria-hidden="true"
+        />
+        <div className="metrics-baseline__media-shade" aria-hidden="true" />
+        <button type="button" className="metrics-baseline__back" onClick={onClose} aria-label="Close calibration">
+          <ArrowLeft aria-hidden="true" />
+        </button>
+        <div className="metrics-baseline__war-copy" aria-hidden="true">
+          <span>Conquer.</span>
+          <strong>Reign.</strong>
+        </div>
+      </section>
+
+      <section className="metrics-baseline__panel">
+        <header className="metrics-baseline__header">
+          <div>
+            <p>YBS body calibration</p>
+            <h2 id="metrics-baseline-title">Calibrate Your Baseline</h2>
+            <span>Answer with precision. Every victory begins with an honest measure.</span>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close calibration"><X aria-hidden="true" /></button>
+        </header>
+
+        <div className="metrics-baseline__form">
       {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="metrics-baseline__steps flex items-center gap-2 mb-6">
         {STEPS.map((s, i) => (
           <div key={s.id} className="flex items-center gap-2">
             <div
@@ -269,97 +327,8 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
         </div>
       )}
 
-      {/* STEP 1 — Body Fat */}
+      {/* STEP 1 — Measurements */}
       {step === 1 && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { id: 'visual', label: 'Reference guide photos', desc: 'Estimate visually' },
-              { id: 'manual', label: 'Enter my own value', desc: 'I know my number' },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setFatMode(mode.id)}
-                className={cn(
-                  'rounded-xl border p-4 text-left transition-all',
-                  fatMode === mode.id
-                    ? 'border-primary/50 bg-primary/10'
-                    : 'border-white/10 bg-white/[0.03] hover:border-white/20'
-                )}
-              >
-                <Camera className={cn('w-4 h-4', fatMode === mode.id ? 'text-primary' : 'text-muted-foreground')} />
-                <p className="mt-2 text-[14px] font-medium text-foreground">{mode.label}</p>
-                <p className="text-[12px] text-muted-foreground">{mode.desc}</p>
-              </button>
-            ))}
-          </div>
-
-          {fatMode === 'visual' ? (
-            <div className="flex flex-col items-center">
-              {form.sex ? (
-                <BodyFatVisualSelector
-                  sex={form.sex}
-                  value={form.body_fat !== '' ? toNumber(form.body_fat) : null}
-                  onChange={(v) => setForm((f) => ({ ...f, body_fat: String(v), body_fat_method: 'visual_estimate' }))}
-                />
-              ) : (
-                <p className="text-[12px] text-muted-foreground text-center py-8">
-                  Choose Male or Female in the previous step to see the correct reference photos.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, body_fat: '', body_fat_method: 'visual_estimate' }))}
-                className="mt-3 text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-              >
-                I'd rather add this later — skip for now
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3 max-w-sm">
-              <Input
-                label="Body fat (%)"
-                type="number"
-                inputMode="decimal"
-                min={VALIDATION_RANGES.body_fat.min}
-                max={VALIDATION_RANGES.body_fat.max}
-                placeholder="e.g. 18.5"
-                value={form.body_fat}
-                onChange={(e) => setForm((f) => ({ ...f, body_fat: e.target.value }))}
-                error={errors.body_fat}
-              />
-              <Select
-                label="How was this measured?"
-                value={form.body_fat_method || 'manual_entry'}
-                onChange={(e) => setField('body_fat_method', e.target.value)}
-              >
-                <option value="manual_entry">Manual entry</option>
-                <option value="navy_estimate">U.S. Navy method</option>
-                <option value="bia">BIA scale</option>
-                <option value="skinfold">Skinfold calipers</option>
-                <option value="dexa">DEXA scan</option>
-                <option value="other">Other / clinical</option>
-              </Select>
-              {errors.body_fat && <p className="text-[12px] text-red-400">{errors.body_fat}</p>}
-              <button
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, body_fat: '', body_fat_method: 'manual_entry' }))}
-                className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-              >
-                Skip for now
-              </button>
-            </div>
-          )}
-          <p className="text-[12px] text-muted-foreground">
-            Visual estimates are stored separately from measured values — they're always shown as
-            &quot;visual estimate&quot; and never presented as a scan or caliper reading.
-          </p>
-        </div>
-      )}
-
-      {/* STEP 2 — Measurements */}
-      {step === 2 && (
         <div className="space-y-5">
           <a
             href={MEASURING_GUIDE_URL}
@@ -402,6 +371,95 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
         </div>
       )}
 
+      {/* STEP 2 — Body Fat */}
+      {step === 2 && (
+        <div className="metrics-baseline__fat-step space-y-5">
+          <div className="metrics-baseline__fat-modes grid grid-cols-2 gap-3">
+            {[
+              { id: 'visual', label: 'Reference guide photos', desc: 'Estimate visually' },
+              { id: 'manual', label: 'Enter my own value', desc: 'I know my number' },
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setFatMode(mode.id)}
+                className={cn(
+                  'rounded-xl border p-4 text-left transition-all',
+                  fatMode === mode.id
+                    ? 'border-primary/50 bg-primary/10'
+                    : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+                )}
+              >
+                <Camera className={cn('w-4 h-4', fatMode === mode.id ? 'text-primary' : 'text-muted-foreground')} />
+                <p className="mt-2 text-[14px] font-medium text-foreground">{mode.label}</p>
+                <p className="text-[12px] text-muted-foreground">{mode.desc}</p>
+              </button>
+            ))}
+          </div>
+
+          {fatMode === 'visual' ? (
+            <div className="metrics-baseline__fat-visual flex flex-col items-center">
+              {form.sex ? (
+                <BodyFatVisualSelector
+                  sex={form.sex}
+                  value={form.body_fat !== '' ? toNumber(form.body_fat) : null}
+                  onChange={(v) => setForm((f) => ({ ...f, body_fat: v == null ? '' : String(v), body_fat_method: 'visual_estimate' }))}
+                />
+              ) : (
+                <p className="text-[12px] text-muted-foreground text-center py-8">
+                  Choose Male or Female in the previous step to see the correct reference photos.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, body_fat: '', body_fat_method: 'visual_estimate' }))}
+                className="metrics-baseline__fat-skip mt-3 text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                I'd rather add this later — skip for now
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3 max-w-sm">
+              <Input
+                label="Body fat (%)"
+                type="number"
+                inputMode="decimal"
+                min={VALIDATION_RANGES.body_fat.min}
+                max={VALIDATION_RANGES.body_fat.max}
+                placeholder="e.g. 18.5"
+                value={form.body_fat}
+                onChange={(e) => setForm((f) => ({ ...f, body_fat: e.target.value }))}
+                error={errors.body_fat}
+              />
+              <Select
+                label="How was this measured?"
+                value={form.body_fat_method || 'manual_entry'}
+                onChange={(e) => setField('body_fat_method', e.target.value)}
+              >
+                <option value="manual_entry">Manual entry</option>
+                <option value="navy_estimate">U.S. Navy method</option>
+                <option value="bia">BIA scale</option>
+                <option value="skinfold">Skinfold calipers</option>
+                <option value="dexa">DEXA scan</option>
+                <option value="other">Other / clinical</option>
+              </Select>
+              {errors.body_fat && <p className="text-[12px] text-red-400">{errors.body_fat}</p>}
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, body_fat: '', body_fat_method: 'manual_entry' }))}
+                className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                Skip for now
+              </button>
+            </div>
+          )}
+          <p className="metrics-baseline__fat-note text-[12px] text-muted-foreground">
+            Visual estimates are stored separately from measured values — they're always shown as
+            &quot;visual estimate&quot; and never presented as a scan or caliper reading.
+          </p>
+        </div>
+      )}
+
       {errors.save && (
         <p className="mt-4 text-[12px] text-red-400 rounded-lg border border-red-500/20 bg-red-500/5 p-3">
           {errors.save}
@@ -409,7 +467,7 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-5 mt-6 border-t border-white/[0.08]">
+      <div className="metrics-baseline__footer flex items-center justify-between pt-5 mt-6 border-t border-white/[0.08]">
         {step > 0 ? (
           <Button variant="outline" onClick={() => setStep((s) => Math.max(0, s - 1))}>
             <ArrowLeft className="w-4 h-4" /> Back
@@ -428,6 +486,8 @@ export default function MetricsBaselineWizard({ open, onClose, clientId, state, 
           </Button>
         )}
       </div>
-    </Modal>
+        </div>
+      </section>
+    </div>
   );
 }

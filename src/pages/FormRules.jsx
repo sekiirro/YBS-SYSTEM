@@ -330,7 +330,7 @@ export default function FormRules() {
 
       {/* ── History Tab ── */}
       {activeTab === 'history' && (
-        instancesLoading ? <LoadingState label="Loading assignment history…" /> :
+        instancesLoading ? <LoadingState inline label="Loading assignment history…" /> :
         instances.length === 0 ? (
           <EmptyState
             icon={History}

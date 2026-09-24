@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { cardItemVariants, buttonMotion } from '@/lib/motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import YbsLoading from '@/components/YbsLoading';
 
 const MotionLink = motion(Link);
 
@@ -136,15 +137,18 @@ export function EmptyState({ icon: Icon, title, description, action }) {
   );
 }
 
-export function LoadingState({ label }) {
+export function LoadingState({ label, inline = false }) {
   return (
-    <div className="ybs-loading" role="status" aria-live="polite" aria-busy="true">
-      <p className="text-sm text-muted-foreground mb-6">{label || 'Loading your workspace…'}</p>
-      <div aria-hidden="true" className="space-y-6">
-        <div className="ybs-skeleton h-9 w-2/3 max-w-sm" />
-        <div className="ybs-skeleton h-40 w-full" />
-        <div className="grid grid-cols-2 gap-4"><div className="ybs-skeleton h-24" /><div className="ybs-skeleton h-24" /></div>
-      </div>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label={label || 'Loading…'}
+      className={inline
+        ? 'flex items-center justify-center py-16'
+        : 'fixed inset-0 z-[100] flex items-center justify-center bg-background'}
+    >
+      <YbsLoading />
     </div>
   );
 }
@@ -236,10 +240,10 @@ export function TextArea({ label = '', error = '', className = '', ...props }) {
   );
 }
 
-export function Modal({ open, onClose, title, children, size = 'md' }) {
+export function Modal({ open, onClose, title, children, size = 'md', className = '' }) {
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent aria-describedby={undefined} className={cn('ybs-dialog p-0 flex flex-col', size === 'lg' ? 'max-w-2xl' : 'max-w-md')}>
+      <DialogContent aria-describedby={undefined} className={cn('ybs-dialog p-0 flex flex-col', size === 'lg' ? 'max-w-2xl' : 'max-w-md', className)}>
         <DialogHeader className="px-6 py-5 pr-16 border-b border-border shrink-0 text-left">
           <DialogTitle className="ybs-dialog-title">{title}</DialogTitle>
         </DialogHeader>

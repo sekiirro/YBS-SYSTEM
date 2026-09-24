@@ -23,7 +23,12 @@ export const BODY_FAT_SLIDER_THRESHOLDS = {
 export const BODY_FAT_SLIDER_IMAGES = Object.fromEntries(
   Object.entries(BODY_FAT_SLIDER_THRESHOLDS).map(([sex, thresholds]) => [
     sex,
-    Object.fromEntries(thresholds.map((value) => [value, `/body-fat/${sex}/${value}.png`])),
+    Object.fromEntries(thresholds.map((value) => [
+      value,
+      sex === 'male'
+        ? `/body-fat/male-cinematic/${value}.png`
+        : `/body-fat/${sex}/${value}.png`,
+    ])),
   ])
 );
 

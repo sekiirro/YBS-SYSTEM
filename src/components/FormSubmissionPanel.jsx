@@ -71,7 +71,7 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
     };
   }, [selectedId]);
 
-  if (loading) return <LoadingState label="Loading form submissions…" />;
+  if (loading) return <LoadingState inline label="Loading form submissions…" />;
 
   if (forms.length === 0) {
     return (
@@ -134,7 +134,7 @@ export default function FormSubmissionPanel({ clientId, initialId, className }) 
 
         {loadingDetail || !assessment ? (
           <div className="p-8 flex items-center justify-center">
-            <LoadingState label="Loading submission…" />
+            <LoadingState inline label="Loading submission…" />
           </div>
         ) : (
           <div className="surface-card rounded-xl border border-border/80 p-4 sm:p-5 max-h-[520px] overflow-y-auto overflow-x-hidden rounded-lg">

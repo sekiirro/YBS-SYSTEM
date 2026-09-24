@@ -108,7 +108,7 @@ export default function ClientConsistencyCard({
           <h3 className="text-base font-semibold text-foreground mt-0.5 font-display">Weekly Adherence</h3>
         </div>
         {consistency.streak > 0 && (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400">
+          <div className="ybs-consistency__streak flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400">
             <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span className="text-xs font-bold font-display tracking-tight">
               {consistency.streak} Day Adherence Streak

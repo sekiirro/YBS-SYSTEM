@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Phone, Lock, Loader2, ArrowRight } from "lucide-react";
-import AuthLayout from "@/components/AuthLayout";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
-export default function Login() {
+// Login form rendered inside the shared AuthShell right-side card.
+// Same width / radius / background / inputs / button as the registration
+// card — only the contents differ.
+export default function LoginForm() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export default function Login() {
         }
 
         if (!res || !res.found) {
-          throw new Error("No account found with this phone number. Please check or create a client account.");
+          throw new Error("No account found with this phone number. Please check your details and try again.");
         }
 
         const status = res.account_status;
@@ -83,83 +85,59 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout
-      brand
-      title="YBS"
-      subtitle="Coaching OS"
-      footer={
-        <>
-          New client?{" "}
-          <Link to="/register" className="text-primary font-medium hover:underline">
-            Create Client Account
-          </Link>
-        </>
-      }
-    >
-      <div className="mb-8 text-center">
-        <p className="text-[14px] text-muted-foreground">Sign in to your workspace</p>
-      </div>
-      {error && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-[14px]">
-          {error}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="identifier" className="text-label">
-            Phone Number (or Email)
-          </Label>
+    <>
+      {error && <div className="registration-error" role="alert">{error}</div>}
+      <form onSubmit={handleSubmit} className="registration-form">
+        <div className="registration-field">
+          <Label htmlFor="login-identifier">Phone Number or Email</Label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Phone className="registration-field-icon" aria-hidden="true" />
             <Input
-              id="identifier"
+              id="login-identifier"
               type="text"
               autoComplete="username"
               autoFocus
               placeholder="+20 10x xxx xxxx or email@example.com"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10"
               required
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-label">
-              Password
-            </Label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+        <div className="registration-field">
+          <div className="registration-field-row">
+            <Label htmlFor="login-password">Password</Label>
+            <Link to="/forgot-password" className="registration-auxlink">
               Forgot password?
             </Link>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Lock className="registration-field-icon" aria-hidden="true" />
             <Input
-              id="password"
+              id="login-password"
               type="password"
               autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10"
               required
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <Button type="submit" className="registration-submit" disabled={loading}>
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Signing in...
+              <Loader2 className="animate-spin" /> Signing in…
             </>
           ) : (
             <>
-              Sign in <ArrowRight className="w-4 h-4 ml-2" />
+              Sign in <ArrowRight />
             </>
           )}
         </Button>
       </form>
-    </AuthLayout>
+    </>
   );
 }

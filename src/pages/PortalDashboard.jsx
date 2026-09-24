@@ -67,7 +67,7 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   }
 
   if (view === 'notifications') {
-    if (loading) return <LoadingState label="Loading notifications…" />;
+    if (loading) return <LoadingState inline label="Loading notifications…" />;
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 pb-4 border-b border-border/60">
@@ -102,7 +102,7 @@ export default function PortalDashboard({ view = 'dashboard' }) {
   }
 
   if (view === 'profile') {
-    if (loading) return <LoadingState label="Loading profile…" />;
+    if (loading) return <LoadingState inline label="Loading profile…" />;
     if (!client) {
       return (
         <div className="surface-card p-12 text-center text-muted-foreground text-xs rounded-xl border border-border">

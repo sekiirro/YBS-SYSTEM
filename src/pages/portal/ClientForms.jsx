@@ -1,211 +1,119 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { AssessmentsService } from '@/services/assessments';
-import FormFiller from '@/components/FormFiller';
+import { supabase } from '@/utils/supabase';
+import CinematicPortalNav from '@/components/portal/CinematicPortalNav';
+import CinematicFormFiller from '@/components/portal/CinematicFormFiller';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
-import { ErrorState, LoadingState, Button, Badge } from '@/components/ui';
-import { formatDate, getFormStatusColor, getFormStatusLabel } from '@/lib/ybs-utils';
-import { ClipboardList, Clock, CheckCircle2, Eye, Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ErrorState, LoadingState } from '@/components/ui';
+import { formatDate, getFormStatusLabel } from '@/lib/ybs-utils';
+import { ArrowRight, CheckCircle2, ClipboardList } from 'lucide-react';
+import formsVideo from '../../../تحريك_صورة_بنفس_حركة_فيديو_20260921221403.mp4';
+import answersVideo from '../../../vid2.mp4';
 
 export default function ClientForms() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [forms, setForms] = useState([]);
-  const [statusTab, setStatusTab] = useState('all'); // 'all' | 'pending' | 'submitted' | 'reviewed'
+  const [focusedId, setFocusedId] = useState(null);
   const [activeForm, setActiveForm] = useState(null);
+  const [opening, setOpening] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const videoRef = useRef(null);
+  const answerVideoRef = useRef(null);
+  const seekRef = useRef({ previousX: null, target: 0, seeking: false });
 
   const loadForms = useCallback(async () => {
-    if (!user?.self_client_id) {
-      setLoading(false);
-      return;
-    }
+    if (!user?.self_client_id) { setLoading(false); return; }
     try {
-      setLoading(true);
-      setLoadError(false);
+      setLoading(true); setLoadError(false);
       const list = await AssessmentsService.list({ client_id: user.self_client_id });
-      setForms(list || []);
-    } catch (err) {
-      setLoadError(true);
-      console.error('Error loading client forms:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.self_client_id]);
+      setForms(list || []); setFocusedId((current) => current || list?.[0]?.id || null);
+      const workspaceId = list?.[0]?.workspace_id || user.active_workspace_id;
+      if (workspaceId) {
+        const { data } = await supabase.from('workspaces').select('name').eq('id', workspaceId).maybeSingle();
+        setWorkspaceName(data?.name || '');
+      }
+    } catch (error) { setLoadError(true); console.error('Error loading client forms:', error); }
+    finally { setLoading(false); }
+  }, [user?.active_workspace_id, user?.self_client_id]);
 
+  useEffect(() => { loadForms(); }, [loadForms]);
   useEffect(() => {
-    loadForms();
-  }, [loadForms]);
-
-  const filteredForms = useMemo(() => {
-    if (statusTab === 'all') return forms;
-    if (statusTab === 'pending') return forms.filter((f) => f.submission_status === 'pending');
-    if (statusTab === 'submitted') return forms.filter((f) => f.submission_status === 'submitted');
-    if (statusTab === 'reviewed') return forms.filter((f) => f.submission_status === 'reviewed');
-    return forms;
-  }, [forms, statusTab]);
-
-  const handleOpenForm = async (f) => {
-    try {
-      const full = await AssessmentsService.getById(f.id);
-      setActiveForm(full);
-    } catch (err) {
-      console.error('Failed to open form:', err);
+    const browseVideo = videoRef.current;
+    const answerVideo = answerVideoRef.current;
+    const video = activeForm ? answerVideo : browseVideo;
+    if (!video) return undefined;
+    const isCompact = window.matchMedia('(max-width: 900px)').matches;
+    if (isCompact) {
+      video.play().catch(() => {});
+      return undefined;
     }
+    browseVideo?.pause(); answerVideo?.pause();
+    seekRef.current.previousX = null;
+    seekRef.current.target = video.currentTime || 0;
+    const seek = () => {
+      if (!Number.isFinite(video.duration)) return;
+      const state = seekRef.current;
+      video.currentTime = Math.max(0, Math.min(video.duration - 0.02, state.target));
+      state.seeking = true;
+    };
+    const move = (event) => {
+      const state = seekRef.current;
+      if (state.previousX == null) { state.previousX = event.clientX; return; }
+      const delta = event.clientX - state.previousX; state.previousX = event.clientX;
+      if (!Number.isFinite(video.duration)) return;
+      state.target = Math.max(0, Math.min(video.duration - 0.02, state.target + (delta / window.innerWidth) * .8 * video.duration));
+      if (!state.seeking) seek();
+    };
+    const seeked = () => { const state = seekRef.current; state.seeking = false; if (Math.abs(video.currentTime - state.target) > .025) seek(); };
+    window.addEventListener('pointermove', move, { passive: true }); video.addEventListener('seeked', seeked);
+    return () => { window.removeEventListener('pointermove', move); video.removeEventListener('seeked', seeked); };
+  }, [activeForm]);
+
+  const openForm = async (form) => {
+    try { setOpening(true); setActiveForm(await AssessmentsService.getById(form.id)); }
+    catch (error) { console.error('Failed to open form:', error); }
+    finally { setOpening(false); }
+  };
+  const saveForm = async (assessmentId, responses) => AssessmentsService.saveResponses(assessmentId, responses);
+  const submitForm = async (assessmentId, responses) => {
+    await AssessmentsService.submitForm(assessmentId, responses, { clientUserId: user.id, coachUserId: activeForm?.assigned_ybs_coach_id, workspaceId: activeForm?.workspace_id, formName: activeForm?.name });
+    setActiveForm(null); await loadForms();
   };
 
-  const handleSaveForm = async (assessmentId, responses) => {
-    await AssessmentsService.saveResponses(assessmentId, responses);
-    const full = await AssessmentsService.getById(assessmentId);
-    setActiveForm(full);
-  };
-
-  const handleSubmitForm = async (assessmentId, responses) => {
-    await AssessmentsService.submitForm(assessmentId, responses, {
-      clientUserId: user.id,
-      coachUserId: activeForm?.assigned_ybs_coach_id,
-      workspaceId: activeForm?.workspace_id,
-      formName: activeForm?.name,
-    });
-    await loadForms();
-    setActiveForm(null);
-  };
-
-  if (loading) return <LoadingState label="Loading your check-ins and forms…" />;
+  if (loading) return <LoadingState label="Loading your forms…" />;
   if (loadError) return <ErrorState onRetry={loadForms} />;
+  const displayName = user?.full_name?.trim() || 'Athlete';
+  const initials = displayName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'C';
 
-  const pendingCount = forms.filter((f) => f.submission_status === 'pending').length;
+  return <main className={`forms-cinema ybs-cine ${activeForm ? 'is-answering' : ''}`}>
+    <CinematicPortalNav workspaceName={workspaceName} initials={initials} displayName={displayName} onSignOut={() => logout()} warmActive />
+    <div className="forms-cinema__media" aria-hidden="true">
+      <video ref={videoRef} className="forms-cinema__video forms-cinema__video--browse" muted playsInline autoPlay loop preload="auto" src={formsVideo} />
+      <video ref={answerVideoRef} className="forms-cinema__video forms-cinema__video--answer" muted playsInline autoPlay loop preload="auto" src={answersVideo} />
+      <div className="forms-cinema__veil" />
+    </div>
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
-        <div>
-          <div className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-primary" />
-            <h1 className="text-xl lg:text-2xl font-display font-semibold tracking-tight text-foreground">
-              My Forms & Check-ins
-            </h1>
-          </div>
-          <p className="text-[14px] text-muted-foreground mt-1">
-            Complete scheduled check-ins so your coach can analyze your progress and calibrate your plans.
-          </p>
-        </div>
-
-        {/* Status filter tabs */}
-        <div className="ybs-forms-filter" aria-label="Filter forms">
-          {[
-            { id: 'all', label: 'All', count: forms.length },
-            { id: 'pending', label: 'Awaiting Response', count: pendingCount },
-            { id: 'submitted', label: 'Under Review', count: forms.filter((f) => f.submission_status === 'submitted').length },
-            { id: 'reviewed', label: 'Reviewed', count: forms.filter((f) => f.submission_status === 'reviewed').length },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusTab(tab.id)}
-              aria-pressed={statusTab === tab.id}
-              className={cn(
-                'px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5',
-                statusTab === tab.id
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <span>{tab.label}</span>
-              <span className={cn('text-[12px] px-1 rounded-full', statusTab === tab.id ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Forms List */}
-      {filteredForms.length === 0 ? (
-        <ClientEmptyState
-          icon={ClipboardList}
-          title={statusTab === 'all' ? 'No Forms Assigned' : `No ${statusTab} Forms`}
-          description={
-            statusTab === 'all'
-              ? 'You do not have any forms or check-ins scheduled right now. Your coach will notify you when a new check-in is due.'
-              : `There are currently no forms in ${statusTab} status.`
-          }
-        />
-      ) : (
-        <div className="border-t border-border">
-          {filteredForms.map((f) => {
-            const isPending = f.submission_status === 'pending';
-            const isReviewed = f.submission_status === 'reviewed';
-
-            return (
-              <div
-                key={f.id}
-                className="ybs-form-row"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-foreground font-display">{f.name}</h3>
-                    <Badge className={cn('capitalize text-[12px]', getFormStatusColor(f.submission_status))}>
-                      {f.submission_status === 'submitted' ? 'Under Review' : getFormStatusLabel(f.submission_status)}
-                    </Badge>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground pt-1">
-                    {f.due_date && (
-                      <span className="flex items-center gap-1 font-mono">
-                        <Calendar className="w-3.5 h-3.5" /> Due: {formatDate(f.due_date)}
-                      </span>
-                    )}
-                    {f.submitted_at && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-primary" /> Submitted: {formatDate(f.submitted_at)}
-                      </span>
-                    )}
-                    {f.reviewed_at && (
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Reviewed: {formatDate(f.reviewed_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                  {isPending ? (
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 shadow-sm"
-                      onClick={() => handleOpenForm(f)}
-                    >
-                      Fill Out Check-in
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs h-9 px-3.5 border-border hover:border-primary/40 text-foreground flex items-center gap-1.5"
-                      onClick={() => handleOpenForm(f)}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      {isReviewed ? 'View Feedback & Answers' : 'View Answers'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
+    {!activeForm && <section className="forms-cinema__browser">
+      {!forms.length ? <ClientEmptyState icon={ClipboardList} title="No Forms Assigned" description="Your next check-in will appear here as soon as your coach sends it." /> : <>
+        <div className="forms-cinema__rail" role="list" aria-label="Your forms">
+          {forms.map((form, index) => {
+            const focused = form.id === focusedId; const pending = form.submission_status === 'pending';
+            return <article key={form.id} role="listitem" className={`forms-cinema__card ${focused ? 'is-focused' : 'is-muted'}`} onClick={() => setFocusedId(form.id)}>
+              <div className="forms-cinema__ordinal">{String(index + 1).padStart(2, '0')}</div>
+              <div><span className="forms-cinema__status">{pending ? 'Awaiting response' : getFormStatusLabel(form.submission_status)}</span><h2>{form.name}</h2><p>{form.due_date ? `Due ${formatDate(form.due_date)}` : pending ? 'Ready when you are.' : form.submitted_at ? `Submitted ${formatDate(form.submitted_at)}` : 'Completed form'}</p></div>
+              <button type="button" onClick={(event) => { event.stopPropagation(); openForm(form); }} disabled={opening}>
+                <span>{opening && focused ? 'Opening…' : pending ? 'Submit now' : 'View answers'}</span>{pending ? <ArrowRight /> : <CheckCircle2 />}
+              </button>
+            </article>;
           })}
         </div>
-      )}
+        <p className="forms-cinema__hint"><strong>Forms</strong> — One thoughtful answer at a time.</p>
+      </>}
+    </section>}
 
-      {/* Form Filler Modal */}
-      {activeForm && (
-        <FormFiller
-          assessment={activeForm}
-          onSave={handleSaveForm}
-          onSubmit={handleSubmitForm}
-          onClose={() => setActiveForm(null)}
-        />
-      )}
-    </div>
-  );
+    {activeForm && <CinematicFormFiller assessment={activeForm} onSave={saveForm} onSubmit={submitForm} onClose={() => setActiveForm(null)} />}
+  </main>;
 }

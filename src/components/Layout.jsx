@@ -5,14 +5,11 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useAuth } from '@/lib/AuthContext';
 import { pageVariants } from '@/lib/motion';
+import { LoadingState } from '@/components/ui';
 
 // Shown only while a lazily-loaded route chunk downloads. Matches the app's
 // existing loading state so navigation appearance is unchanged.
-const RouteFallback = () => (
-  <div className="min-h-[50vh] flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-  </div>
-);
+const RouteFallback = () => <LoadingState label="Loading…" />;
 
 export default function Layout() {
   const { user } = useAuth();

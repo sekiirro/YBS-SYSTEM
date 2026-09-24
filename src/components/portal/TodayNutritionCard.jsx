@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Apple, CheckCircle2, ArrowRight, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 
-export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) {
+export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals, compact = false }) {
   const [logging, setLogging] = useState(false);
   const [justLogged, setJustLogged] = useState(false);
   const [error, setError] = useState(null);
@@ -66,10 +66,19 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
             <Apple className="w-3.5 h-3.5 text-primary" />
             Today&apos;s Nutrition
           </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-secondary/80 text-foreground border border-border/80">
-            {calories > 0 ? `${calories} kcal / day` : 'Active'}
-          </span>
+          {!compact && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-secondary/80 text-foreground border border-border/80">
+              {calories > 0 ? `${calories} kcal / day` : 'Active'}
+            </span>
+          )}
         </div>
+
+        {compact && (
+          <div className="ybs-cine__calories">
+            <strong>{calories > 0 ? calories.toLocaleString() : 'Active'}</strong>
+            {calories > 0 && <span>kcal / day</span>}
+          </div>
+        )}
 
         {/* Macro targets mini grid */}
         <div className="grid grid-cols-3 gap-2 py-4 mb-4 border-y border-border/60">
@@ -94,9 +103,11 @@ export default function TodayNutritionCard({ nutrition, todayLog, onLogMeals }) 
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>Meals logged for today</span>
             </div>
-            <p className="text-[12px] text-emerald-300/80 leading-tight">
-              Great job! You&apos;re staying on track with your nutritional discipline.
-            </p>
+            {!compact && (
+              <p className="text-[12px] text-emerald-300/80 leading-tight">
+                Great job! You&apos;re staying on track with your nutritional discipline.
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-2">

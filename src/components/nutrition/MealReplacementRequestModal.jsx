@@ -199,7 +199,7 @@ export default function MealReplacementRequestModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Request a Replacement" size="lg">
+    <Modal open={open} onClose={onClose} title="Request a Replacement" size="lg" className="nutrition-replacement-glass">
       <div className="space-y-4">
         {/* Read-only framing */}
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/[0.05] border border-primary/20 text-[12px] text-muted-foreground leading-relaxed">

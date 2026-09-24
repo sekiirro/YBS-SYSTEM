@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { MetricsService } from '@/services/metrics';
+import { WorkoutsService } from '@/services/workouts';
+import { NutritionService } from '@/services/nutrition';
 import ClientEmptyState from '@/components/portal/ClientEmptyState';
 import { ErrorState, LoadingState, Button, Badge, Modal } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
@@ -12,12 +14,16 @@ import {
   Settings,
   Sparkles,
   AlertTriangle,
+  ArrowUpRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ProgressCompositionChart from '@/components/portal/ProgressCompositionChart';
 import MeasurementsChart from '@/components/portal/MeasurementsChart';
 import MetricsBaselineWizard from '@/components/portal/MetricsBaselineWizard';
 import MetricsCheckInModal from '@/components/portal/MetricsCheckInModal';
+import CinematicPortalNav from '@/components/portal/CinematicPortalNav';
+import MythicProgressExperience from '@/components/portal/MythicProgressExperience';
+import { supabase } from '@/utils/supabase';
 import {
   getBaselineState,
   calculateDerived,
@@ -58,7 +64,7 @@ function SummaryCard({ label, icon: Icon, value, unit, delta = null, note }) {
 }
 
 export default function ClientMetrics() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [state, setState] = useState(null);
@@ -66,6 +72,9 @@ export default function ClientMetrics() {
   const [showBaseline, setShowBaseline] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [workoutHistory, setWorkoutHistory] = useState([]);
+  const [nutritionHistory, setNutritionHistory] = useState([]);
 
   const loadData = useCallback(async () => {
     if (!user?.self_client_id) {
@@ -81,6 +90,12 @@ export default function ClientMetrics() {
       ]);
       setState(s);
       setMetrics(list || []);
+      const [workoutsResult, nutritionResult] = await Promise.allSettled([
+        WorkoutsService.getClientWorkoutHistory(user.self_client_id, 250),
+        NutritionService.getWeeklyNutritionLogs(user.self_client_id),
+      ]);
+      setWorkoutHistory(workoutsResult.status === 'fulfilled' ? workoutsResult.value : []);
+      setNutritionHistory(nutritionResult.status === 'fulfilled' ? nutritionResult.value : []);
     } catch (err) {
       setLoadError(true);
       console.error('Error loading client metrics:', err);
@@ -92,6 +107,17 @@ export default function ClientMetrics() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!user?.active_workspace_id) return;
+    supabase
+      .from('workspaces')
+      .select('name')
+      .eq('id', user.active_workspace_id)
+      .maybeSingle()
+      .then(({ data }) => setWorkspaceName(data?.name || ''))
+      .catch(() => {});
+  }, [user?.active_workspace_id]);
 
   if (loading) return <LoadingState label="Loading your body progress…" />;
   if (loadError) return <ErrorState onRetry={loadData} />;
@@ -111,6 +137,9 @@ export default function ClientMetrics() {
   // ------------------------------------------------------------------
   const baseline = getBaselineState(state);
   const client = state?.client || {};
+  const displayName = user?.full_name?.trim() || 'Athlete';
+  const initials = displayName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'C';
+  const portalNav = { workspaceName, initials, displayName, onSignOut: () => logout() };
   const heightSource = toNumber(client?.height) || toNumber(baseline?.height) || null;
 
   const rows = [...metrics].sort((a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime());
@@ -137,6 +166,54 @@ export default function ClientMetrics() {
 
   // ------------------------------------------------------------------
   if (!baseline.complete) {
+    return (
+      <div className="metrics-calibration ybs-cine">
+        <CinematicPortalNav
+          workspaceName={workspaceName}
+          initials={initials}
+          displayName={displayName}
+          onSignOut={() => logout()}
+          warmActive
+        />
+        <video
+          className="metrics-calibration__video"
+          src="/videos/metrics-calibration.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        />
+        <div className="metrics-calibration__shade" aria-hidden="true" />
+
+        <main className="metrics-calibration__content">
+          <div className="metrics-calibration__copy">
+            <h1>Let&apos;s<br />Calibrate.</h1>
+            <p className="metrics-calibration__arabic" dir="rtl">
+              حين تخطو إلى هذه الحرب، تُغلق خلفك أبواب الرجوع؛ فهنا لا يُخلِّد التاريخُ المترددين،
+              ولا يعترف إلا بمن انتزعوا مكانهم بين الملوك.
+            </p>
+            <button type="button" className="metrics-calibration__cta" onClick={() => setShowBaseline(true)}>
+              <span>هل أنت جاهز؟</span>
+              <ArrowUpRight aria-hidden="true" />
+            </button>
+          </div>
+        </main>
+
+        <MetricsBaselineWizard
+          open={showBaseline}
+          onClose={() => setShowBaseline(false)}
+          clientId={user.self_client_id}
+          state={state}
+          onSaved={loadData}
+          portalNav={portalNav}
+        />
+      </div>
+    );
+  }
+
+  if (false) {
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
         <div className="pb-4 border-b border-border/60">
@@ -197,6 +274,7 @@ export default function ClientMetrics() {
           clientId={user.self_client_id}
           state={state}
           onSaved={loadData}
+          portalNav={portalNav}
         />
       </div>
     );
@@ -212,7 +290,22 @@ export default function ClientMetrics() {
       : null;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <>
+      <MythicProgressExperience
+        portalNav={portalNav}
+        displayName={displayName}
+        client={client}
+        metrics={metrics}
+        latest={latest}
+        derivedLatest={derivedLatest}
+        allPhotos={allPhotos}
+        workoutLogs={workoutHistory}
+        nutritionLogs={nutritionHistory}
+        onEditBaseline={() => setShowBaseline(true)}
+        onAddCheckIn={() => setShowCheckIn(true)}
+        onPhotoOpen={setSelectedPhoto}
+      />
+      {false && <div className="hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-border/60">
         <div>
@@ -435,6 +528,7 @@ export default function ClientMetrics() {
         )}
       </div>
 
+      </div>}
       {/* Lightbox photo modal */}
       {selectedPhoto && (
         <Modal open={!!selectedPhoto} onClose={() => setSelectedPhoto(null)} title="Progress photo" size="lg">
@@ -461,6 +555,7 @@ export default function ClientMetrics() {
         clientId={user.self_client_id}
         state={state}
         onSaved={loadData}
+        portalNav={portalNav}
       />
       <MetricsCheckInModal
         open={showCheckIn}
@@ -470,6 +565,6 @@ export default function ClientMetrics() {
         latest={latest}
         onSaved={loadData}
       />
-    </div>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { ClipboardList, CheckCircle2, ArrowRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { formatDate } from '@/lib/ybs-utils';
 
-export default function TodayFormsCard({ forms = [], onOpenForm }) {
+export default function TodayFormsCard({ forms = [], onOpenForm, compact = false }) {
   const pendingForms = forms.filter((f) => f.submission_status === 'pending');
   const nextPending = pendingForms[0] || null;
   const reviewedCount = forms.filter((f) => f.submission_status === 'reviewed').length;
@@ -39,9 +39,11 @@ export default function TodayFormsCard({ forms = [], onOpenForm }) {
             <h3 className="text-base font-semibold text-foreground mt-0.5 line-clamp-1 font-display">
               {nextPending.name}
             </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Your weekly check-in provides your coach with the biofeedback needed to adjust your plan.
-            </p>
+            {!compact && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Your weekly check-in provides your coach with the biofeedback needed to adjust your plan.
+              </p>
+            )}
           </div>
         ) : (
           <div>
@@ -49,9 +51,11 @@ export default function TodayFormsCard({ forms = [], onOpenForm }) {
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               <h3 className="text-base font-semibold text-foreground">All Check-ins Complete</h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              You are completely caught up on your scheduled check-ins and forms.
-            </p>
+            {!compact && (
+              <p className="text-xs text-muted-foreground mt-1">
+                You are completely caught up on your scheduled check-ins and forms.
+              </p>
+            )}
           </div>
         )}
 

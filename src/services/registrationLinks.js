@@ -32,7 +32,7 @@ export const RegistrationLinksService = {
    * creation and preserves handle_new_user() behavior.
    */
   async registerClient(payload) {
-    const { token, email, phone, password } = payload;
+    const { token, email, phone, password, date_of_birth } = payload;
     const fullName = (
       payload.full_name ||
       [payload.first_name, payload.last_name].filter(Boolean).join(' ')
@@ -43,6 +43,7 @@ export const RegistrationLinksService = {
       email: email?.toLowerCase().trim(),
       phone,
       password,
+      date_of_birth,
     };
 
     // Any failure must surface as a controlled error (with a stable code),

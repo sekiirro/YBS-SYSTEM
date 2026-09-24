@@ -98,7 +98,7 @@ export default function MetricsCheckInModal({ open, onClose, clientId, workspace
     CIRCUMFERENCE_FIELDS.reduce((n, f) => n + (form.measurements[f] !== '' ? 1 : 0), 0);
 
   return (
-    <Modal open={open} onClose={onClose} title="Quick Check-in" size="lg">
+    <Modal open={open} onClose={onClose} title="Quick Check-in" size="lg" className="ascent-checkin-modal">
       <p className="text-[12px] text-muted-foreground mb-5 leading-relaxed">
         Log a new progress snapshot. Leave anything blank and it won't be changed or duplicated —
         you can always log the missing part at your next check-in.

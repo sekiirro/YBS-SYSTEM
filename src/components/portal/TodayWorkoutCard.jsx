@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Dumbbell, CheckCircle2, ArrowRight, BedDouble } from 'lucide-react';
 import { Button } from '@/components/ui';
 
-export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) {
+export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout, compact = false }) {
   if (!workout) {
     return (
       <div className="surface-card p-5 rounded-xl border border-border/80 flex flex-col justify-between h-full">
@@ -65,9 +65,11 @@ export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) 
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               <h3 className="text-base font-semibold text-foreground">Workout Completed</h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Great work! Today&apos;s session is logged. Rest, hydrate, and hit your nutrition goals.
-            </p>
+            {!compact && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Great work! Today&apos;s session is logged. Rest, hydrate, and hit your nutrition goals.
+              </p>
+            )}
             {todayLog.session_name && (
               <p className="text-[12px] text-emerald-400/90 font-mono mt-2 bg-emerald-500/10 px-2 py-1 rounded inline-block">
                 Session: {todayLog.session_name}
@@ -77,9 +79,11 @@ export default function TodayWorkoutCard({ workout, todayLog, onStartWorkout }) 
         ) : isRestDay ? (
           <div>
             <h3 className="text-base font-semibold text-foreground">Rest & Recovery Day</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Recovery is where growth happens. Focus on mobility, sleep, and meeting your protein target.
-            </p>
+            {!compact && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Recovery is where growth happens. Focus on mobility, sleep, and meeting your protein target.
+              </p>
+            )}
           </div>
         ) : (
           <div>

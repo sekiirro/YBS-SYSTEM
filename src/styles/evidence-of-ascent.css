@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+.ascent-page{font-family:"Space Mono",monospace;background:#000;color:#fff;width:100%;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}.ascent-page *{box-sizing:border-box}.ascent-video-layer{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;z-index:1;background:#000;user-select:none}.ascent-video-layer video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;opacity:0;will-change:transform,filter,opacity}.ascent-bottom-blur{position:fixed;bottom:0;left:0;width:100%;height:150px;z-index:30;pointer-events:none;background:linear-gradient(to bottom,transparent,#000);-webkit-mask-image:linear-gradient(to top,#000 50%,transparent);mask-image:linear-gradient(to top,#000 50%,transparent);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.ascent-header{position:fixed;top:0;left:0;right:0;height:80px;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;opacity:0;transition:opacity .8s ease-out}.ascent-page.is-visible .ascent-header{opacity:1}.ascent-logo-pill{height:48px;padding:0 20px;background:rgba(243,237,227,.08);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border:1px solid rgba(242,139,60,.28);border-radius:14px;display:flex;align-items:center;gap:10px;transition:background .2s,border-color .2s,transform .2s;color:rgba(243,237,227,.92)}.ascent-logo-pill:hover{background:rgba(243,237,227,.13);border-color:rgba(242,139,60,.5);transform:scale(1.02)}.ascent-logo-pill svg{width:18px}.ascent-logo-pill span{font-size:16px;letter-spacing:-.02em;white-space:nowrap}.ascent-action-pill{height:48px;padding:0 26px;background:rgba(243,237,227,.07);backdrop-filter:blur(22px) saturate(1.35);-webkit-backdrop-filter:blur(22px) saturate(1.35);border:1px solid rgba(242,139,60,.32);border-radius:9999px;display:flex;align-items:center;color:rgba(243,237,227,.94);font-size:14px;font-weight:650;letter-spacing:.08em;font-family:inherit;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.08)}.ascent-action-pill:hover{background:rgba(242,139,60,.16);border-color:rgba(242,139,60,.58);box-shadow:0 6px 24px rgba(0,0,0,.28),0 0 20px rgba(242,139,60,.14),inset 0 1px rgba(255,255,255,.1)}
+.ascent-main{position:relative;width:100%;display:flex;flex-direction:column;padding:80px 2rem 144px;z-index:10;opacity:0;transition:opacity 1s ease-out}.ascent-page.is-visible .ascent-main{opacity:1}.ascent-dot-grid{position:absolute;inset:0;background-image:radial-gradient(rgba(243,237,227,.5) 1px,transparent 1px);background-size:24px 24px;opacity:.04;pointer-events:none}.ascent-hero{position:relative;width:100%;max-width:1280px;margin:0 auto;display:flex;flex-direction:column;min-height:80vh;justify-content:space-between;padding-top:32px;padding-bottom:64px;transition:opacity .1s linear,transform .1s linear}.ascent-hero-inner{width:100%;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:48px}.ascent-grid,.ascent-grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:48px;width:100%}.ascent-grid-bottom{margin-top:auto;padding-top:48px;align-items:end}.ascent-title{font-weight:300;font-size:clamp(50px,8vw,100px);color:rgba(243,237,227,.88);line-height:.95;letter-spacing:-.03em;display:flex;flex-direction:column;user-select:none;text-shadow:0 4px 40px rgba(0,0,0,.55)}.ascent-title.right{align-items:flex-end;text-align:right}.ascent-desc{max-width:380px;font-size:15px;color:rgba(243,237,227,.52);line-height:1.625;transition:opacity .1s linear,transform .1s linear}.ascent-desc p{font-size:11px;letter-spacing:.24em;color:rgba(242,139,60,.88);font-weight:700}
+.ascent-cinematic{position:relative;width:100%;max-width:1024px;margin:0 auto;padding:96px 24px 128px;perspective:400px;pointer-events:none}.ascent-cinematic>div{transform-style:preserve-3d;text-align:center;transition:opacity .05s linear}.ascent-cinematic h2{font-weight:400;font-size:clamp(22px,3.5vw,42px);color:#fff;line-height:1.35;letter-spacing:-.02em;user-select:none;padding:0 24px}
+.ascent-stats{width:100vw;position:relative;margin-left:calc(-50vw + 50%);margin-top:64px;overflow:hidden;opacity:0;transform:translateY(40px) scale(.98);transition:opacity .6s ease-out,transform .6s ease-out}.ascent-stats.is-revealed{opacity:1;transform:translateY(0) scale(1)}.ascent-stats .swiper{width:100%;height:585px;padding-bottom:20px!important;overflow:visible!important}.ascent-stats .swiper-slide{width:428px;max-width:92%;height:540px;background-position:center;background-size:cover}.ascent-card-outer{padding:6px;border-radius:28px;background:rgba(255,255,255,.04);backdrop-filter:blur(12px);display:flex;flex-direction:column;justify-content:space-between;height:540px}.ascent-card-inner{background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.05);backdrop-filter:blur(12px);border-radius:23px;padding:32px;display:flex;flex-direction:column;justify-content:space-between;flex:1}.ascent-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#fff;opacity:.8}.ascent-card-value{font-size:clamp(60px,6vw,76px);font-weight:400;letter-spacing:-.04em;color:#fff;line-height:1;margin-top:24px}.ascent-card-value small{font-size:14px;margin-left:5px;color:rgba(255,255,255,.6)}.ascent-card-details{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-top:16px}.ascent-card-details>div{min-width:0}.ascent-card-details span{display:block;font-size:8px;letter-spacing:.09em;color:rgba(255,255,255,.45)}.ascent-card-details strong{display:block;margin-top:5px;font-size:10px;white-space:nowrap}.ascent-card-footer{padding:12px 24px 10px;font-size:10px;font-weight:500;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ascent-chart{height:125px;padding-top:10px}.ascent-chart svg{width:100%;height:100px;overflow:visible}.ascent-chart line{stroke:rgba(255,255,255,.12);stroke-width:.6}.ascent-chart polyline{fill:none;stroke:#f28b3c;stroke-width:1.5;vector-effect:non-scaling-stroke}.ascent-chart circle{fill:#f28b3c;vector-effect:non-scaling-stroke}.ascent-chart>div{display:flex;justify-content:space-between;font-size:8px;color:rgba(255,255,255,.38)}.ascent-card-inner--warning{justify-content:space-between}.ascent-warning{display:flex;align-items:center;gap:9px;color:#d8ae55;font-size:11px}.ascent-warning svg{width:16px}.ascent-empty{height:480px;display:grid;place-content:center;justify-items:center;gap:12px;color:rgba(255,255,255,.6)}
+@media(max-width:639px){.ascent-header{padding:0 16px}.ascent-logo-pill{padding:0 14px}.ascent-action-pill{font-size:12px;padding:0 18px;height:42px}.ascent-main{padding:80px 16px 144px}.ascent-grid{grid-template-columns:1fr}.ascent-grid-bottom{grid-template-columns:1fr 1fr;gap:16px 24px;align-items:end}.ascent-title{font-size:clamp(38px,12vw,68px)}.ascent-title.right{align-items:flex-end;text-align:right;order:2}.ascent-desc{order:1;font-size:14px}.ascent-cinematic{padding:64px 16px 96px}.ascent-stats .swiper-slide{width:375px}.ascent-card-inner{padding:26px}.ascent-card-details{gap:6px}}
+@media(prefers-reduced-motion:reduce){.ascent-video-layer video{filter:none!important;transform:none!important}.ascent-hero,.ascent-desc,.ascent-cinematic>div{transform:none!important}}
+
+/* ── Check-in modal: mythic warm dark theme ──────────────────────────────────
+   The modal is teleported to <body> by Radix, so we target .ascent-checkin-modal
+   (the DialogContent className) and override the blue-tinted ybs-field/ybs-dialog
+   tokens with the hero selector's copper/cream palette.                       */
+.ascent-checkin-modal{
+  background:rgba(18,11,8,.96) !important;
+  backdrop-filter:blur(40px) saturate(1.5) !important;
+  -webkit-backdrop-filter:blur(40px) saturate(1.5) !important;
+  border:1px solid rgba(242,139,60,.22) !important;
+  box-shadow:0 32px 80px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.04) inset !important;
+  color:rgba(243,237,227,.9) !important;
+}
+.ascent-checkin-modal [class*="DialogHeader"],.ascent-checkin-modal .ybs-dialog-title{
+  color:rgba(243,237,227,.96) !important;
+  border-bottom-color:rgba(242,139,60,.18) !important;
+}
+.ascent-checkin-modal label{color:rgba(243,237,227,.82) !important}
+.ascent-checkin-modal p{color:rgba(243,237,227,.52) !important}
+/* Input / select / textarea fields */
+.ascent-checkin-modal .ybs-field{
+  background:rgba(243,237,227,.04) !important;
+  border-color:rgba(242,139,60,.22) !important;
+  color:rgba(243,237,227,.94) !important;
+  border-radius:10px !important;
+}
+.ascent-checkin-modal .ybs-field:focus{
+  border-color:rgba(242,139,60,.52) !important;
+  box-shadow:0 0 0 3px rgba(242,139,60,.1) !important;
+  outline:none !important;
+}
+.ascent-checkin-modal .ybs-field::placeholder{color:rgba(243,237,227,.28) !important}
+/* Native select arrow colour tweak */
+.ascent-checkin-modal select.ybs-field{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f28b3c' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;
+  background-position:right 12px center !important;
+  padding-right:36px !important;
+  appearance:none !important;
+  -webkit-appearance:none !important;
+}
+/* Select options (system popup — limited styling) */
+.ascent-checkin-modal select.ybs-field option{background:#180f0a;color:rgba(243,237,227,.9)}
+/* Primary action button */
+.ascent-checkin-modal .ybs-button-primary{
+  background:rgba(242,139,60,.82) !important;
+  color:#160a04 !important;
+  border:1px solid rgba(242,139,60,.6) !important;
+  box-shadow:0 4px 20px rgba(242,139,60,.2) !important;
+}
+.ascent-checkin-modal .ybs-button-primary:hover{
+  background:rgba(242,139,60,.96) !important;
+  box-shadow:0 6px 28px rgba(242,139,60,.3) !important;
+}
+/* Ghost / cancel button */
+.ascent-checkin-modal .ybs-button:not(.ybs-button-primary){
+  color:rgba(243,237,227,.62) !important;
+  border-color:rgba(242,139,60,.16) !important;
+}
+.ascent-checkin-modal .ybs-button:not(.ybs-button-primary):hover{
+  color:rgba(243,237,227,.9) !important;
+  background:rgba(243,237,227,.06) !important;
+}
+/* Divider line above footer */
+.ascent-checkin-modal [class*="border-t"]{border-top-color:rgba(242,139,60,.14) !important}
+/* Error text */
+.ascent-checkin-modal .text-red-400{color:#e07070 !important}
+/* Measurement count hint */
+.ascent-checkin-modal .text-muted-foreground{color:rgba(243,237,227,.45) !important}
+/* Close button (×) */
+.ascent-checkin-modal button[aria-label="Close"]{color:rgba(243,237,227,.4) !important}
+.ascent-checkin-modal button[aria-label="Close"]:hover{color:rgba(243,237,227,.9) !important}
+

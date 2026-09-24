@@ -12,9 +12,7 @@ import RoleGuard from '@/components/RoleGuard';
 import Layout from '@/components/Layout';
 import PortalLayout from '@/components/PortalLayout';
 
-import Landing from '@/pages/Landing';
-import Login from '@/pages/Login';
-import ClientSignup from '@/pages/ClientSignup';
+import { AuthLogin, AuthNoInvite } from '@/pages/Auth';
 import JoinWorkspace from '@/pages/JoinWorkspace';
 import Activate from '@/pages/Activate';
 import PendingApproval from '@/pages/PendingApproval';
@@ -63,23 +61,16 @@ const WorkspaceRouteGuard = ({ children }) => {
 };
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth } = useAuth();
-
-  if (isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
   return (
     <Routes>
-      {/* Public */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<ClientSignup />} />
+      {/* Public — one shared YBS authentication shell. Login is public;
+          account creation is invitation-only (valid token required). */}
+      <Route path="/" element={<AuthLogin />} />
+      <Route path="/login" element={<AuthLogin />} />
+      <Route path="/register" element={<AuthNoInvite />} />
       <Route path="/join/:token" element={<JoinWorkspace />} />
+      <Route path="/invite/:token" element={<JoinWorkspace />} />
+      <Route path="/register/:token" element={<JoinWorkspace />} />
       <Route path="/activate" element={<Activate />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -157,7 +148,7 @@ const AuthenticatedApp = () => {
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
-    </Routes>
+      </Routes>
   );
 };
 
