@@ -15,7 +15,6 @@ import {
   TrendingUp,
   Apple,
   Dumbbell,
-  CreditCard,
   Bell,
   User,
   LogOut,
@@ -34,7 +33,6 @@ const DESKTOP_NAV = [
   { label: 'My Metrics', path: '/portal/metrics', icon: TrendingUp },
   { label: 'Nutrition Plan', path: '/portal/nutrition', icon: Apple },
   { label: 'Exercise Plan', path: '/portal/exercise', icon: Dumbbell },
-  { label: 'My Package', path: '/portal/package', icon: CreditCard },
   { label: 'Notifications', path: '/portal/notifications', icon: Bell },
   { label: 'Profile', path: '/portal/profile', icon: User },
 ];
@@ -92,13 +90,6 @@ export default function PortalLayout() {
       path: '/portal/forms',
       icon: ClipboardList,
       active: isPathActive('/portal/forms', ['/portal/assessments']),
-    },
-    {
-      label: 'My Package',
-      desc: 'Subscription & plan details',
-      path: '/portal/package',
-      icon: CreditCard,
-      active: isPathActive('/portal/package', ['/portal/subscription']),
     },
     {
       label: 'Notifications',
@@ -199,8 +190,7 @@ export default function PortalLayout() {
                 const isActive = location.pathname === item.path ||
                   (item.path === '/portal/forms' && location.pathname === '/portal/assessments') ||
                   (item.path === '/portal/metrics' && location.pathname === '/portal/progress') ||
-                  (item.path === '/portal/exercise' && location.pathname === '/portal/workout') ||
-                  (item.path === '/portal/package' && location.pathname === '/portal/subscription');
+                  (item.path === '/portal/exercise' && location.pathname === '/portal/workout');
                 const Icon = item.icon;
                 return (
                   <Link

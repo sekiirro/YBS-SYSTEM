@@ -8,7 +8,6 @@ const NAV_LINKS = [
   { label: 'Nutrition', path: '/portal/nutrition', aliases: [] },
   { label: 'Workout', path: '/portal/exercise', aliases: ['/portal/workout'] },
   { label: 'Progress', path: '/portal/metrics', aliases: ['/portal/progress'] },
-  { label: 'Package', path: '/portal/package', aliases: ['/portal/subscription'] },
 ];
 
 export default function CinematicPortalNav({ workspaceName, initials, displayName, onSignOut, warmActive = false }) {
