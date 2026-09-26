@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { WorkspacesService } from '@/services/workspaces';
 import { getActiveWorkspaceId, getRoleCategory } from '@/lib/ybs-auth';
 import { getInitials } from '@/lib/ybs-utils';
-import ThemeControl from '@/components/ThemeControl';
 
 const dropdownVariants = {
   initial: { opacity: 0, scale: 0.96, y: -6 },
@@ -93,30 +92,31 @@ export default function Topbar({ onMenuClick }) {
         </motion.button>
 
         {/* Global search */}
-        <div className="relative max-w-sm w-full hidden sm:block">
+        <div className="relative max-w-sm w-full hidden sm:block ml-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             aria-label="Search clients, plans, and exercises"
             placeholder="Search clients, plans, exercises…"
-            className="w-full h-9 pl-9 pr-4 rounded-full bg-secondary/60 border border-border/70 text-[14px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40 focus:bg-secondary/80 focus:ring-1 focus:ring-primary/20 transition-all duration-200"
+            className="w-full h-9 pl-9 pr-4 rounded-xl bg-secondary/50 border border-border text-[14px] text-foreground placeholder:text-muted-foreground/80 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/25 transition-all duration-150"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <ThemeControl />
+      <div className="flex items-center gap-1">
         {/* Notification bell */}
         <motion.button
-          className="relative p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+          className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
           onClick={() => navigate('/notifications')}
           aria-label="Notifications"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
           transition={{ duration: 0.15 }}
         >
           <Bell className="w-[18px] h-[18px]" />
         </motion.button>
+
+        <div aria-hidden="true" className="w-px h-6 bg-border mx-1" />
 
         {/* Account menu */}
         <div className="relative">
@@ -124,14 +124,13 @@ export default function Topbar({ onMenuClick }) {
             onClick={openMenu}
             aria-label="Account menu"
             aria-expanded={menuOpen}
-            className="flex items-center gap-2.5 pl-1 pr-2.5 py-1 rounded-full hover:bg-white/5 transition-colors"
-            whileHover={{ backgroundColor: 'hsl(var(--foreground)/0.05)' }}
+            className="flex items-center gap-2.5 pl-1 pr-2.5 py-1 rounded-full hover:bg-foreground/[0.06] transition-colors"
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.15 }}
           >
             <motion.div
-              className="w-8 h-8 rounded-full bg-secondary/80 border border-border/60 flex items-center justify-center text-foreground text-xs font-semibold"
-              whileHover={{ scale: 1.05 }}
+              className="w-8 h-8 rounded-full bg-secondary/70 border border-border/70 flex items-center justify-center text-foreground text-xs font-semibold"
+              whileHover={{ scale: 1.04 }}
               transition={{ duration: 0.2 }}
             >
               {getInitials(user?.full_name || user?.email || 'U')}
@@ -153,7 +152,7 @@ export default function Topbar({ onMenuClick }) {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
                 <motion.div
-                  className="absolute right-0 top-full mt-2 w-64 bg-popover border border-border rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-64 bg-popover border border-border/80 rounded-xl shadow-xl shadow-black/40 z-50 overflow-hidden"
                   variants={dropdownVariants}
                   initial="initial"
                   animate="animate"
@@ -173,15 +172,14 @@ export default function Topbar({ onMenuClick }) {
                     {[
                       { label: 'Profile', icon: UserIcon, onClick: handleProfile },
                     ].map(({ label, icon: Icon, onClick }) => (
-                      <motion.button
+                      <button
                         key={label}
+                        type="button"
                         onClick={onClick}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-[14px] text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                        whileHover={{ x: 2 }}
-                        transition={{ duration: 0.12 }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-[14px] text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
                       >
                         <Icon className="w-4 h-4" /> {label}
-                      </motion.button>
+                      </button>
                     ))}
 
                     {switchable && (
@@ -206,42 +204,39 @@ export default function Topbar({ onMenuClick }) {
                           ) : workspaces.length === 0 ? (
                             <p className="px-3 py-2 text-[12px] text-muted-foreground">No workspaces assigned yet.</p>
                           ) : workspaces.map((w) => (
-                            <motion.button
+                            <button
                               key={w.id}
+                              type="button"
                               onClick={() => handleSwitch(w.id)}
                               disabled={switching}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-white/5 transition-colors disabled:opacity-50"
-                              whileHover={{ x: 2 }}
-                              transition={{ duration: 0.12 }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left hover:bg-foreground/[0.06] transition-colors disabled:opacity-50"
                             >
                               <div className="w-5 h-5 rounded-lg bg-primary/10 border border-primary/15 flex items-center justify-center shrink-0">
                                 <span className="text-[12px] font-semibold text-primary">{w.name?.[0] || 'W'}</span>
                               </div>
                               <span className="text-[12px] font-medium truncate flex-1">{w.name}</span>
-                              {w.id === activeWsId && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
-                            </motion.button>
+{w.id === activeWsId && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                            </button>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    <motion.button
+                    <button
+                      type="button"
                       onClick={handleAddAccount}
-                      className="w-full flex items-center gap-2.5 px-4 py-2 text-[14px] text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.12 }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-[14px] text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
                     >
                       <Repeat className="w-4 h-4" /> Add Account
-                    </motion.button>
+                    </button>
 
-                    <motion.button
+                    <button
+                      type="button"
                       onClick={() => { setMenuOpen(false); logout(); }}
                       className="w-full flex items-center gap-2.5 px-4 py-2 text-[14px] text-red-400 hover:bg-red-500/10 transition-colors"
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.12 }}
                     >
                       <LogOut className="w-4 h-4" /> Sign out
-                    </motion.button>
+                    </button>
                   </div>
                 </motion.div>
               </>

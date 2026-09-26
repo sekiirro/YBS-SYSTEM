@@ -7,7 +7,7 @@ import { getActiveWorkspaceId, isPlatformAdmin } from '@/lib/ybs-auth';
 import { WorkoutsService, calculateWorkoutVolume } from '@/services/workouts';
 import { ClientsService } from '@/services/clients';
 import { WorkspacesService } from '@/services/workspaces';
-import { LoadingState, Button, Badge, Modal } from '@/components/ui';
+import { Button, Badge, Modal } from '@/components/ui';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
@@ -56,6 +56,7 @@ import {
   Pencil,
   MoreVertical,
   MoreHorizontal,
+  NotebookPen,
   Link2,
   X,
 } from 'lucide-react';
@@ -243,6 +244,8 @@ export default function WorkoutPlanBuilder(props = {}) {
     onPlanSaved,
     embedded = false,
     onExit,
+    initialDraft = null,
+    reviewMode = false,
   } = props;
   const { id: routeId } = useParams();
   const [searchParams] = useSearchParams();
@@ -298,6 +301,7 @@ export default function WorkoutPlanBuilder(props = {}) {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [activeVideoExercise, setActiveVideoExercise] = useState(null);
+  const [expandedExerciseNote, setExpandedExerciseNote] = useState(null);
 
   // Platform-owner "Link exercise versions" modal (targets one exercise).
   const [versionLinkExercise, setVersionLinkExercise] = useState(null); // { id, name } | null
@@ -521,7 +525,7 @@ export default function WorkoutPlanBuilder(props = {}) {
               const matched = clientList.find((c) => c.id === queryClientId);
               setSelectedClient(matched || (queryClientName ? { id: queryClientId, full_name: queryClientName } : null));
             }
-            if (isMounted) {
+if (isMounted) {
               setInitialSnapshot(JSON.stringify([
                 tpl.name,
                 tpl.split_type || 'upper_lower',
@@ -532,6 +536,62 @@ export default function WorkoutPlanBuilder(props = {}) {
               ]));
               setInitialized(true);
             }
+          }
+        } else if (initialDraft) {
+          // Pre-filling builder from a Create Plan proposal (read-only review mode)
+          setPlanId(null);
+          setName(initialDraft.plan?.name || 'AI Proposal');
+          setSplitType(initialDraft.plan?.split_type || 'upper_lower');
+          setCustomSplitName(initialDraft.plan?.custom_split_name || '');
+          setNotes(initialDraft.plan?.notes || '');
+          setIsTemplate(false);
+
+          const proposalDays = (initialDraft.days || []).map((d, dIdx) => {
+            const isRest = d.day_type === 'rest_day';
+            return {
+              id: d.temp_id || `proposal-day-${dIdx}-${Date.now()}`,
+              day_name: d.day_name,
+              day_type: d.day_type,
+              sort_order: d.sort_order,
+              rest_day: isRest,
+              notes: d.notes || '',
+              exercises: isRest ? [] : (d.exercises || []).map((ex, exIdx) => ({
+                id: ex.source_ref || `proposal-ex-${exIdx}-${Date.now()}`,
+                exercise_id: ex.exercise_id,
+                exercise_name: ex.exercise_name,
+                category: ex.category || 'other',
+                muscle_group: ex.muscle_group || null,
+                equipment: ex.equipment || null,
+                video_url: ex.video_url || null,
+                sort_order: ex.sort_order,
+                sets: ex.sets,
+                rep_range: ex.rep_range,
+                rest_seconds: ex.rest_seconds,
+                target_weight: ex.target_weight,
+                rpe: ex.rpe,
+                warmup: ex.warmup || false,
+                warmup_sets: ex.warmup_sets ?? 0,
+                working_sets: ex.working_sets ?? ex.sets,
+                notes: ex.notes || '',
+                group_id: ex.group_id || null,
+                group_type: ex.group_type || null,
+                prescribed_sets_detail: ex.prescribed_sets_detail || [],
+                _versionInfo: ex._versionInfo || null,
+              })),
+            };
+          });
+          setDays(proposalDays);
+
+          if (isMounted) {
+            setInitialSnapshot(JSON.stringify([
+              initialDraft.plan?.name || 'AI Proposal',
+              initialDraft.plan?.split_type || 'upper_lower',
+              initialDraft.plan?.custom_split_name || '',
+              initialDraft.plan?.notes || '',
+              wsId || null,
+              proposalDays,
+            ]));
+            setInitialized(true);
           }
         } else {
           setName('New Workout Program');
@@ -575,8 +635,8 @@ export default function WorkoutPlanBuilder(props = {}) {
   // Standalone/new-template flows keep the explicit "Save & Assign" flow.
   // The initialized gate additionally guarantees no PATCH can fire with
   // default/blank state or after a failed load.
-  const canAutoCreate = embedded && !isTemplate && !planId && !!selectedClient?.id;
-  const autosaveEnabled = initialized && (!!planId || canAutoCreate);
+const canAutoCreate = embedded && !isTemplate && !planId && !!selectedClient?.id && !reviewMode;
+  const autosaveEnabled = initialized && (!!planId || canAutoCreate) && !reviewMode;
   const autosaveSnapshot = JSON.stringify([name, splitType, customSplitName, notes, exerciseLibraryWorkspaceId, days]);
   const autosave = useAutosave({
     id: planId,
@@ -1918,6 +1978,29 @@ export default function WorkoutPlanBuilder(props = {}) {
                                     <ArrowLeftRight className="w-3.5 h-3.5" />
                                   </button>
 
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const noteKey = `${activeDay.id || activeDayIndex}:${ex.id || `ex-${exIdx}`}`;
+                                      setExpandedExerciseNote((current) => current === noteKey ? null : noteKey);
+                                    }}
+                                    className={cn(
+                                      "relative p-1.5 rounded-lg transition-colors",
+                                      expandedExerciseNote === `${activeDay.id || activeDayIndex}:${ex.id || `ex-${exIdx}`}`
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                    )}
+                                    title={ex.notes?.trim() ? "Edit technique note" : "Add technique note"}
+                                    aria-label={ex.notes?.trim() ? `Edit note for ${ex.exercise_name}` : `Add note for ${ex.exercise_name}`}
+                                    aria-expanded={expandedExerciseNote === `${activeDay.id || activeDayIndex}:${ex.id || `ex-${exIdx}`}`}
+                                    aria-controls={`exercise-note-${activeDay.id || activeDayIndex}-${ex.id || exIdx}`}
+                                  >
+                                    <NotebookPen className="w-3.5 h-3.5" />
+                                    {ex.notes?.trim() && (
+                                      <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-card" aria-hidden="true" />
+                                    )}
+                                  </button>
+
                                   {/* Secondary actions dropdown */}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -2020,16 +2103,24 @@ export default function WorkoutPlanBuilder(props = {}) {
                                 </div>
                               </div>
 
-                              {/* Notes */}
-                              <div className="px-3.5 pb-3">
-                                <textarea
-                                  rows={2}
-                                  placeholder="Technique note (e.g. Slow 3s eccentric, full stretch)…"
-                                  value={ex.notes || ''}
-                                  onChange={(e) => handleUpdateExercise(exIdx, { notes: e.target.value })}
-                                  className="w-full min-h-[42px] py-1.5 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[12px] text-muted-foreground placeholder:text-muted-foreground focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors resize-none"
-                                />
-                              </div>
+                              {expandedExerciseNote === `${activeDay.id || activeDayIndex}:${ex.id || `ex-${exIdx}`}` && (
+                                <div
+                                  id={`exercise-note-${activeDay.id || activeDayIndex}-${ex.id || exIdx}`}
+                                  className="px-3.5 pb-3 pt-1"
+                                >
+                                  <label className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+                                    Technique note
+                                  </label>
+                                  <textarea
+                                    rows={2}
+                                    autoFocus
+                                    placeholder="e.g. Slow 3s eccentric, full stretch…"
+                                    value={ex.notes || ''}
+                                    onChange={(e) => handleUpdateExercise(exIdx, { notes: e.target.value })}
+                                    className="w-full min-h-[42px] py-1.5 px-2.5 rounded-lg bg-secondary/30 border border-border/40 text-[12px] text-muted-foreground placeholder:text-muted-foreground focus:text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/40 transition-colors resize-y"
+                                  />
+                                </div>
+                              )}
                             </div>
                           )}
                         </Draggable>

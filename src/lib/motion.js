@@ -6,9 +6,9 @@
 // ─── Page / Container ─────────────────────────────────────────────────────────
 
 export const pageVariants = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-  exit:    { opacity: 0, y: -4, transition: { duration: 0.18, ease: 'easeIn' } },
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } },
+  exit:    { opacity: 0, y: -2, transition: { duration: 0.15, ease: 'easeIn' } },
 };
 
 // ─── Staggered children list ───────────────────────────────────────────────────
@@ -25,9 +25,9 @@ export const listItemVariants = {
 // ─── Fade up (cards, sections, charts) ────────────────────────────────────────
 
 export const fadeUp = {
-  initial: { opacity: 0, y: 14 },
+  initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+  transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
 };
 
 // ─── Scale fade (modals, tooltips, dropdowns) ─────────────────────────────────
@@ -45,8 +45,8 @@ export const cardGridVariants = {
 };
 
 export const cardItemVariants = {
-  initial: { opacity: 0, y: 16, scale: 0.98 },
-  animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } },
+  initial: { opacity: 0, y: 14, scale: 0.99 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] } },
 };
 
 // ─── Sidebar item ─────────────────────────────────────────────────────────────

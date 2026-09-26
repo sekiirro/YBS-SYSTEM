@@ -17,8 +17,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  ArrowLeft, Plus, FilePlus, Copy, Search, ArrowRight, Trash2,
-  ChevronDown, ChevronRight, ClipboardList, Sparkles, Dumbbell,
+  Plus, FilePlus, Copy, Search, ArrowRight, Trash2,
+  ChevronDown, ClipboardList, Sparkles, Dumbbell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -323,7 +323,7 @@ export default function ClientTrainingWorkspace({ client }) {
 
   return (
     <>
-      <div className="h-[calc(100vh-240px)] min-h-[640px] overflow-hidden">
+      <div className="h-[calc(100dvh-170px)] min-h-[720px] max-h-[920px] overflow-hidden">
         {editor ? (
           <WorkoutPlanBuilder
             key={editor.mode === 'edit' ? editor.planId : `${editor.mode}-${editor.templateId || 'new'}`}

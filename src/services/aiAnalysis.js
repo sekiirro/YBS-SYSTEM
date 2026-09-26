@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabase';
+import { ANALYSIS_TYPES, computeAnalysisFingerprint, restoreFromCacheRow } from '@/lib/aiAnalysisCache';
 
 /**
  * AI analysis service — thin wrapper around the summarize-nutrition and
@@ -76,4 +77,59 @@ export async function getNutritionAnalysis(assessmentId) {
  */
 export async function getTrainingAnalysis(assessmentId) {
   return invokeAnalysis('summarize-training', assessmentId);
+}
+
+/**
+ * Read-only restore path.
+ *
+ * Returns the persisted analysis for (assessmentId, analysisType) straight out
+ * of `public.ai_analysis_cache`, or null when there is nothing valid to show.
+ *
+ * This is deliberately two plain RLS-scoped SELECTs and NOTHING else:
+ *   - it never invokes summarize-nutrition / summarize-training, so mounting
+ *     the panel, switching tabs or changing routes can never spend provider
+ *     quota or start a regeneration;
+ *   - it never writes, so it cannot invalidate or overwrite the cache.
+ *
+ * Visibility is exactly the cache table's existing SELECT policy (platform
+ * owner / workspace owner / assigned YBS coach / client self), so a caller can
+ * only ever restore an analysis they were already allowed to generate.
+ *
+ * The assessment is read only for the columns the stored fingerprint is
+ * computed from, then hashed with the same algorithm the edge function used.
+ * A mismatch means the submission changed since the analysis was generated, so
+ * the stale analysis is discarded and the caller falls back to the
+ * "Generate AI Analysis" state.
+ *
+ * @param {string} assessmentId
+ * @param {'nutrition'|'training'} analysisType
+ * @returns {Promise<null | { success: true, cached: true, model: string|null,
+ *   meta: { provider: string|null, model: string|null, fallbackDepth: number|null, cached: true },
+ *   analysis: Object, sources: Array }>}
+ */
+export async function restoreCachedAnalysis(assessmentId, analysisType) {
+  if (!assessmentId || !ANALYSIS_TYPES.includes(analysisType)) return null;
+
+  const [cacheRes, assessmentRes] = await Promise.all([
+    supabase
+      .from('ai_analysis_cache')
+      .select('assessment_id, analysis_type, input_fingerprint, model, provider, fallback_depth, result, sources, updated_at')
+      .eq('assessment_id', assessmentId)
+      .eq('analysis_type', analysisType)
+      .maybeSingle(),
+    supabase
+      .from('assessments')
+      .select('id, questions_snapshot, assessment_responses(id, question_id, question_label, response_value)')
+      .eq('id', assessmentId)
+      .maybeSingle(),
+  ]);
+
+  if (cacheRes.error) throw cacheRes.error;
+  if (assessmentRes.error) throw assessmentRes.error;
+
+  const row = cacheRes.data;
+  const assessment = assessmentRes.data;
+  if (!row || !assessment) return null;
+
+  return restoreFromCacheRow(row, await computeAnalysisFingerprint(assessment));
 }

@@ -208,11 +208,12 @@ async function fetchMetadataOrEmpty() {
     groupKeysByFood: new Map(),
     preferredGroupKeysByFood: new Map(),
     groupNameByKey: new Map(),
+    allergenMetadataAvailable: true,
   };
 
   const queries = [
     supabase.from('food_roles').select('id, slug'),
-    supabase.from('food_allergen_links').select('food_id, allergens(slug)'),
+    supabase.from('food_allergen_links').select('food_id, food_allergens(slug)'),
     supabase.from('food_substitution_members').select(
       'food_id, is_preferred, food_substitution_groups(name, workspace_id)'
     ),
@@ -231,9 +232,15 @@ async function fetchMetadataOrEmpty() {
   }
   if (!links.error && Array.isArray(links.data)) {
     for (const row of links.data) {
-      const slug = row?.allergens?.slug;
+      const slug = row?.food_allergens?.slug;
       if (row?.food_id && slug) addToSetMap(meta.allergenSlugsByFood, row.food_id, slug);
     }
+  } else if (links.error) {
+    // Query failed (e.g. wrong embed path, RLS, network). Surface this so callers
+    // can degrade to "unverified" rather than assuming "no allergens".
+    console.warn('foodReplacement: allergen metadata query failed', links.error);
+    // Attach a flag so the caller knows metadata is not available
+    meta.allergenMetadataAvailable = false;
   }
   if (!members.error && Array.isArray(members.data)) {
     for (const row of members.data) {

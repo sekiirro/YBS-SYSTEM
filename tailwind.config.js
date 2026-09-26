@@ -1,8 +1,13 @@
 // Compatibility aliases keep existing utility classes on the semantic theme.
 const tone = (text, fill) => Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map((shade) => [shade, `hsl(var(--${shade >= 500 ? fill : text}) / <alpha-value>)`]));
-const info = tone('primary', 'legacy-info-fill');
+// Semantic tone families -> the tailwind color utilities map onto the same
+// HSL tokens the design system reads, so a "green" chip and a `--success`
+// styled surface can never drift apart.
+const info = tone('primary', 'primary-strong');
 const signal = tone('destructive', 'brand-crimson');
 const neutral = tone('muted-foreground', 'foreground');
+const positive = tone('success', 'success-strong');
+const attention = tone('warning', 'warning-strong');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -21,10 +26,10 @@ module.exports = {
         white: 'hsl(var(--foreground) / <alpha-value>)',
         pearl: 'hsl(var(--brand-pearl) / <alpha-value>)',
         blue: info, sky: info, cyan: info, teal: info, indigo: info,
-        green: info, emerald: info, lime: info,
+        green: positive, emerald: positive, lime: positive,
         red: signal, rose: signal, pink: signal, orange: signal,
         purple: neutral, violet: neutral, fuchsia: neutral,
-        amber: tone('warning', 'brand-pearl'), yellow: tone('warning', 'brand-pearl'),
+        amber: attention, yellow: attention,
         slate: neutral, gray: neutral, zinc: neutral, stone: neutral, neutral,
         nutri: {
           surface: 'hsl(var(--nutri-surface))', 'surface-2': 'hsl(var(--nutri-surface-2))',

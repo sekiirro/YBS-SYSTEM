@@ -7,6 +7,17 @@
  */
 import { runAnalysis, buildFormPrompt } from '../_shared/genai.ts';
 
+/**
+ * Training's schema asks for materially more content than nutrition's: the
+ * optional `program` object alone carries 10 properties, 5 of them unbounded
+ * string arrays (focus areas, exercise recommendations, technique cues, injury
+ * considerations, recovery/rest). The shared MAX_OUTPUT_TOKENS (2048) is also
+ * the model's thinking budget, so the JSON document was being cut off before it
+ * closed and JSON.parse failed -> generation_failed. Nutrition's smaller
+ * payload fits inside 2048, so it is left on the shared default and unchanged.
+ */
+const TRAINING_MAX_OUTPUT_TOKENS = 8192;
+
 const RESPONSE_SCHEMA: Record<string, any> = {
   type: 'OBJECT',
   properties: {
@@ -98,7 +109,13 @@ function buildPrompt(assessment: Record<string, any>): string {
 }
 
 async function handler(req: Request): Promise<Response> {
-  return runAnalysis({ req, kind: 'training', buildPrompt, responseSchema: RESPONSE_SCHEMA });
+  return runAnalysis({
+    req,
+    kind: 'training',
+    buildPrompt,
+    responseSchema: RESPONSE_SCHEMA,
+    maxOutputTokens: TRAINING_MAX_OUTPUT_TOKENS,
+  });
 }
 
 Deno.serve(handler);

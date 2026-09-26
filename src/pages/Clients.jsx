@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
@@ -16,12 +16,82 @@ import { toast } from '@/components/ui/use-toast';
 import { formatDate, generateClientCode, getInitials, planDeliveryState } from '@/lib/ybs-utils';
 import {
   Users, Search, Plus, X, Building2, Loader2, CheckCircle2,
-  Clock, CheckCheck, Siren, ClipboardList
+  Clock, CheckCheck, Siren, ClipboardList, ArrowDown, ArrowUp, ChevronsUpDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ViewFormDrawer from '@/components/clients/ViewFormDrawer';
 import PendingFormDrawer from '@/components/clients/PendingFormDrawer';
 import ClientFormsPopover from '@/components/clients/ClientFormsPopover';
+
+const compareText = (a, b) => String(a || '').trim().localeCompare(String(b || '').trim(), undefined, {
+  sensitivity: 'base',
+  numeric: true,
+});
+
+const getClientCodeNumber = (code) => {
+  const match = String(code || '').match(/\d+/);
+  if (!match) return null;
+  const value = Number(match[0]);
+  return Number.isSafeInteger(value) ? value : null;
+};
+
+const getPhoneSortValue = (phone) => {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return null;
+  const group = digits.startsWith('9') ? 0 : digits.startsWith('02') ? 1 : 2;
+  return { group, digits: digits.replace(/^0+(?=\d)/, '') };
+};
+
+const compareNaturalDigits = (a, b) => {
+  if (a.length !== b.length) return a.length - b.length;
+  return a.localeCompare(b, undefined, { numeric: true });
+};
+
+const getDateTimestamp = (value) => {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const getClientStatusRank = (client) => {
+  if (client.status === 'active' && client.subscription_status === 'active') return 0;
+  if (client.status === 'expired' || client.subscription_status === 'expired') return 2;
+  return 1;
+};
+
+function SortableTableHeader({ label, column, sortConfig, onSort }) {
+  const isActive = sortConfig?.key === column;
+  const direction = isActive ? sortConfig.direction : null;
+  const Icon = direction === 'asc' ? ArrowUp : direction === 'desc' ? ArrowDown : ChevronsUpDown;
+  const nextAction = !isActive ? 'ascending' : direction === 'asc' ? 'descending' : 'default order';
+
+  return (
+    <th
+      scope="col"
+      aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
+      className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground"
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        title={`Sort by ${label} (${nextAction})`}
+        className={cn(
+          'group inline-flex items-center gap-1.5 rounded-sm text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-primary motion-reduce:transition-none',
+          isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+        )}
+      >
+        <span>{label}</span>
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            'h-3.5 w-3.5 shrink-0',
+            isActive ? 'text-primary' : 'text-muted-foreground/50 group-hover:text-muted-foreground'
+          )}
+        />
+      </button>
+    </th>
+  );
+}
 
 export default function Clients() {
   const navigate = useNavigate();
@@ -44,6 +114,7 @@ export default function Clients() {
   const [packageFilter, setPackageFilter] = useState('all');
   const [formsFilter, setFormsFilter] = useState('all');
   const [urgentSort, setUrgentSort] = useState(false);
+  const [sortConfig, setSortConfig] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [assigningId, setAssigningId] = useState(null);
 
@@ -144,13 +215,13 @@ export default function Clients() {
   };
 
   // Helper to test if a pending form is overdue
-  const isFormOverdue = (form) => {
+  const isFormOverdue = useCallback((form) => {
     if (!form || form.submission_status !== 'pending' || !form.due_date) return false;
     const dueDate = new Date(form.due_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return dueDate.getTime() < today.getTime();
-  };
+  }, []);
 
   // Map each client to their real or realistic fallback forms, incorporating immediate updates
   const clientFormsMap = useMemo(() => {
@@ -261,7 +332,7 @@ export default function Clients() {
     });
 
     return map;
-  }, [clients, assessments, reviewedFormIds, reminderUpdates]);
+  }, [clients, assessments, reviewedFormIds, reminderUpdates, isFormOverdue]);
 
   // ── Most Urgent: exact Plan Delivery urgency, identical to the Forms page ──
   // Mirrors Assessments.jsx: urgency comes ONLY from planDeliveryState over
@@ -270,17 +341,17 @@ export default function Clients() {
   // (most overdue first), due today -> 0, upcoming -> positive days-left.
   // Forms with no running counter (delivery done, or SLA not started) have no
   // urgency and land after all ranked forms.
-  const formUrgencyKey = (form) => {
+  const formUrgencyKey = useCallback((form) => {
     if (!form) return null;
     const state = planDeliveryState(form.submitted_at, form.nutrition_delivered, form.workout_delivered);
     if (!state || state.kind === 'done') return null;
     if (state.kind === 'overdue') return -state.days;
     return state.daysLeft;
-  };
+  }, []);
 
   // A client's single most urgent form (lowest numeric key). When every form
   // has no urgency, falls back to the first form for a stable tie-break.
-  const mostUrgentForm = (clientId) => {
+  const mostUrgentForm = useCallback((clientId) => {
     const forms = clientFormsMap[clientId] || [];
     if (!forms.length) return null;
     let best = null;
@@ -296,19 +367,29 @@ export default function Clients() {
       }
     });
     return best;
-  };
+  }, [clientFormsMap, formUrgencyKey]);
 
-  const clientUrgencyKey = (clientId) => {
+  const clientUrgencyKey = useCallback((clientId) => {
     const f = mostUrgentForm(clientId);
     return f ? formUrgencyKey(f) : null;
-  };
+  }, [formUrgencyKey, mostUrgentForm]);
 
-  const clientUrgencyCreatedTs = (clientId) => {
+  const clientUrgencyCreatedTs = useCallback((clientId) => {
     const f = mostUrgentForm(clientId);
     if (!f || !f.created_at) return 0;
     const ts = new Date(f.created_at).getTime();
     return Number.isFinite(ts) ? ts : 0;
-  };
+  }, [mostUrgentForm]);
+
+  const compareMostUrgent = useCallback((a, b) => {
+    const ua = clientUrgencyKey(a.id);
+    const ub = clientUrgencyKey(b.id);
+    if (ua === null && ub === null) return clientUrgencyCreatedTs(b.id) - clientUrgencyCreatedTs(a.id);
+    if (ua === null) return 1;
+    if (ub === null) return -1;
+    if (ua !== ub) return ua - ub;
+    return clientUrgencyCreatedTs(b.id) - clientUrgencyCreatedTs(a.id);
+  }, [clientUrgencyCreatedTs, clientUrgencyKey]);
 
   // Overview Strip calculations: Submitted includes all submitted forms (both reviewed and unreviewed)
   const formsOverview = useMemo(() => {
@@ -338,7 +419,7 @@ export default function Clients() {
     });
 
     return { total: clients.length, submitted, pending, overdue, urgent };
-  }, [clients, clientFormsMap, reviewedFormIds]);
+  }, [clients, clientFormsMap, reviewedFormIds, formUrgencyKey, isFormOverdue]);
 
   // Filtered clients
   const filtered = useMemo(() => {
@@ -378,21 +459,90 @@ export default function Clients() {
     });
   }, [clients, search, statusFilter, trainerFilter, packageFilter, formsFilter, clientFormsMap, reviewedFormIds]);
 
-  // Most Urgent is a stable sort over per-client Plan Delivery urgency,
-  // mirroring the Forms page comparator: null-urgency clients land last,
-  // equal urgency breaks on newest form created.
+  const wsName = useCallback((id) => (id ? workspaces.find((w) => w.id === id)?.name : null), [workspaces]);
+
+  const trainerName = useCallback((trainerId) => {
+    if (!trainerId) return null;
+    const trainer = trainers.find((item) => item.id === trainerId);
+    return trainer ? (trainer.full_name || trainer.email) : null;
+  }, [trainers]);
+
+  const handleSort = (column) => {
+    const currentSort = urgentSort ? { key: 'package', direction: 'asc' } : sortConfig;
+    let nextSort = { key: column, direction: 'asc' };
+
+    if (currentSort?.key === column) {
+      nextSort = currentSort.direction === 'asc'
+        ? { key: column, direction: 'desc' }
+        : null;
+    }
+
+    setUrgentSort(false);
+    setSortConfig(nextSort);
+  };
+
+  const activeSortConfig = urgentSort ? { key: 'package', direction: 'asc' } : sortConfig;
+
   const sortedClients = useMemo(() => {
-    if (!urgentSort) return filtered;
-    return [...filtered].sort((a, b) => {
-      const ua = clientUrgencyKey(a.id);
-      const ub = clientUrgencyKey(b.id);
-      if (ua === null && ub === null) return clientUrgencyCreatedTs(b.id) - clientUrgencyCreatedTs(a.id);
-      if (ua === null) return 1;
-      if (ub === null) return -1;
-      if (ua !== ub) return ua - ub;
-      return clientUrgencyCreatedTs(b.id) - clientUrgencyCreatedTs(a.id);
-    });
-  }, [urgentSort, filtered, clientFormsMap]);
+    if (urgentSort) return [...filtered].sort(compareMostUrgent);
+    if (!sortConfig) return filtered;
+
+    const direction = sortConfig.direction === 'desc' ? -1 : 1;
+
+    if (sortConfig.key === 'package') {
+      return [...filtered].sort((a, b) => direction * compareMostUrgent(a, b));
+    }
+
+    const compareRows = (a, b) => {
+      let result = 0;
+
+      if (sortConfig.key === 'client') {
+        result = compareText(a.full_name, b.full_name);
+      } else if (sortConfig.key === 'code') {
+        const aValue = getClientCodeNumber(a.client_code);
+        const bValue = getClientCodeNumber(b.client_code);
+        if (aValue === null && bValue === null) result = 0;
+        else if (aValue === null) result = 1;
+        else if (bValue === null) result = -1;
+        else result = aValue - bValue;
+      } else if (sortConfig.key === 'workspace') {
+        const aValue = wsName(a.workspace_id);
+        const bValue = wsName(b.workspace_id);
+        if (!aValue && bValue) result = 1;
+        else if (aValue && !bValue) result = -1;
+        else result = compareText(aValue, bValue);
+      } else if (sortConfig.key === 'phone') {
+        const aValue = getPhoneSortValue(a.phone);
+        const bValue = getPhoneSortValue(b.phone);
+        if (!aValue && bValue) result = 1;
+        else if (aValue && !bValue) result = -1;
+        else if (aValue && bValue) {
+          if (aValue.group !== bValue.group) result = aValue.group - bValue.group;
+          else result = compareNaturalDigits(aValue.digits, bValue.digits);
+        }
+      } else if (sortConfig.key === 'forms') {
+        result = (clientFormsMap[a.id] || []).length - (clientFormsMap[b.id] || []).length;
+      } else if (sortConfig.key === 'trainer') {
+        const aAssigned = Boolean(a.assigned_ybs_coach_id);
+        const bAssigned = Boolean(b.assigned_ybs_coach_id);
+        if (aAssigned !== bAssigned) result = aAssigned ? -1 : 1;
+        else if (aAssigned) result = compareText(trainerName(a.assigned_ybs_coach_id), trainerName(b.assigned_ybs_coach_id));
+      } else if (sortConfig.key === 'subEnd') {
+        const aValue = getDateTimestamp(a.subscription_end_date);
+        const bValue = getDateTimestamp(b.subscription_end_date);
+        if (aValue === null && bValue === null) result = 0;
+        else if (aValue === null) result = 1;
+        else if (bValue === null) result = -1;
+        else result = aValue - bValue;
+      } else if (sortConfig.key === 'status') {
+        result = getClientStatusRank(a) - getClientStatusRank(b);
+      }
+
+      return result || compareText(a.full_name, b.full_name) || compareText(a.client_code, b.client_code);
+    };
+
+    return [...filtered].sort((a, b) => direction * compareRows(a, b));
+  }, [compareMostUrgent, clientFormsMap, filtered, sortConfig, trainerName, urgentSort, wsName]);
 
   // Human-readable Plan Delivery urgency hint mirroring the Forms page (same
   // planDeliveryState source), shown for any form with a running countdown —
@@ -409,18 +559,11 @@ export default function Clients() {
     return { text: `Plan pending · Due in ${state.daysLeft} days`, tone: 'soon' };
   };
 
-  const wsName = (id) => (id ? workspaces.find((w) => w.id === id)?.name : null);
   const showWsColumn = isAdmin && activeWsTab === 'all';
 
   const hasActiveFilters = search || statusFilter !== 'all' || trainerFilter !== 'all' || packageFilter !== 'all' || formsFilter !== 'all' || urgentSort;
 
   const canAssignTrainer = !isTrainer && hasPermission(user, 'clients.update');
-
-  const trainerName = (trainerId) => {
-    if (!trainerId) return null;
-    const t = trainers.find((x) => x.id === trainerId);
-    return t ? (t.full_name || t.email) : null;
-  };
 
   const handleAssignTrainer = async (client, trainerId) => {
     if (assigningId || trainerId === (client.assigned_ybs_coach_id || '')) return;
@@ -692,7 +835,7 @@ export default function Clients() {
           {/* Most Urgent: priority sort control for pending forms */}
           <button
             type="button"
-            onClick={() => { setFormsFilter('all'); setUrgentSort((v) => !v); }}
+            onClick={() => { setFormsFilter('all'); setSortConfig(null); setUrgentSort((v) => !v); }}
             title="Sort pending forms by nearest or overdue due date"
             aria-pressed={urgentSort}
             className={cn(
@@ -738,16 +881,15 @@ export default function Clients() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Client</th>
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Code</th>
-                  {showWsColumn && <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</th>}
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Package</th>
-                  {/* Forms column strictly positioned between Package and Trainer */}
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Forms</th>
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Trainer</th>
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Sub End</th>
-                  <th className="text-left px-4 py-3 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                  <SortableTableHeader label="Client" column="client" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Code" column="code" sortConfig={activeSortConfig} onSort={handleSort} />
+                  {showWsColumn && <SortableTableHeader label="Workspace" column="workspace" sortConfig={activeSortConfig} onSort={handleSort} />}
+                  <SortableTableHeader label="Phone" column="phone" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Package" column="package" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Forms" column="forms" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Trainer" column="trainer" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Sub End" column="subEnd" sortConfig={activeSortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Status" column="status" sortConfig={activeSortConfig} onSort={handleSort} />
                 </tr>
               </thead>
               <tbody>

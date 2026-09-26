@@ -44,6 +44,9 @@
   --border: 102.857 5.785% 76.275%;
   --input: 205.714 9.170% 55.098%;
   --ring: 210.380 36.406% 42.549%;
+  --primary-strong: 233.000 35.000% 19.000%;
+  --success-strong: 210.000 38.000% 30.000%;
+  --warning-strong: 345.484 73.810% 13.000%;
   --success: 210.789 38.000% 39.216%;
   --warning: 345.484 73.810% 16.471%;
   --destructive: 345.484 73.810% 16.471%;
@@ -64,29 +67,54 @@
   --action-foreground: 54.783 74.194% 93.922%;
 }
 :root[data-theme="night"] {
-  --background: 212.000 65.217% 4.510%;
-  --foreground: 54.783 74.194% 93.922%;
-  --card: 214.839 63.265% 9.608%;
-  --popover: 214.118 62.963% 15.882%;
-  --primary: 203.721 27.389% 69.216%;
-  --primary-foreground: 0.000 0.000% 0.000%;
-  --secondary: 213.750 54.237% 23.137%;
-  --muted: 214.800 62.500% 15.686%;
-  --muted-foreground: 193.043 19.328% 76.667%;
-  --accent: 212.174 46.309% 29.216%;
-  --border: 212.571 44.304% 30.980%;
-  --input: 210.380 35.747% 43.333%;
-  --ring: 203.721 27.389% 69.216%;
-  --success: 198.750 23.529% 73.333%;
-  --warning: 22.000 21.739% 72.941%;
-  --destructive: 16.875 19.512% 67.843%;
+  /* Surfaces — a cool blue-charcoal ladder with quiet steps. Depth is read
+     from lightness deltas (background → card → popover), not from borders. */
+  --background: 217.000 60.000% 3.400%;
+  --card: 217.000 52.000% 6.200%;
+  --popover: 216.000 50.000% 10.200%;
+  --muted: 216.000 46.000% 7.600%;
+  --secondary: 215.000 40.000% 12.200%;
+  --accent: 212.000 36.000% 15.000%;
+
+  /* Text — foreground stays brand pearl; secondary is dimmed a step so
+     containers read as quieter than the headline layer. */
+  --foreground: 55.000 72.000% 94.200%;
+  --muted-foreground: 212.000 24.000% 66.000%;
+
+  /* Accent — a confident YBS ocean steel, used as the single brand accent.
+     Dark navy ink sits on it for primary actions. */
+  --primary: 209.000 60.000% 64.000%;
+  --primary-foreground: 217.000 70.000% 8.500%;
+  --primary-strong: 211.000 52.000% 30.000%;
+  --ring: 209.000 64.000% 70.000%;
+
+  /* Edges — faint structural hairlines vs. stronger interactive edges. */
+  --border: 216.000 34.000% 11.500%;
+  --input: 213.000 32.000% 18.000%;
+
+  /* Semantic signals — calm, saturated, never neon. Amber is dialed down a
+     touch so attention states read as warm, not fluorescent. */
+  --success: 158.000 44.000% 51.000%;
+  --success-strong: 156.000 38.000% 28.000%;
+  --warning: 40.000 74.000% 58.000%;
+  --warning-strong: 38.000 54.000% 36.000%;
+  --destructive: 3.000 60.000% 60.000%;
   --destructive-foreground: 0.000 0.000% 0.000%;
-  --sidebar-background: 215.455 64.706% 6.667%;
-  --chart-1: 203.721 27.389% 69.216%;
-  --chart-2: 54.783 74.194% 93.922%;
-  --chart-3: 16.875 19.512% 67.843%;
-  --chart-4: 208.966 36.100% 52.745%;
-  --chart-5: 229.500 19.048% 41.176%;
+
+  /* App frame — the sidebar/topbar rail sits one step below the canvas so
+     the working area reads as the active plane. */
+  --sidebar-background: 219.000 62.000% 3.000%;
+  --sidebar-border: 217.000 40.000% 10.000%;
+
+  /* Data — primary series in the brand steel, secondary in muted gold,
+     then coral / pale steel / jade for further series. */
+  --chart-1: 209.000 62.000% 58.000%;
+  --chart-2: 44.000 58.000% 56.000%;
+  --chart-3: 4.000 55.000% 60.000%;
+  --chart-4: 210.000 50.000% 76.000%;
+  --chart-5: 158.000 44.000% 52.000%;
+
+  /* Client-only hero gradients — left on the brand expressions they serve. */
   --hero-a: 212.727 51.563% 25.098%;
   --hero-b: 214.444 62.791% 16.863%;
   --hero-c: 215.000 62.069% 11.373%;

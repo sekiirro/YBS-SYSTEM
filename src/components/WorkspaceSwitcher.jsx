@@ -136,7 +136,7 @@ export default function WorkspaceSwitcher({ collapsed }) {
         )}
       </button>
       {open && !collapsed && (
-        <div className="absolute z-50 mt-1 w-[220px] left-2 right-2 rounded-md bg-popover border border-border shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 w-[220px] left-2 right-2 rounded-md bg-popover border border-border shadow-xl shadow-black/40 overflow-hidden">
           <p className="px-3 py-1.5 text-[12px] uppercase tracking-wider text-muted-foreground border-b border-border">Switch Workspace</p>
           {workspaces.map((w) => (
             <button

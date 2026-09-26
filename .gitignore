@@ -8,6 +8,7 @@ ybs-cleanup-dryrun.cjs
 #env
 .env
 .env.*
+.ai-secrets.env
 
 # Logs
 /logs

@@ -4,8 +4,11 @@
  *
  * Every function follows the same security contract as the generic `gemini`
  * gateway:
- *   - The GEMINI_API_KEY lives exclusively in the SUPABASE secret and is
- *     never exposed to the browser, stored in source, or echoed in logs.
+ *   - Provider credentials (Novita / OpenRouter / Kilo / NVIDIA / Gemini) live
+ *     exclusively in SUPABASE secrets and are never exposed to the browser,
+ *     stored in source, or echoed in logs. Generation itself is delegated to
+ *     ./aiRouter.ts, which owns the model order and failover policy; this file
+ *     only owns auth, cache, prompts and the YBS response contract.
  *   - Only an authenticated YBS user may invoke the function; their own JWT
  *     builds an RLS-scoped Supabase client, so every assessment read and
  *     every ai_analysis_cache write is authorized by the existing RLS
@@ -13,12 +16,26 @@
  *   - Analysis prompts only ever contain that single client's own form
  *     snapshot + responses (privacy: no other tenant data crosses the wire).
  */
-import { GoogleGenAI } from 'npm:@google/genai@2.22.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { runFailover } from './aiRouter.ts';
+import { extractJsonObject, jsonObjectValidator, PER_ROUTE_TIMEOUT_MS } from './aiProviders.ts';
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
-export const MAX_OUTPUT_TOKENS = 2048;
-export const GEMINI_TIMEOUT_MS = 60000;
+/**
+ * Shared output budget. Nutrition was the last consumer of this default and is
+ * the only caller that does not override it (Training passes its own 8192).
+ *
+ * 2048 -> 8192, from live evidence on 2026-09-25: Ling Sante returned HTTP 200
+ * with `finishReason=length`, `budget=2048` and only 889 characters of output,
+ * i.e. a syntactically incomplete JSON document. The same model completed the
+ * same document correctly minutes earlier, because this budget is shared with
+ * the model's thinking tokens -- so the split between "tokens spent reasoning"
+ * and "tokens left to write JSON" is nondeterministic, and 2048 sits right on
+ * that boundary. At 889 characters the JSON never got a chance to close.
+ * Training was already raised to 8192 for exactly this reason.
+ */
+export const MAX_OUTPUT_TOKENS = 8192;
+/** Per-route ceiling; the router enforces the overall failover budget. */
+export const GEMINI_TIMEOUT_MS = PER_ROUTE_TIMEOUT_MS;
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -94,14 +111,6 @@ export async function authenticateCaller(req: Request): Promise<AuthResult> {
   return { ok: true, userId: data.user.id, userClient };
 }
 
-/** Returns a configured Gemini client + model or null when not configured. */
-export function getGeminiConfig() {
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
-  if (!apiKey) return null;
-  const model = Deno.env.get('GEMINI_MODEL')?.trim() || DEFAULT_GEMINI_MODEL;
-  return { ai: new GoogleGenAI({ apiKey }), model };
-}
-
 /** SHA-256 hex digest of an arbitrary string (used for cache fingerprints). */
 export async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
@@ -109,6 +118,33 @@ export async function sha256Hex(input: string): Promise<string> {
   return [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+/**
+ * Fingerprint the EXACT input (snapshot + responses) of an assessment.
+ *
+ * The mapped response array MUST be deterministic. `assessment_responses` is
+ * read as an embedded relation, so PostgreSQL returns it in unspecified
+ * order, while JSON.stringify is order-sensitive: the same unchanged
+ * assessment could hash to a different fingerprint on two consecutive calls
+ * and force a redundant regeneration. That was observed live on 2026-09-25 --
+ * an identical form was a cache hit at 20:16 and a cache miss at 20:18, and
+ * the regenerated request then surfaced a flaky provider failure to the user
+ * that the cached copy would have hidden.
+ *
+ * Sorting on `id` (the primary key: stable and unique) makes the hash
+ * order-independent. This is fingerprinting ONLY -- the prompt is built from
+ * the assessment separately and is untouched, so nothing the model sees
+ * changes.
+ */
+export async function computeInputFingerprint(assessment: Record<string, any>): Promise<string> {
+  const snapshot = Array.isArray(assessment.questions_snapshot) ? assessment.questions_snapshot : [];
+  const responses = (Array.isArray(assessment.assessment_responses)
+    ? [...assessment.assessment_responses]
+    : [])
+    .sort((a, b) => String(a?.id ?? '').localeCompare(String(b?.id ?? '')))
+    .map((r: Record<string, any>) => [r.question_id, r.question_label, r.response_value]);
+  return sha256Hex(JSON.stringify({ id: assessment.id, snapshot, responses }));
 }
 
 export interface Source {
@@ -223,6 +259,14 @@ export interface RunAnalysisOptions {
   kind: 'nutrition' | 'training';
   buildPrompt: (assessment: Record<string, any>) => string;
   responseSchema: Record<string, any>;
+  /**
+   * Per-call output budget override. Omit it to use MAX_OUTPUT_TOKENS.
+   * maxOutputTokens is shared with the model's thinking tokens, so a schema
+   * that asks for a lot of content (e.g. training) needs a bigger budget than
+   * one that does not, otherwise the JSON is cut off mid-document and
+   * JSON.parse fails. Kept per-call so each analysis sizes its own budget.
+   */
+  maxOutputTokens?: number;
 }
 
 /**
@@ -232,7 +276,7 @@ export interface RunAnalysisOptions {
  * cache upsert -> response.
  */
 export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
-  const { req, kind, buildPrompt, responseSchema } = opts;
+  const { req, kind, buildPrompt, responseSchema, maxOutputTokens } = opts;
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS });
@@ -278,15 +322,7 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
   }
 
   // 3. Fingerprint the EXACT input (snapshot + responses) to detect changes.
-  const snapshot = Array.isArray(assessment.questions_snapshot) ? assessment.questions_snapshot : [];
-  const responses = Array.isArray(assessment.assessment_responses)
-    ? assessment.assessment_responses.map((r: Record<string, any>) => [
-        r.question_id,
-        r.question_label,
-        r.response_value,
-      ])
-    : [];
-  const fingerprint = await sha256Hex(JSON.stringify({ id: assessment.id, snapshot, responses }));
+  const fingerprint = await computeInputFingerprint(assessment);
 
   // 4. Cache hit: same assessment + type + unchanged input -> return stored.
   const { data: cached } = await auth.userClient
@@ -300,75 +336,85 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
       success: true,
       cached: true,
       model: cached.model,
+      meta: {
+        provider: cached.provider ?? null,
+        model: cached.model,
+        fallbackDepth: cached.fallback_depth ?? null,
+        cached: true,
+      },
       analysis: cached.result,
       sources: Array.isArray(cached.sources) ? cached.sources : [],
     });
   }
 
-  // 5. Run Gemini with structured JSON output and Google Search grounding.
-  //    Gemini 3 series supports combining structured outputs (responseSchema)
-  //    with built-in tools including googleSearch grounding.
-  const gen = getGeminiConfig();
-  if (!gen) {
-    return errorResponse('server_not_configured', 'AI service is not configured.', 503);
-  }
-
+  // 5. Generate via the provider failover router.
+  //    Model order (owned by ./aiRouter.ts, not by this file):
+  //      1. Ling 3.0 Flash Sante   (OpenRouter -> Kilo)
+  //      2. Gemini                 (existing model + structured output, unchanged)
+  //      3. Nemotron 3.5 Lightning (NVIDIA -> OpenRouter -> Kilo)
+  //    NOTE: Google Search grounding (tools: [{ googleSearch: {} }]) is
+  //    mutually exclusive with responseSchema / responseMimeType:'application/json'
+  //    in the Gemini API — combining them returns a 400 error every time. That
+  //    is still true for the Gemini route; the OpenAI-compatible routes receive
+  //    the identical contract through a system message instead.
   const prompt = buildPrompt(assessment).slice(0, 30000);
-  const generateConfig: Record<string, unknown> = {
-    maxOutputTokens: MAX_OUTPUT_TOKENS,
-    responseMimeType: 'application/json',
-    responseSchema,
-    tools: [{ googleSearch: {} }],
-  };
+  const budget = maxOutputTokens ?? MAX_OUTPUT_TOKENS;
 
-  let response: Record<string, any> | null = null;
-  let lastErr: Error | null = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      response = await withTimeout(
-        gen.ai.models.generateContent({
-          model: gen.model,
-          contents: prompt,
-          config: generateConfig,
-        }),
-        GEMINI_TIMEOUT_MS,
-      );
-      break;
-    } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err));
-      const status = (err as any)?.status || (err as any)?.code;
-      if (status === 503 || status === 429) {
-        const retryAfter = (err as any)?.retryAfter ?? 2000;
-        await new Promise((r) => setTimeout(r, retryAfter));
-        continue;
-      }
-      break;
+  const routed = await runFailover({
+    task: kind,
+    prompt,
+    schema: responseSchema,
+    maxOutputTokens: budget,
+    // A route only counts as a success if it produced a usable JSON object for
+    // this schema. This is what lets a truncated 200 from one provider fail
+    // over to the next instead of ending the chain.
+    validateOutput: jsonObjectValidator(responseSchema),
+  });
+
+  if (!routed.ok) {
+    // Error codes and HTTP statuses are unchanged from the pre-router code so
+    // the frontend needs no change: a completely unconfigured service still
+    // reports 503 server_not_configured, every provider outage 502
+    // ai_unavailable. Integration/auth/config faults (the `hard` cases) are
+    // already logged with their full route chain by the router.
+    if (routed.notConfigured) {
+      return errorResponse('server_not_configured', 'AI service is not configured.', 503);
     }
-  }
-
-  if (!response) {
-    const detail = lastErr?.message || 'Unknown Gemini error';
-    console.error(`${kind} analysis: generation failed:`, detail);
+    // Every route answered 200 but none produced a usable document. That is a
+    // generation problem, not an availability problem, so it keeps the
+    // generation_failed contract the UI already renders rather than degrading
+    // to the generic unavailable message.
+    if (routed.errorClass === 'generation_output_invalid') {
+      return errorResponse('generation_failed', 'The AI summary could not be generated. Please try again.', 502);
+    }
     return errorResponse('ai_unavailable', 'AI service is currently unavailable.', 502);
   }
 
-  const text = typeof response?.text === 'string' ? response.text.trim() : '';
-  let parsed: Record<string, any> | null = null;
-  if (text) {
-    try {
-      const candidate = JSON.parse(text);
-      if (candidate && typeof candidate === 'object') parsed = candidate;
-    } catch {
-      // Fall through to generation_failed.
-    }
-  }
+  const modelUsed = routed.model;
+  const text = typeof routed.text === 'string' ? routed.text.trim() : '';
+  const parsed = text ? extractJsonObject(text) : null;
   if (!parsed) {
-    console.error(`${kind} analysis: empty or non-JSON response. text=${JSON.stringify(text?.slice(0, 200))}`);
+    // Diagnostics are deliberately bounded and secret-free: provider, model,
+    // finish reason, token budget, the head of the model's own output and how
+    // many routes it took to get here. The prompt and the client's answers are
+    // never logged. finishReason=length / MAX_TOKENS at the budget means the
+    // JSON was cut off mid-document.
+    console.error(
+      `${kind} analysis: empty or non-JSON response.`,
+      `provider=${routed.provider}`,
+      `model=${modelUsed}`,
+      `finishReason=${routed.finishReason}`,
+      `budget=${budget}`,
+      `len=${text.length}`,
+      `routesTried=${routed.attempts.length}`,
+      `text=${JSON.stringify(text.slice(0, 200))}`,
+    );
     return errorResponse('generation_failed', 'The AI summary could not be generated. Please try again.', 502);
   }
 
-  // Extract sources from grounding metadata when Google Search was used.
-  const sources = extractSources(response, 4);
+  // Grounding metadata only ever exists on the Gemini route; the
+  // OpenAI-compatible payloads simply have no `candidates` and yield [].
+  const sources = extractSources(routed.raw, 4);
 
   // 6. Cache for identical future requests. A failed cache write never fails
   //    the user-facing result.
@@ -378,7 +424,9 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
       assessment_id: assessment.id,
       analysis_type: kind,
       input_fingerprint: fingerprint,
-      model: gen.model,
+      model: modelUsed,
+      provider: routed.provider,
+      fallback_depth: routed.attempts.length,
       result: parsed,
       sources,
       updated_at: new Date().toISOString(),
@@ -392,7 +440,13 @@ export async function runAnalysis(opts: RunAnalysisOptions): Promise<Response> {
   return json({
     success: true,
     cached: false,
-    model: gen.model,
+    model: modelUsed,
+    meta: {
+      provider: routed.provider,
+      model: modelUsed,
+      fallbackDepth: routed.attempts.length,
+      cached: false,
+    },
     analysis: parsed,
     sources,
   });

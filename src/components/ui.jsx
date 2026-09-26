@@ -47,15 +47,15 @@ export function StatCard({ label, value, sublabel, icon: Icon, trend, accent, to
       <div className="flex items-start justify-between mb-3">
         <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         {Icon && (
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="w-4 h-4 text-primary" />
+          <div className={cn('w-7 h-7 rounded-md flex items-center justify-center shrink-0', accent ? 'bg-primary/12 text-primary' : 'bg-foreground/5 text-muted-foreground')}>
+            <Icon className="w-4 h-4" />
           </div>
         )}
       </div>
       <div className="flex items-baseline gap-2">
         <span className="ybs-stat-value tabular-nums">{value}</span>
         {trend && (
-          <span className={cn('text-xs font-semibold', trend > 0 ? 'text-green-400' : 'text-red-400')}>
+          <span className={cn('text-xs font-semibold', trend > 0 ? 'text-success' : 'text-destructive')}>
             {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
           </span>
         )}
@@ -100,11 +100,11 @@ export function StatCard({ label, value, sublabel, icon: Icon, trend, accent, to
 
 export function Badge({ children, variant = 'default', className = '' }) {
   const variants = {
-    default: 'bg-primary/15 text-primary border-transparent',
-    outline: 'border-white/15 text-foreground',
-    success: 'bg-green-500/15 text-green-400 border-transparent',
-    warning: 'bg-amber-500/15 text-amber-400 border-transparent',
-    destructive: 'bg-red-500/15 text-red-400 border-transparent',
+    default: 'bg-primary/12 text-primary border-transparent',
+    outline: 'border-border/70 text-foreground',
+    success: 'bg-success/15 text-success border-transparent',
+    warning: 'bg-warning/15 text-warning border-transparent',
+    destructive: 'bg-destructive/15 text-destructive border-transparent',
   };
   return (
     <span className={cn(
@@ -259,13 +259,13 @@ export function AnimatePresenceWrapper({ children }) {
 }
 
 export function Button({ children = null, variant = 'default', size = 'default', className = '', ...props }) {
-  const variants = {
+const variants = {
     default: 'ybs-button-primary',
     primary: 'ybs-button-primary',
-    secondary: 'bg-white/5 text-foreground border border-white/10 hover:bg-white/[0.08]',
-    outline: 'border border-white/15 text-foreground hover:border-primary/50 hover:bg-primary/5',
-    ghost: 'text-muted-foreground hover:text-foreground hover:bg-white/5',
-    destructive: 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20',
+    secondary: 'bg-secondary/60 text-foreground border border-border hover:bg-secondary/80',
+    outline: 'border border-border text-foreground hover:border-primary/50 hover:bg-primary/5',
+    ghost: 'text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]',
+    destructive: 'bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/20',
   };
   const sizes = {
     default: 'h-10 px-5 text-[14px]',

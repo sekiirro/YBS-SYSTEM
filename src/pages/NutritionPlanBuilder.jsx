@@ -119,6 +119,8 @@ export default function NutritionPlanBuilder(props = {}) {
     onPlanSaved,
     embedded = false,
     onExit,
+    initialDraft = null,
+    reviewMode = false,
   } = props;
 
   const { id: routeId } = useParams();
@@ -271,6 +273,45 @@ export default function NutritionPlanBuilder(props = {}) {
               setInitialized(true);
             }
           }
+if (isMounted) {
+            setInitialSnapshot(JSON.stringify([`${tpl.name} (Copy)`, tpl.notes || '', copiedMeals]));
+            setInitialized(true);
+          }
+        } else if (initialDraft) {
+          // Pre-filling builder from a Create Plan proposal (read-only review mode)
+          setPlanId(null);
+          setName(initialDraft.plan?.name || 'AI Proposal');
+          setNotes(initialDraft.plan?.notes || '');
+          setIsTemplate(false);
+          setStatus('draft');
+
+          const proposalMeals = (initialDraft.meals || []).map((m, mIdx) => ({
+            id: m.temp_id || `proposal-meal-${mIdx}-${Date.now()}`,
+            meal_name: m.meal_name,
+            notes: m.notes || null,
+            sort_order: m.sort_order,
+            day_number: 1,
+            items: (m.items || []).map((it, itIdx) => ({
+              id: it.source_ref || `proposal-item-${itIdx}-${Date.now()}`,
+              food_id: it.food_id,
+              food_name: it.food_name,
+              brand: null,
+              amount: it.amount,
+              unit: it.unit,
+              calories: it.calories,
+              protein: it.protein,
+              carbs: it.carbs,
+              fat: it.fat,
+              base_food: null,
+            })),
+          }));
+          setMeals(proposalMeals);
+
+          if (isMounted) {
+            // In review mode we don't autosave; initialSnapshot prevents false dirty state
+            setInitialSnapshot(JSON.stringify([initialDraft.plan?.name || 'AI Proposal', initialDraft.plan?.notes || '', proposalMeals]));
+            setInitialized(true);
+          }
         } else {
           // New Blank Plan
           try {
@@ -319,8 +360,8 @@ export default function NutritionPlanBuilder(props = {}) {
   // row on the first real edit, then keeps autosaving in place — so switching
   // Client Detail tabs never loses a draft that was never explicitly saved.
   // Standalone/new-template flows keep the explicit first-save behaviour.
-  const canAutoCreate = embedded && !isTemplate && !planId && status === 'draft' && !!selectedClient?.id;
-  const autosaveEnabled = initialized && (!!planId || canAutoCreate);
+  const canAutoCreate = embedded && !isTemplate && !planId && status === 'draft' && !!selectedClient?.id && !reviewMode;
+  const autosaveEnabled = initialized && (!!planId || canAutoCreate) && !reviewMode;
   const autosaveSnapshot = JSON.stringify([name, notes, meals]);
   const autosave = useAutosave({
     id: planId,

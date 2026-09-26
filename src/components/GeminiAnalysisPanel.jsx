@@ -1,31 +1,82 @@
-import React, { useState } from 'react';
-import { getNutritionAnalysis, getTrainingAnalysis, AIAnalysisError } from '@/services/aiAnalysis';
+import React, { useState, useEffect } from 'react';
+import { getNutritionAnalysis, getTrainingAnalysis, restoreCachedAnalysis, AIAnalysisError } from '@/services/aiAnalysis';
+import { generatePlanProposal, CreatePlanError } from '@/services/createPlan';
 import { Button } from '@/components/ui';
-import { Sparkles, RefreshCw, AlertCircle, ExternalLink, Zap, Activity, Bot } from 'lucide-react';
+import CreatePlanDialog from '@/components/client/CreatePlanDialog';
+import { Sparkles, RefreshCw, AlertCircle, ExternalLink, Zap, Activity, Bot, Plus, ChevronLeft } from 'lucide-react';
+import { attributionLine } from '@/lib/aiAnalysisCache';
 import { cn } from '@/lib/utils';
 
 /**
- * Gemini AI analysis panel for a client's submitted form.
+ * AI analysis panel for a client's submitted form.
  *
- * Calls the summarize-nutrition / summarize-training edge function scoped to the
- * signed-in coach's own session (RLS-authorized), which serves cached results
- * when the input is unchanged, otherwise generates and stores a fresh one.
+ * Generating calls the summarize-nutrition / summarize-training edge function
+ * scoped to the signed-in coach's own session (RLS-authorized), which serves
+ * cached results when the input is unchanged, otherwise generates and stores a
+ * fresh one.
+ *
+ * PERSISTENCE: the analysis is owned by `public.ai_analysis_cache`, not by this
+ * component. Because the Nutrition <-> Training tab switch unmounts this
+ * subtree, the panel re-hydrates on every mount from that cache with a read-only
+ * query (see `restoreCachedAnalysis`). Mounting therefore never starts a
+ * generation — an analysis is only ever generated from an explicit click.
  */
-export default function GeminiAnalysisPanel({ assessmentId, analysisType, clientName, className }) {
+export default function GeminiAnalysisPanel({ assessmentId, analysisType, clientName, className, onPlanSaved }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [hydrating, setHydrating] = useState(Boolean(assessmentId));
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [planDialogData, setPlanDialogData] = useState(null);
 
   const isNutrition = analysisType === 'nutrition';
 
+  // Re-hydrate from the persisted cache whenever the identity changes (first
+  // mount, tab switch back, switching Nutrition <-> Training, a different
+  // assessment). Read-only: no edge function, no quota, no regeneration.
+  useEffect(() => {
+    if (!assessmentId) {
+      setResult(null);
+      setHydrating(false);
+      return;
+    }
+
+    let cancelled = false;
+    setHydrating(true);
+    setError(null);
+
+    restoreCachedAnalysis(assessmentId, analysisType)
+      .then((restored) => {
+        if (cancelled) return;
+        setResult(restored ?? null);
+      })
+      .catch(() => {
+        // Restore is best-effort: if it fails we simply show the Generate
+        // state. The cached analysis itself is untouched and will be picked up
+        // on the next mount.
+        if (cancelled) return;
+        setResult(null);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setHydrating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assessmentId, analysisType]);
+
   const run = async () => {
+    // Guard every entry point (empty state, Try Again, Regenerate) so a double
+    // click can never fire two generations.
+    if (loading) return;
     if (!assessmentId) {
       setError({ message: 'This tab requires a submitted form.', code: 'no_submission' });
       return;
     }
     setLoading(true);
     setError(null);
-    setResult(null);
     try {
       const fn = isNutrition ? getNutritionAnalysis : getTrainingAnalysis;
       const data = await fn(assessmentId);
@@ -41,9 +92,30 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
     }
   };
 
+  const handleCreatePlan = () => {
+    if (!assessmentId) {
+      setError({ message: 'This tab requires a submitted form.', code: 'no_submission' });
+      return;
+    }
+    setPlanDialogData({ assessmentId, kind: analysisType });
+    setPlanDialogOpen(true);
+  };
+
+  const handlePlanSaved = React.useCallback(({ kind, objective, proposal, draft, meta }) => {
+    setPlanDialogOpen(false);
+    setPlanDialogData(null);
+    if (onPlanSaved) {
+      onPlanSaved({ kind, objective, proposal, draft, meta });
+    }
+  }, [onPlanSaved]);
+
   if (!assessmentId) {
     return <NoAnalysisState icon={Sparkles} message="Your client has not submitted the required form yet." />;
   }
+
+  // Nothing is rendered while the cache read is in flight, so returning to the
+  // tab shows the persisted analysis instead of flashing the empty state.
+  if (hydrating) return null;
 
   if (error) {
     return (
@@ -87,6 +159,7 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
             size="sm"
             className="mt-4 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             onClick={run}
+            disabled={loading}
           >
             <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Generate AI Analysis
           </Button>
@@ -97,9 +170,14 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
 
   const a = result.analysis || {};
   const sources = result.sources || [];
+  const meta = result.meta || {};
+
+  const summaryText = isNutrition ? a.clientSummary : a.trainingSummary;
+  const attribution = attributionLine(meta);
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <>
+      <div className={cn('space-y-4', className)}>
       {/* Analysis Header */}
       <div className="surface-card rounded-xl border border-border/80 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 border-b border-border/60 bg-secondary/20">
@@ -116,7 +194,7 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
           <div className="flex items-center gap-2 shrink-0">
             {result.cached && (
               <span className="text-[12px] text-muted-foreground bg-secondary/70 px-2 py-0.5 rounded-full border border-border/40">
-                Cached · {result.model}
+                Cached
               </span>
             )}
             <Button
@@ -134,9 +212,9 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
         <div className="p-4 sm:p-5 space-y-6">
           {/* Summary */}
           <div>
-            <SectionLabel>Client Summary</SectionLabel>
+            <SectionLabel>{isNutrition ? 'Client Summary' : 'Training Summary'}</SectionLabel>
             <p className="text-[14px] text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {a.clientSummary || 'No summary returned.'}
+              {summaryText || 'No summary returned.'}
             </p>
           </div>
 
@@ -173,6 +251,30 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
             </div>
           )}
 
+          {/* Attribution + next action */}
+          <div className="pt-3 border-t border-border/50 space-y-3">
+            {attribution && (
+              <p className="text-[12px] text-muted-foreground flex items-center gap-1.5">
+                <Bot className="w-3 h-3 shrink-0" />
+                {attribution}
+              </p>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-[12px] text-muted-foreground">
+                Ready to turn this analysis into a {isNutrition ? 'nutrition' : 'training'} plan.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreatePlan}
+                className="text-xs h-8 px-3 shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Plan
+              </Button>
+            </div>
+          </div>
+
           {/* Sources */}
           {sources.length > 0 && (
             <div className="pt-3 border-t border-border/50">
@@ -192,6 +294,20 @@ export default function GeminiAnalysisPanel({ assessmentId, analysisType, client
         </div>
       </div>
     </div>
+    {planDialogOpen && planDialogData && (
+      <CreatePlanDialog
+        open={planDialogOpen}
+        onClose={() => {
+          setPlanDialogOpen(false);
+          setPlanDialogData(null);
+        }}
+        assessmentId={planDialogData.assessmentId}
+        kind={planDialogData.kind}
+        clientName={clientName}
+        onSave={handlePlanSaved}
+      />
+    )}
+    </>
   );
 }
 

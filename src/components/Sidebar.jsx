@@ -170,7 +170,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
               <AnimatePresence>
                 {!collapsed && (
                   <motion.p
-                    className="px-3 mb-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -196,19 +196,14 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                       aria-label={collapsed ? item.label : undefined}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <motion.div
+<motion.div
                         className={cn(
                           'flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-medium',
                           collapsed && 'justify-center',
                           isActive
-                            ? 'bg-primary/15 text-primary'
+                            ? 'text-primary'
                             : 'text-muted-foreground hover:text-foreground'
                         )}
-                        whileHover={!isActive ? {
-                          backgroundColor: 'hsl(var(--foreground)/0.04)',
-                          x: 1,
-                          transition: { duration: 0.15 }
-                        } : {}}
                         transition={{ duration: 0.15 }}
                       >
                         <Icon className={cn(
@@ -248,10 +243,9 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         </nav>
 
         <div className="hidden lg:block border-t border-sidebar-border p-2">
-          <motion.button
+<motion.button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-            whileHover={{ backgroundColor: 'hsl(var(--foreground)/0.05)' }}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] transition-colors"
             whileTap={{ scale: 0.97 }}
           >
             <motion.div

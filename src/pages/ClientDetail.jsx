@@ -107,15 +107,21 @@ export default function ClientDetail() {
       </button>
 
       {/* Header card */}
-      <div className="surface-card p-5 mb-4 bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))] border border-white/[0.08]">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 shadow-[0_0_20px_hsl(var(--primary)/0.15)] flex items-center justify-center text-primary text-lg font-semibold shrink-0">
+      <div className={cn(
+        "surface-card mb-4 bg-gradient-to-br from-[hsl(var(--card))] to-[hsl(var(--background))] border border-white/[0.08]",
+        activeTab === 'workout' ? "p-3.5 sm:p-4" : "p-5"
+      )}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className={cn(
+              "rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/25 shadow-[0_0_20px_hsl(var(--primary)/0.15)] flex items-center justify-center text-primary font-semibold shrink-0",
+              activeTab === 'workout' ? "w-12 h-12 text-base" : "w-14 h-14 text-lg"
+            )}>
               {getInitials(client.full_name)}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-display font-semibold tracking-tight">{client.full_name}</h1>
+                <h1 className="text-xl font-display font-semibold tracking-tight truncate">{client.full_name}</h1>
                 {(client.status === 'active' && client.subscription_status === 'active') ? (
                   <Badge className="text-emerald-400 bg-emerald-500/10 border-emerald-500/20">Active</Badge>
                 ) : (
@@ -125,15 +131,17 @@ export default function ClientDetail() {
                   <Badge className="text-violet-300 bg-violet-500/10 border-violet-500/25">Manual Override</Badge>
                 )}
               </div>
-              <p className="text-[12px] text-muted-foreground font-mono mt-1">{client.client_code}</p>
-              <div className="flex items-center gap-4 mt-2 flex-wrap text-[12px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {client.phone || '—'}</span>
-                {client.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {client.email}</span>}
-                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Joined {formatDate(client.join_date)}</span>
+              <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-4">
+                <p className="text-[12px] text-muted-foreground font-mono shrink-0">{client.client_code}</p>
+                <div className="flex min-w-0 items-center gap-4 flex-wrap text-[12px] text-muted-foreground md:border-l md:border-white/[0.08] md:pl-4">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap"><Phone className="w-3.5 h-3.5 shrink-0" /> {client.phone || '—'}</span>
+                  {client.email && <span className="flex min-w-0 items-center gap-1.5"><Mail className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{client.email}</span></span>}
+                  <span className="flex items-center gap-1.5 whitespace-nowrap"><Calendar className="w-3.5 h-3.5 shrink-0" /> Joined {formatDate(client.join_date)}</span>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end lg:self-auto lg:shrink-0">
             {canEdit && (
               <Button variant="secondary" onClick={() => setShowEdit(true)}>
                 <Edit className="w-4 h-4" /> Edit
